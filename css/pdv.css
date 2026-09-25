@@ -1,0 +1,718 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #1e1e2f;
+    color: #e1e1e6;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.pdv-header {
+    background-color: #181824;
+    padding: 15px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #2d2d3f;
+}
+
+.pdv-header h1 {
+    font-size: 1.4rem;
+    color: #fff;
+}
+
+.status-badge {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-top: 4px;
+    display: inline-block;
+}
+
+.sound-btn {
+    background: #2d2d3f;
+    color: #fff;
+    border: 1px solid #44445e;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Kanban Board */
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    padding: 20px;
+    flex: 1;
+    overflow-x: auto;
+}
+
+.kanban-column {
+    background-color: #181824;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 100px);
+    border: 1px solid #2d2d3f;
+}
+
+.column-header {
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #2d2d3f;
+}
+
+.column-header h2 {
+    font-size: 1.05rem;
+}
+
+.badge-count {
+    background: #2d2d3f;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.cards-container {
+    padding: 12px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Card de Pedido */
+.order-card {
+    background: #252536;
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 5px solid #6c757d;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.column-pendente .order-card {
+    border-left-color: #ffc107;
+}
+.column-preparando .order-card {
+    border-left-color: #fd7e14;
+}
+.column-caminho .order-card {
+    border-left-color: #0dcaf0;
+}
+.column-concluido .order-card {
+    border-left-color: #198754;
+    opacity: 0.8;
+}
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-bottom: 8px;
+}
+
+.card-id {
+    font-weight: bold;
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.card-type {
+    background: #3b3b54;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.card-items {
+    margin: 10px 0;
+    padding: 8px 0;
+    border-top: 1px solid #333348;
+    border-bottom: 1px solid #333348;
+    font-size: 0.9rem;
+}
+
+.card-item-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.card-info {
+    font-size: 0.85rem;
+    color: #ccc;
+    margin-bottom: 10px;
+}
+
+.card-obs {
+    background: #332a15;
+    color: #ffda6a;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+}
+
+.card-total {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #2ec4b6;
+    margin-bottom: 12px;
+}
+
+/* Botões de Ação */
+.card-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-action {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+/* --- NAVEGAÇÃO POR ABAS --- */
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.nav-tabs {
+    display: flex;
+    gap: 8px;
+    background: #11111a;
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: #8a8a9e;
+    padding: 8px 16px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: #2d2d3f;
+    color: #ffffff;
+}
+
+/* --- TELA DE GERENCIAMENTO DE PRODUTOS --- */
+.products-manager {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.manager-container {
+    background-color: #181824;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #2d2d3f;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.manager-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.btn-refresh {
+    background: #2d2d3f;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.products-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.products-table th, .products-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #2d2d3f;
+    vertical-align: middle;
+}
+
+.products-table th {
+    background-color: #202030;
+    color: #aaa;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+/* Inputs da Tabela */
+.input-table {
+    background: #252536;
+    border: 1px solid #3d3d52;
+    color: #fff;
+    padding: 8px;
+    border-radius: 6px;
+    width: 100px;
+    font-size: 0.95rem;
+}
+
+.input-table:focus {
+    outline: none;
+    border-color: #0d6efd;
+}
+
+/* Botões de + e - */
+.qty-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-qty {
+    background: #3b3b54;
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-qty:hover {
+    background: #4e4e6d;
+}
+
+/* Botão Salvar */
+.btn-save-prod {
+    background: #2e7d32;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-save-prod:hover {
+    background: #1b5e20;
+}
+
+.product-row-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
+.btn-next {
+    background: #0d6efd;
+    color: white;
+}
+.btn-next:hover {
+    background: #0b5ed7;
+}
+
+.btn-cancel {
+    background: #dc3545;
+    color: white;
+}
+.btn-cancel:hover {
+    background: #bb2d3b;
+}
+
+/* Botão de Impressão */
+.btn-print {
+    background: #495057;
+    color: white;
+}
+
+.btn-print:hover {
+    background: #343a40;
+}
+
+/* --- ESTILOS DE IMPRESSÃO (CUPOM TÉRMICO) --- */
+#print-area {
+    display: none;
+}
+
+@media print {
+    /* Esconde a interface inteira do PDV na impressão */
+    body * {
+        visibility: hidden;
+    }
+
+    /* Exibe exclusivamente a div do comprovante */
+    #print-area, #print-area * {
+        visibility: visible;
+    }
+
+    #print-area {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 72mm; /* Ajustado para bobinas térmicas padrões de 80mm/58mm */
+        padding: 4mm;
+        font-family: 'Courier New', Courier, monospace;
+        color: #000;
+        background: #fff;
+    }
+
+    .receipt h2 {
+        text-align: center;
+        font-size: 16px;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+    }
+
+    .receipt p {
+        font-size: 11px;
+        margin: 3px 0;
+        line-height: 1.2;
+    }
+
+    .receipt hr {
+        border: none;
+        border-top: 1px dashed #000;
+        margin: 6px 0;
+    }
+
+    .receipt table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        margin: 6px 0;
+    }
+
+    .receipt table th, .receipt table td {
+        padding: 2px 0;
+    }
+}
+
+/* --- TELA DE HISTÓRICO E METRICAS --- */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+}
+
+.metric-card {
+    background: #202030;
+    padding: 18px;
+    border-radius: 8px;
+    border: 1px solid #2d2d3f;
+}
+
+.metric-title {
+    font-size: 0.85rem;
+    color: #8a8a9e;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    font-size: 1.6rem;
+    color: #2ec4b6;
+    margin-top: 8px;
+}
+
+.history-filters {
+    display: flex;
+    gap: 10px;
+}
+
+.status-badge-table {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.status-concluido {
+    background: #198754;
+    color: white;
+}
+.status-cancelado {
+    background: #dc3545;
+    color: white;
+}
+
+/* Overlay e Card de Login */
+.login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #11111a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.login-card {
+    background: #181824;
+    padding: 30px;
+    border-radius: 12px;
+    border: 1px solid #2d2d3f;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.login-card h2 {
+    font-size: 1.3rem;
+    margin-bottom: 6px;
+}
+.login-card p {
+    font-size: 0.85rem;
+    color: #8a8a9e;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    font-size: 0.8rem;
+    color: #aaa;
+    font-weight: bold;
+}
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+}
+
+.login-erro {
+    color: #ff6b6b !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 10px !important;
+}
+
+/* =========================================================
+   REGRAS UNIFICADAS DE IMPRESSÃO (RECIBO & PIX)
+   ========================================================= */
+
+/* Esconde as áreas de impressão na tela normal */
+#print-area,
+#area-impressao-pix {
+    display: none;
+}
+
+@media print {
+    /* 1. Oculta tudo na tela por padrão */
+    body * {
+        visibility: hidden !important;
+    }
+
+    /* 2. MODO IMPRESSÃO DE PLACA PIX */
+    body.imprimindo-pix #area-impressao-pix,
+    body.imprimindo-pix #area-impressao-pix * {
+        visibility: visible !important;
+    }
+
+    body.imprimindo-pix #area-impressao-pix {
+        display: block !important;
+        position: absolute !important;
+        left: 50% !important;
+        top: 20px !important;
+        transform: translateX(-50%) !important;
+        width: 300px !important;
+        border: 2px solid #000000 !important;
+        border-radius: 8px !important;
+        padding: 15px !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    body.imprimindo-pix .pix-ocultar-impressao {
+        display: none !important;
+    }
+
+    /* 3. MODO IMPRESSÃO DE PEDIDO / CUPOM (NOVA REGRA CORRIGIDA) */
+    body:not(.imprimindo-pix) #print-area,
+    body:not(.imprimindo-pix) #print-area * {
+        visibility: visible !important;
+    }
+
+    body:not(.imprimindo-pix) #print-area {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 72mm !important;
+        padding: 4mm !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        color: #000000 !important;
+        background: #ffffff !important;
+    }
+
+    /* Estilos internos do cupom para garantir contraste e formatação */
+    .receipt h2 {
+        text-align: center;
+        font-size: 16px;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+        color: #000 !important;
+    }
+
+    .receipt p,
+    .receipt td,
+    .receipt th {
+        font-size: 11px;
+        margin: 3px 0;
+        line-height: 1.2;
+        color: #000 !important;
+    }
+
+    .receipt hr {
+        border: none;
+        border-top: 1px dashed #000 !important;
+        margin: 6px 0;
+    }
+
+    .receipt table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        margin: 6px 0;
+    }
+}
+
+/* ============================================
+   MODAL - HISTÓRICO DE PRODUÇÕES
+   ============================================ */
+#historico-producoes-container {
+    display: none;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9999 !important;
+
+    background: rgba(0, 0, 0, 0.72) !important;
+
+    padding: 30px !important;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+/* Caixa principal da janela */
+#historico-producoes-container > div {
+    width: min(1250px, 100%);
+    max-height: calc(100vh - 60px);
+    margin: 0 auto;
+
+    background: #2a2a35 !important;
+    color: #fff !important;
+
+    border: 1px solid #3d3d4e;
+    border-radius: 10px;
+
+    padding: 20px !important;
+
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.45);
+
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+/* Título e textos */
+#historico-producoes-container h2,
+#historico-producoes-container h3,
+#historico-producoes-container p {
+    color: #fff;
+}
+
+/* Área da tabela */
+#historico-producoes-container .table-responsive {
+    background: #1e1e24 !important;
+    border: 1px solid #3d3d4e;
+    border-radius: 8px;
+    padding: 10px;
+
+    overflow-x: auto;
+}
+
+/* Tabela */
+#historico-producoes-container .products-table {
+    background: #1e1e24 !important;
+    color: #fff !important;
+}
+
+/* Cabeçalho da tabela */
+#historico-producoes-container .products-table thead th {
+    background: #3d3d4e !important;
+    color: #fff !important;
+}
+
+/* Células */
+#historico-producoes-container .products-table tbody td {
+    color: #fff !important;
+    background: #1e1e24;
+}
+
+/* Linhas alternadas */
+#historico-producoes-container .products-table tbody tr:nth-child(even) td {
+    background: #252530;
+}
+
+/* Botão fechar */
+#btn-fechar-historico-producoes {
+    border: none;
+    background: #dc3545;
+    color: #fff;
+
+    min-width: 95px;
+    height: 38px;
+
+    padding: 0 14px;
+    border-radius: 6px;
+
+    cursor: pointer;
+    font-weight: bold;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+#btn-fechar-historico-producoes:hover {
+    background: #bb2d3b;
+}

@@ -1,0 +1,2343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Painel PDV - Gestão de Pedidos & Estoque</title>
+        <link rel="stylesheet" href="css/pdv.css">
+
+        <style>
+            /*
+             * Enquanto a sessão e as permissões estão sendo verificadas,
+             * o sistema fica invisível e sem interação.
+             */
+            body.pdv-carregando > header,
+            body.pdv-carregando > main {
+                visibility: hidden;
+                pointer-events: none;
+            }
+
+            /*
+             * O login continua disponível durante a inicialização.
+             */
+            body.pdv-carregando #login-overlay {
+                visibility: visible;
+                pointer-events: auto;
+            }
+        </style>
+
+        <script>
+            // Ativa o modo de inicialização ANTES da página terminar de renderizar.
+            document.documentElement.classList.add('pdv-inicializando');
+        </script>
+
+        <!-- Supabase JS CDN -->
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    </head>
+
+    <body class="pdv-carregando">
+
+        <header class="pdv-header">
+            <div class="header-left">
+                <h1>🖥️ Gestor PDV</h1>
+                <!-- Botões das Abas -->
+                <nav class="nav-tabs">
+                    <button class="tab-btn active" id="btn-tab-pedidos" onclick="alternarAba('pedidos')">📋 Pedidos</button>
+                    <button class="tab-btn" id="btn-tab-balcao" onclick="alternarAba('balcao')">🛒 Venda de Balcão</button>
+                    <button class="tab-btn" id="btn-tab-produtos" onclick="alternarAba('produtos')">📦 Produtos & Estoque</button>
+                    <button class="tab-btn" id="btn-tab-ficha-tecnica" onclick="alternarAba('ficha-tecnica')" style="display: none;">📋 Ficha Técnica</button>
+                    <button class="tab-btn" id="btn-tab-compras" onclick="alternarAba('compras')">🛒 Compras</button>
+                    <button class="tab-btn" id="btn-tab-mov-estoque" onclick="alternarAba('mov-estoque')">📦 Mov. Estoque</button>
+                    <button class="tab-btn" id="btn-tab-historico" onclick="alternarAba('historico')">📜 Histórico & Relatórios</button>
+                    <button class="tab-btn" id="btn-tab-pix" onclick="alternarAba('pix')">❖ Pagamento via PIX</button>
+                    <button class="tab-btn" id="btn-tab-financas" onclick="alternarAba('financas')">📊 Finanças</button>
+                    <button class="tab-btn" id="btn-tab-config" onclick="alternarAba('config')">⚙️ Configurações</button>
+                </nav>
+            </div>
+            <div>
+                <span class="status-badge" id="realtime-status">🔴 Conectando ao Banco...</span>
+                <button class="sound-btn" id="btn-som" onclick="ativarSom()">🔔 Ativar Alerta</button>
+            </div>
+
+            <button class="sound-btn" id="btn-logout" onclick="fazerLogout()" style="display: none; background: #dc3545;">🚪 Sair</button>
+
+        </header>
+
+        <!-- ABA 1: Quadro Kanban de Pedidos -->
+        <main class="kanban-board" id="aba-pedidos">
+
+            <!-- Coluna 1: Novos Pedidos -->
+            <div class="kanban-column column-pendente">
+                <div class="column-header">
+                    <h2>🟡 Novos Pedidos</h2>
+                    <span class="badge-count" id="count-pendente">0</span>
+                </div>
+                <div class="cards-container" id="container-PENDENTE"></div>
+            </div>
+
+            <!-- Coluna 2: Em Preparo -->
+            <div class="kanban-column column-preparando">
+                <div class="column-header">
+                    <h2>🟠 Em Preparo</h2>
+                    <span class="badge-count" id="count-preparando">0</span>
+                </div>
+                <div class="cards-container" id="container-PREPARANDO"></div>
+            </div>
+
+            <!-- Coluna 3: Saiu para Entrega / Pronto -->
+            <div class="kanban-column column-caminho">
+                <div class="column-header">
+                    <h2>🔵 A Caminho / Pronto</h2>
+                    <span class="badge-count" id="count-a_caminho">0</span>
+                </div>
+                <div class="cards-container" id="container-A_CAMINHO"></div>
+            </div>
+
+            <!-- Coluna 4: Concluídos -->
+            <div class="kanban-column column-concluido">
+                <div class="column-header" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <h2>🟢 Concluídos</h2>
+                        <span class="badge-count" id="count-concluido">0</span>
+                    </div>
+
+                    <!-- Filtro de Período -->
+                    <select id="filtro-concluidos" onchange="renderizarKanban(listaPedidosGlobal)" 
+                            style="width: 100%; background: #2a2a35; color: #fff; border: 1px solid #3d3d4e; padding: 5px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">
+                        <option value="hoje">Hoje</option>
+                        <option value="7dias">Últimos 7 dias</option>
+                        <option value="mes">Este Mês</option>
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div class="cards-container" id="container-CONCLUIDO"></div>
+            </div>
+        </main>
+
+        <!-- ABA 2: Gerenciador de Produtos & Estoque (Inicia oculta) -->
+        <main class="products-manager" id="aba-produtos" style="display: none;">
+            <div class="manager-container">
+                <h2>📦 Controle Rápido de Estoque e Preços</h2>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button
+                        class="btn-refresh"
+                        style="background: #2e7d32;"
+                        onclick="abrirModalNovoProduto()"
+                        >
+                        ➕ Novo Produto
+                    </button>
+
+                    <button
+                        class="btn-refresh"
+                        style="background: #1565c0;"
+                        onclick="abrirModalProducao()"
+                        >
+                        🏭 Produção
+                    </button>
+
+                    <button
+                        class="btn-refresh"
+                        style="background: #6a1b9a;"
+                        onclick="alternarHistoricoProducoes()"
+                        >
+                        📜 Histórico de Produções
+                    </button>
+
+                    <button
+                        class="btn-refresh"
+                        onclick="carregarProdutosGerenciador()"
+                        >
+                        🔄 Atualizar Lista
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="products-table">
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Custo (R$)</th>
+                                <th>Margem (%)</th>
+                                <th>Venda (R$)</th>
+                                <th>Estoque</th>
+                                <th>Ajuste Rápido</th>
+                                <th>Status</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="produtos-table-body">
+                            <!-- Linhas geradas via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- =========================================================
+                HISTÓRICO DE PRODUÇÕES
+                ========================================================= -->
+                <div
+                    id="historico-producoes-container"
+                    style="
+                    display: none;
+                    margin-top: 25px;
+                    background: #2a2a35;
+                    border: 1px solid #3d3d4e;
+                    border-radius: 8px;
+                    padding: 20px;
+                    "
+                    >
+
+                    <div
+                        style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 10px;
+                        margin-bottom: 15px;
+                        flex-wrap: wrap;
+                        "
+                        >
+
+                        <div>
+                            <h2 style="margin: 0 0 5px 0;">
+                                📜 Histórico de Produções
+                            </h2>
+
+                            <p style="margin: 0; color: #aaa;">
+                                Consulte produções realizadas, quantidades e custos.
+                            </p>
+                        </div>
+
+                        <div style="
+                             display: flex;
+                             gap: 10px;
+                             align-items: center;
+                             flex-wrap: wrap;
+                             ">
+
+                            <button
+                                type="button"
+                                class="btn-refresh"
+                                onclick="carregarHistoricoProducoes()"
+                                >
+                                🔄 Atualizar
+                            </button>
+
+                            <button
+                                type="button"
+                                id="btn-fechar-historico-producoes"
+                                onclick="alternarHistoricoProducoes()"
+                                >
+                                ✕ Fechar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+
+                        <table class="products-table">
+
+                            <thead>
+                                <tr>
+                                    <th>Data / Hora</th>
+                                    <th>Produção</th>
+                                    <th>Produto</th>
+                                    <th>Quantidade</th>
+                                    <th>Custo Total</th>
+                                    <th>Custo Unitário</th>
+                                    <th>Usuário</th>
+                                    <th>Observação</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="historico-producoes-table-body">
+
+                                <tr>
+                                    <td
+                                        colspan="8"
+                                        style="text-align: center;"
+                                        >
+                                        Nenhuma produção carregada.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Produção -->
+            <div
+                id="modal-producao"
+                class="login-overlay"
+                style="display: none;"
+                >
+                <div
+                    class="login-card"
+                    style="
+                    max-width: 560px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    padding-right: 15px;
+                    "
+                    >
+
+                    <h2>🏭 Registrar Produção</h2>
+
+                    <p>
+                        Produza produtos acabados usando a Ficha Técnica
+                        e faça o consumo automático dos insumos.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Produto *</label>
+
+                        <select
+                            id="producao-produto"
+                            class="input-table"
+                            style="width: 100%;"
+                            onchange="carregarDadosProducaoUI()"
+                            >
+                            <option value="">
+                                Selecione o produto...
+                            </option>
+                        </select>
+                    </div>
+
+                    <div
+                        id="producao-info"
+                        style="
+                        display: none;
+                        margin-top: 12px;
+                        padding: 12px;
+                        border-radius: 6px;
+                        background: #f5f5f5;
+                        color: #222;
+                        "
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Quantidade a produzir *</label>
+
+                        <input
+                            type="number"
+                            id="producao-quantidade"
+                            class="input-table"
+                            min="1"
+                            step="1"
+                            value="1"
+                            style="width: 100%;"
+                            oninput="atualizarResumoProducaoUI()"
+                            >
+                    </div>
+
+                    <div
+                        id="producao-resumo"
+                        style="
+                        display: none;
+                        margin-top: 12px;
+                        padding: 12px;
+                        border-radius: 6px;
+                        background: #eef6ff;
+                        color: #222;
+                        "
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Observação</label>
+
+                        <textarea
+                            id="producao-observacao"
+                            class="input-table"
+                            rows="3"
+                            placeholder="Ex.: Produção do período da manhã..."
+                            style="width: 100%; resize: vertical;"
+                            ></textarea>
+                    </div>
+
+                    <div
+                        style="
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 10px;
+                        margin-top: 18px;
+                        "
+                        >
+                        <button
+                            type="button"
+                            class="btn-refresh"
+                            onclick="fecharModalProducao()"
+                            >
+                            Cancelar
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn-refresh"
+                            style="background: #2e7d32;"
+                            onclick="registrarProducaoUI()"
+                            >
+                            🏭 Produzir
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Cadastro de Produto -->
+            <div id="modal-produto" class="login-overlay" style="display: none;">
+                <div class="login-card" style="max-width: 520px; max-height: 90vh; overflow-y: auto; padding-right: 15px;">
+                    <h2>➕ Cadastrar Novo Produto</h2>
+                    <p>Preencha os dados do item para publicar no cardápio.</p>
+
+                    <form id="form-novo-produto" onsubmit="salvarNovoProduto(event)">
+                        <!-- LINHA: Nome (Esquerda) + Código de Barras (Direita) -->
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                            <div class="form-group">
+                                <label>Nome do Produto *</label>
+                                <input type="text" id="np-nome" class="input-table" required style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label>Código de Barras *</label>
+                                <input type="text" id="np-codigo" class="input-table" required style="width: 100%;">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Descrição</label>
+                            <input type="text" id="np-descricao" class="input-table" placeholder="Ex: Cremoso, 200ml" style="width: 100%;">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="form-group">
+                                <label>Categoria</label>
+                                <select id="np-categoria" class="input-table" style="width: 100%;">
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Estoque Inicial *</label>
+                                <input type="number" id="np-estoque" class="input-table" value="10" min="0" required style="width: 100%;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                            <div class="form-group">
+                                <label>Custo (R$)</label>
+                                <input type="number" id="np-custo" step="0.10" min="0" value="0.00" class="input-table" style="width: 100%;" oninput="calcularPrecoModal()">
+                            </div>
+                            <div class="form-group">
+                                <label>Margem (%)</label>
+                                <input type="number" id="np-margem" step="1" min="0" value="50" class="input-table" style="width: 100%;" oninput="calcularPrecoModal()">
+                            </div>
+                            <div class="form-group">
+                                <label>Venda (R$) *</label>
+                                <input type="number" id="np-venda" step="0.50" min="0" value="0.00" required class="input-table" style="width: 100%;" oninput="calcularMargemModal()">
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">URL ou Arquivo de Imagem</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="np-imagem" placeholder="https://link.com/foto.jpg ou selecione um arquivo..." class="input-table" style="flex: 1;">
+                                <input type="file" id="np-file-imagem" accept="image/*" style="display: none;" onchange="selecionarFotoLocal(event)">
+                                <button type="button" onclick="document.getElementById('np-file-imagem').click()" 
+                                        style="background: #3d3d4e; color: #fff; border: 1px solid #555; padding: 0 14px; border-radius: 6px; cursor: pointer; font-weight: bold; white-space: nowrap;">
+                                    📁 Foto
+                                </button>
+                            </div>
+                            <small id="status-upload-img" style="color: #aaa; display: block; margin-top: 4px; font-size: 0.8rem;"></small>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button type="button" class="btn-qty" style="flex: 1; height: 40px; background: #555;" onclick="fecharModalNovoProduto()">❌ Cancelar</button>
+                            <button type="submit" id="btn-salvar-modal" class="btn-save-prod" style="flex: 2; height: 40px;">💾 Cadastrar Produto</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+
+        <!-- =========================================================
+     ABA: FICHA TÉCNICA
+     ========================================================= -->
+
+        <main
+            class="products-manager"
+            id="aba-ficha-tecnica"
+            style="display: none;">
+
+            <div class="manager-container">
+
+                <div style="
+                     display: flex;
+                     justify-content: space-between;
+                     align-items: center;
+                     gap: 10px;
+                     margin-bottom: 20px;
+                     ">
+
+                    <div>
+                        <h2 style="margin-bottom: 5px;">
+                            📋 Ficha Técnica de Produtos
+                        </h2>
+
+                        <p style="
+                           margin: 0;
+                           color: #aaa;
+                           ">
+                            Cadastre receitas, ingredientes, perdas,
+                            rendimento e custo técnico.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <!-- ================================================
+                     SELEÇÃO DO PRODUTO
+                     ================================================ -->
+
+                <div style="
+                     background: #2a2a35;
+                     border: 1px solid #3d3d4e;
+                     border-radius: 8px;
+                     padding: 20px;
+                     margin-bottom: 20px;
+                     ">
+
+                    <h3 style="margin-top: 0;">
+                        🍰 Produto
+                    </h3>
+
+                    <div class="form-group">
+
+                        <label>
+                            Produto final *
+                        </label>
+
+                        <select
+                            id="ficha-produto"
+                            class="input-table"
+                            style="width: 100%;">
+
+                            <option value="">
+                                Selecione o produto
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ================================================
+                     DADOS DA FICHA
+                     ================================================ -->
+
+                <div style="
+                     background: #2a2a35;
+                     border: 1px solid #3d3d4e;
+                     border-radius: 8px;
+                     padding: 20px;
+                     margin-bottom: 20px;
+                     ">
+
+                    <h3 style="margin-top: 0;">
+                        📐 Dados da Receita
+                    </h3>
+
+                    <div style="
+                         display: grid;
+                         grid-template-columns: 1fr 180px 2fr;
+                         gap: 15px;
+                         ">
+
+                        <div class="form-group">
+
+                            <label>
+                                Rendimento *
+                            </label>
+
+                            <input
+                                type="number"
+                                id="ficha-rendimento"
+                                class="input-table"
+                                min="0.0001"
+                                step="0.0001"
+                                placeholder="Ex.: 10"
+                                style="width: 100%;">
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                Unidade *
+                            </label>
+
+                            <select
+                                id="ficha-unidade-rendimento"
+                                class="input-table"
+                                style="width: 100%;">
+
+                                <option value="">
+                                    Selecione
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                Observação
+                            </label>
+
+                            <input
+                                type="text"
+                                id="ficha-observacao"
+                                class="input-table"
+                                placeholder="Ex.: Receita padrão"
+                                style="width: 100%;">
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ================================================
+                     INGREDIENTES
+                     ================================================ -->
+
+                <div style="
+                     background: #2a2a35;
+                     border: 1px solid #3d3d4e;
+                     border-radius: 8px;
+                     padding: 20px;
+                     margin-bottom: 20px;
+                     ">
+
+                    <div style="
+                         display: flex;
+                         justify-content: space-between;
+                         align-items: center;
+                         margin-bottom: 15px;
+                         ">
+
+                        <h3 style="margin: 0;">
+                            🧪 Ingredientes
+                        </h3>
+
+                        <button
+                            type="button"
+                            class="btn-refresh"
+                            onclick="adicionarLinhaIngredienteFicha()">
+                            ➕ Adicionar ingrediente
+                        </button>
+
+                    </div>
+
+
+                    <div class="table-responsive">
+
+                        <table class="products-table">
+
+                            <thead>
+
+                                <tr>
+                                    <th>Insumo</th>
+                                    <th>Unidade</th>
+                                    <th>Qtd. Bruta</th>
+                                    <th>Perda (%)</th>
+                                    <th>Qtd. Líquida</th>
+                                    <th>Custo</th>
+                                    <th>Ação</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="ficha-itens-body">
+
+                                <tr>
+                                    <td
+                                        colspan="7"
+                                        style="
+                                        text-align: center;
+                                        color: #aaa;
+                                        padding: 25px;
+                                        ">
+
+                                        Nenhum ingrediente adicionado.
+
+                                    </td>
+                                </tr>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ================================================
+                     RESUMO DO CUSTO
+                     ================================================ -->
+
+                <div style="
+                     display: grid;
+                     grid-template-columns: repeat(3, 1fr);
+                     gap: 15px;
+                     margin-bottom: 20px;
+                     ">
+
+                    <div style="
+                         background: #2a2a35;
+                         border: 1px solid #3d3d4e;
+                         border-radius: 8px;
+                         padding: 18px;
+                         ">
+
+                        <span style="
+                              color: #aaa;
+                              display: block;
+                              font-size: 0.85rem;
+                              ">
+                            Custo da Receita
+                        </span>
+
+                        <strong
+                            id="ficha-custo-total"
+                            style="
+                            display: block;
+                            margin-top: 5px;
+                            font-size: 1.4rem;
+                            ">
+                            R$ 0,00
+                        </strong>
+
+                    </div>
+
+
+                    <div style="
+                         background: #2a2a35;
+                         border: 1px solid #3d3d4e;
+                         border-radius: 8px;
+                         padding: 18px;
+                         ">
+
+                        <span style="
+                              color: #aaa;
+                              display: block;
+                              font-size: 0.85rem;
+                              ">
+                            Custo por Unidade
+                        </span>
+
+                        <strong
+                            id="ficha-custo-unitario"
+                            style="
+                            display: block;
+                            margin-top: 5px;
+                            font-size: 1.4rem;
+                            ">
+                            R$ 0,00
+                        </strong>
+
+                    </div>
+
+
+                    <div style="
+                         background: #2a2a35;
+                         border: 1px solid #3d3d4e;
+                         border-radius: 8px;
+                         padding: 18px;
+                         ">
+
+                        <span style="
+                              color: #aaa;
+                              display: block;
+                              font-size: 0.85rem;
+                              ">
+                            Status da Ficha
+                        </span>
+
+                        <strong
+                            id="ficha-status"
+                            style="
+                            display: block;
+                            margin-top: 5px;
+                            font-size: 1.1rem;
+                            color: #aaa;
+                            ">
+                            Nenhuma ficha selecionada
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ================================================
+                     BOTÕES
+                     ================================================ -->
+
+                <div style="
+                     display: flex;
+                     gap: 10px;
+                     justify-content: flex-end;
+                     ">
+
+                    <button
+                        type="button"
+                        class="btn-refresh"
+                        style="background: #555;"
+                        onclick="limparFichaTecnicaUI()">
+                        🧹 Limpar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-refresh"
+                        style="background: #2e7d32;"
+                        onclick="salvarFichaTecnicaUI()">
+                        💾 Salvar Ficha
+                    </button>
+
+                </div>
+
+            </div>
+
+        </main>
+
+        <!-- ABA: COMPRAS -->
+        <main class="products-manager" id="aba-compras" style="display: none;">
+            <div class="manager-container">
+
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 20px;">
+                    <div>
+                        <h2 style="margin-bottom: 5px;">🛒 Compras e Entrada de Mercadorias</h2>
+                        <p style="margin: 0; color: #aaa;">
+                            Registre compras, custos e produtos recebidos.
+                        </p>
+                    </div>
+
+                    <button
+                        class="btn-refresh"
+                        onclick="limparCompraUI()"
+                        style="background: #555;">
+                        🧹 Limpar
+                    </button>
+                </div>
+
+                <!-- DADOS DA COMPRA -->
+                <div style="
+                     background: #2a2a35;
+                     border: 1px solid #3d3d4e;
+                     border-radius: 8px;
+                     padding: 20px;
+                     margin-bottom: 20px;
+                     ">
+
+                    <h3 style="margin-top: 0;">📋 Dados da Compra</h3>
+
+                    <div style="
+                         display: grid;
+                         grid-template-columns: 2fr 1fr 1fr;
+                         gap: 15px;
+                         ">
+
+                        <div class="form-group">
+                            <label>Fornecedor *</label>
+                            <select
+                                id="compra-fornecedor"
+                                class="input-table"
+                                style="width: 100%;">
+                                <option value="">Carregando fornecedores...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Número da Nota</label>
+                            <input
+                                type="text"
+                                id="compra-nota"
+                                class="input-table"
+                                placeholder="NF / Documento"
+                                style="width: 100%;">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Data da Compra *</label>
+                            <input
+                                type="date"
+                                id="compra-data"
+                                class="input-table"
+                                style="width: 100%;">
+                        </div>
+
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Observação</label>
+                        <textarea
+                            id="compra-observacao"
+                            class="input-table"
+                            rows="2"
+                            placeholder="Observações da compra..."
+                            style="width: 100%; resize: vertical;"></textarea>
+                    </div>
+                </div>
+
+                <!-- ADIÇÃO DE PRODUTOS -->
+                <div style="
+                     background: #2a2a35;
+                     border: 1px solid #3d3d4e;
+                     border-radius: 8px;
+                     padding: 20px;
+                     margin-bottom: 20px;
+                     ">
+
+                    <h3 style="margin-top: 0;">📦 Produtos da Compra</h3>
+
+                    <div style="
+                         display: grid;
+                         grid-template-columns: 2fr 100px 130px 110px;
+                         gap: 10px;
+                         align-items: end;
+                         ">
+
+                        <div class="form-group">
+                            <label>Produto</label>
+                            <select
+                                id="compra-produto"
+                                class="input-table"
+                                style="width: 100%;">
+                                <option value="">Selecione o produto</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Qtd.</label>
+                            <input
+                                type="number"
+                                id="compra-quantidade"
+                                class="input-table"
+                                value="1"
+                                min="1"
+                                step="1"
+                                style="width: 100%;">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Custo Unit. (R$)</label>
+                            <input
+                                type="number"
+                                id="compra-custo"
+                                class="input-table"
+                                value="0.00"
+                                min="0"
+                                step="0.01"
+                                style="width: 100%;">
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn-save-prod"
+                            onclick="adicionarItemCompraUI()"
+                            style="
+                            height: 38px;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            line-height: 1;
+                            box-sizing: border-box;
+                            white-space: nowrap;
+                            ">
+                            ➕ Adicionar
+                        </button>
+
+                    </div>
+                </div>
+
+                <!-- ITENS -->
+                <div class="table-responsive">
+                    <table class="products-table">
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th style="text-align: center;">Qtd.</th>
+                                <th style="text-align: right;">Custo Unit.</th>
+                                <th style="text-align: right;">Total</th>
+                                <th style="width: 80px;">Ação</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="compra-itens-body">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #888;">
+                                    Nenhum item adicionado.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TOTAIS -->
+                <div style="
+                     display: flex;
+                     justify-content: flex-end;
+                     margin-top: 20px;
+                     ">
+                    <div style="
+                         width: 320px;
+                         background: #2a2a35;
+                         border: 1px solid #3d3d4e;
+                         border-radius: 8px;
+                         padding: 18px;
+                         ">
+
+                        <div style="
+                             display: flex;
+                             justify-content: space-between;
+                             margin-bottom: 8px;
+                             ">
+                            <span>Subtotal:</span>
+                            <strong id="compra-subtotal">R$ 0,00</strong>
+                        </div>
+
+                        <div style="
+                             display: flex;
+                             justify-content: space-between;
+                             align-items: center;
+                             margin-bottom: 8px;
+                             ">
+                            <span>Desconto:</span>
+                            <input
+                                type="number"
+                                id="compra-desconto"
+                                class="input-table"
+                                value="0.00"
+                                min="0"
+                                step="0.01"
+                                style="width: 110px; text-align: right;"
+                                oninput="recalcularCompraUI()">
+                        </div>
+
+                        <div style="
+                             display: flex;
+                             justify-content: space-between;
+                             align-items: center;
+                             margin-bottom: 8px;
+                             ">
+                            <span>Frete:</span>
+                            <input
+                                type="number"
+                                id="compra-frete"
+                                class="input-table"
+                                value="0.00"
+                                min="0"
+                                step="0.01"
+                                style="width: 110px; text-align: right;"
+                                oninput="recalcularCompraUI()">
+                        </div>
+
+                        <hr style="border: 0; border-top: 1px solid #3d3d4e;">
+
+                        <div style="
+                             display: flex;
+                             justify-content: space-between;
+                             font-size: 1.25rem;
+                             margin-top: 12px;
+                             ">
+                            <strong>Total:</strong>
+                            <strong id="compra-total" style="color: #2ed573;">
+                                R$ 0,00
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AÇÕES -->
+                <div style="
+                     display: flex;
+                     justify-content: flex-end;
+                     align-items: center;
+                     gap: 12px;
+                     margin-top: 20px;
+                     width: 100%;
+                     box-sizing: border-box;
+                     ">
+
+                    <button
+                        type="button"
+                        class="btn-qty"
+                        onclick="limparCompraUI()"
+                        style="
+                        width: 130px;
+                        min-width: 130px;
+                        height: 42px;
+                        padding: 0 14px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        position: relative;
+                        box-sizing: border-box;
+                        line-height: 1;
+                        white-space: nowrap;
+                        flex: 0 0 130px;
+                        ">
+                        ❌ Cancelar
+                    </button>
+
+                    <button
+                        type="button"
+                        id="btn-salvar-compra"
+                        class="btn-save-prod"
+                        onclick="salvarCompraUI()"
+                        style="
+                        width: 170px;
+                        min-width: 170px;
+                        height: 42px;
+                        padding: 0 14px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        position: relative;
+                        box-sizing: border-box;
+                        line-height: 1;
+                        white-space: nowrap;
+                        flex: 0 0 170px;
+                        ">
+                        💾 Salvar Compra
+                    </button>
+                </div>
+            </div>
+
+            <!-- COMPRAS EM ABERTO -->
+            <div style="
+                 margin-top: 30px;
+                 background: #2a2a35;
+                 border: 1px solid #3d3d4e;
+                 border-radius: 8px;
+                 padding: 20px;
+                 ">
+
+                <div style="
+                     display: flex;
+                     justify-content: space-between;
+                     align-items: center;
+                     gap: 10px;
+                     margin-bottom: 15px;
+                     ">
+                    <div>
+                        <h3 style="margin: 0 0 5px 0;">
+                            📋 Compras em Aberto
+                        </h3>
+
+                        <small style="color: #aaa;">
+                            Compras registradas que ainda aguardam recebimento.
+                        </small>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn-refresh"
+                        onclick="carregarComprasAbertasUI()">
+                        🔄 Atualizar
+                    </button>
+                </div>
+
+                <div
+                    id="compras-abertas-body"
+                    style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    "
+                    >
+                    <div style="
+                         text-align: center;
+                         color: #888;
+                         padding: 20px;
+                         ">
+                        Carregando compras...
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================
+     HISTÓRICO DE COMPRAS
+     ============================================================ -->
+
+            <div style="
+                 margin-top: 30px;
+                 background: #2a2a35;
+                 border: 1px solid #3d3d4e;
+                 border-radius: 8px;
+                 padding: 20px;
+                 ">
+
+                <div style="
+                     display: flex;
+                     justify-content: space-between;
+                     align-items: center;
+                     gap: 15px;
+                     margin-bottom: 15px;
+                     ">
+
+                    <div>
+                        <h3 style="margin: 0 0 5px 0;">
+                            📜 Histórico de Compras
+                        </h3>
+
+                        <small style="color: #aaa;">
+                            Consulte compras abertas, recebidas e canceladas.
+                        </small>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn-refresh"
+                        onclick="carregarHistoricoComprasUI()">
+                        🔄 Atualizar
+                    </button>
+
+                </div>
+
+                <!-- FILTROS -->
+
+                <div style="
+                     display: grid;
+                     grid-template-columns: 180px 180px 1fr;
+                     gap: 10px;
+                     margin-bottom: 15px;
+                     ">
+
+                    <select
+                        id="filtro-compras-status"
+                        class="input-table"
+                        onchange="carregarHistoricoComprasUI()">
+
+                        <option value="TODOS">
+                            Todos os status
+                        </option>
+
+                        <option value="ABERTA">
+                            🟡 Abertas
+                        </option>
+
+                        <option value="RECEBIDA">
+                            🟢 Recebidas
+                        </option>
+
+                        <option value="CANCELADA">
+                            🔴 Canceladas
+                        </option>
+
+                    </select>
+
+                    <select
+                        id="filtro-compras-periodo"
+                        class="input-table"
+                        onchange="carregarHistoricoComprasUI()">
+
+                        <option value="TODOS">
+                            Todo período
+                        </option>
+
+                        <option value="HOJE">
+                            Hoje
+                        </option>
+
+                        <option value="7DIAS">
+                            Últimos 7 dias
+                        </option>
+
+                        <option value="MES">
+                            Este mês
+                        </option>
+
+                    </select>
+
+                    <input
+                        type="text"
+                        id="filtro-compras-texto"
+                        class="input-table"
+                        placeholder="🔎F, NF, NC"
+                        oninput="filtrarHistoricoComprasUI()">
+                </div>
+
+                <!-- TABELA -->
+
+                <div class="table-responsive">
+
+                    <table class="products-table">
+
+                        <thead>
+                            <tr>
+                                <th>Compra</th>
+                                <th>Fornecedor</th>
+                                <th>Nota</th>
+                                <th>Data</th>
+                                <th>Itens</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="historico-compras-body">
+                            <tr>
+                                <td
+                                    colspan="8"
+                                    style="
+                                    text-align:center;
+                                    color:#888;
+                                    ">
+                                    Carregando compras...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ============================================================
+                 MODAL DETALHES DA COMPRA
+                 ============================================================ -->
+
+            <div
+                id="modal-detalhes-compra"
+                class="login-overlay"
+                style="display: none;">
+
+                <div class="login-card"
+                     style="
+                     max-width: 760px;
+                     max-height: 90vh;
+                     overflow-y: auto;
+                     ">
+
+                    <div style="
+                         display:flex;
+                         justify-content:space-between;
+                         align-items:center;
+                         gap:10px;
+                         margin-bottom:15px;
+                         ">
+
+                        <h2
+                            id="titulo-detalhes-compra"
+                            style="margin:0;">
+                            📋 Detalhes da Compra
+                        </h2>
+
+                        <button
+                            type="button"
+                            class="btn-qty"
+                            onclick="fecharDetalhesCompraUI()"
+                            style="
+                            width:40px;
+                            min-width:40px;
+                            height:40px;
+                            display:inline-flex;
+                            align-items:center;
+                            justify-content:center;
+                            line-height:1;
+                            ">
+                            ✕
+                        </button>
+                    </div>
+
+                    <div
+                        id="conteudo-detalhes-compra">
+                        Carregando...
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ABA 3: Histórico de Vendas e Relatórios -->
+        <main class="history-manager" id="aba-historico" style="display: none;">
+            <div class="manager-container">
+
+                <!-- Cartões de Métricas / Faturamento -->
+                <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px;">
+                    <div class="metric-card">
+                        <span class="metric-title">Faturamento</span>
+                        <h3 class="metric-value" id="metric-faturamento">R$ 0,00</h3>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-title">Concluídos</span>
+                        <h3 class="metric-value" id="metric-qtd-pedidos">0</h3>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-title">Ticket Médio</span>
+                        <h3 class="metric-value" id="metric-ticket-medio">R$ 0,00</h3>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-title">Itens Vendidos</span>
+                        <h3 class="metric-value" id="metric-itens-vendidos" style="color: #1e90ff;">0 un</h3>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-title">Balcão vs. Delivery</span>
+                        <h3 class="metric-value" id="metric-canais" style="color: #a29bfe; font-size: 1.1rem;">0 / 0</h3>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-title">Cancelados</span>
+                        <h3 class="metric-value" id="metric-cancelados" style="color: #ff4757;">0</h3>
+                    </div>
+                </div>
+
+                <!-- Filtros do Histórico + Botão de Impressão Único -->
+                <div class="manager-header" style="margin-top: 25px; display: flex; justify-content: space-between; align-items: center;">
+                    <h2>📜 Histórico de Pedidos</h2>
+                    <div class="history-filters" style="display: flex; gap: 10px; align-items: center;">
+                        <select id="filtro-periodo" class="input-table" onchange="carregarHistoricoVendas()">
+                            <option value="hoje">Hoje</option>
+                            <option value="7dias">Últimos 7 dias</option>
+                            <option value="mes">Este Mês</option>
+                            <option value="todos">Todos</option>
+                        </select>
+                        <button class="btn-save-prod" onclick="reimprimirPedidoSelecionado()" style="padding: 10px 16px; background: #3b82f6; color: #fff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                            🖨️ Reimprimir Selecionado
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela do Histórico -->
+                <div class="table-responsive">
+                    <table class="products-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px; text-align: center;">
+                                    <input type="checkbox" id="select-all-pedidos" onchange="toggleSelecionarTodos(this)" style="cursor: pointer; transform: scale(1.2);" title="Selecionar Todos">
+                                </th>
+                                <th>ID</th>
+                                <th>Data / Hora</th>
+                                <th>Tipo / Pagamento</th>
+                                <th>Endereço / Cliente</th>
+                                <th>Total (R$)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historico-table-body">
+                            <!-- Linhas geradas via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- ABA: Histórico de Movimentações de Estoque -->
+        <main class="history-manager" id="aba-mov-estoque" style="display: none;">
+            <div class="manager-container">
+
+                <div class="manager-header"
+                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+
+                    <h2>📦 Histórico de Movimentações de Estoque</h2>
+
+                    <button
+                        class="btn-refresh"
+                        onclick="carregarHistoricoEstoque()">
+                        🔄 Atualizar
+                    </button>
+                </div>
+
+                <!-- FILTROS -->
+                <div
+                    style="
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1fr;
+                    gap: 10px;
+                    margin-bottom: 20px;
+                    "
+                    >
+
+                    <input
+                        type="text"
+                        id="filtro-estoque-produto"
+                        class="input-table"
+                        placeholder="🔎 Filtrar por produto..."
+                        oninput="carregarHistoricoEstoque()"
+                        >
+
+                    <select
+                        id="filtro-estoque-tipo"
+                        class="input-table"
+                        onchange="carregarHistoricoEstoque()"
+                        >
+                        <option value="TODOS">Todos os tipos</option>
+                        <option value="VENDA">Venda</option>
+                        <option value="ENTRADA">Entrada</option>
+                        <option value="AJUSTE">Ajuste</option>
+                        <option value="CANCELAMENTO">Cancelamento</option>
+                    </select>
+
+                    <select
+                        id="filtro-estoque-periodo"
+                        class="input-table"
+                        onchange="carregarHistoricoEstoque()"
+                        >
+                        <option value="hoje">Hoje</option>
+                        <option value="7dias">Últimos 7 dias</option>
+                        <option value="mes">Este mês</option>
+                        <option value="todos">Todos</option>
+                    </select>
+
+                </div>
+
+                <!-- TABELA -->
+                <div class="table-responsive">
+                    <table class="products-table">
+                        <thead>
+                            <tr>
+                                <th>Data / Hora</th>
+                                <th>Produto</th>
+                                <th>Tipo</th>
+                                <th>Quantidade</th>
+                                <th>Estoque Anterior</th>
+                                <th>Estoque Posterior</th>
+                                <th>Motivo</th>
+                                <th>Pedido</th>
+                                <th>Usuário</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="historico-estoque-table-body">
+                            <tr>
+                                <td colspan="9" style="text-align: center;">
+                                    Nenhuma movimentação carregada.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- ABA 4: Configurações do Sistema e Gestão -->
+        <main class="config-manager" id="aba-config" style="display: none; padding: 20px;">
+            <div style="max-width: 900px; margin: 0 auto;">
+
+                <!-- Menu de Sub-abas -->
+                <div class="sub-tabs-nav" style="display: flex; gap: 10px; border-bottom: 2px solid #3d3d4e; padding-bottom: 10px; margin-bottom: 20px;">
+                    <button class="btn-sub-tab active" onclick="alternarSubAba('sub-caixa', this)" style="padding: 10px 18px; background: #2a2a35; color: #fff; border: 1px solid #3d3d4e; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                        💵 Operação de Caixa
+                    </button>
+                    <button class="btn-sub-tab" onclick="alternarSubAba('sub-loja', this)" style="padding: 10px 18px; background: #1e1e24; color: #aaa; border: 1px solid #3d3d4e; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                        🌐 Loja Virtual & Delivery
+                    </button>
+                    <button class="btn-sub-tab" onclick="alternarSubAba('sub-permissoes', this)" style="padding: 10px 18px; background: #1e1e24; color: #aaa; border: 1px solid #3d3d4e; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                        👥 Permissões
+                    </button>
+                </div>
+
+                <!-- CONTEÚDO SUB-ABA 1: OPERAÇÃO DE CAIXA -->
+                <div id="sub-caixa" class="sub-aba-content" style="display: block;">
+                    <div style="background: #2a2a35; padding: 20px; border-radius: 8px; border: 1px solid #3d3d4e;">
+                        <h3>💵 Status & Controle do Caixa Diário</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+                            <div style="background: #1e1e24; padding: 15px; border-radius: 6px; border-left: 4px solid #2ed573;">
+                                <span style="color: #aaa; font-size: 0.85rem; display: block;">Operador Ativo</span>
+                                <strong id="caixa-operador-nome" style="font-size: 1.1rem; color: #fff;">Não Identificado</strong>
+                            </div>
+                            <div style="background: #1e1e24; padding: 15px; border-radius: 6px; border-left: 4px solid #ffa502;">
+                                <span style="color: #aaa; font-size: 0.85rem; display: block;">Status do Turno</span>
+                                <strong id="caixa-status-texto" style="font-size: 1.1rem; color: #ffa502;">Fechado</strong>
+                            </div>
+                            <div style="background: #1e1e24; padding: 15px; border-radius: 6px; border-left: 4px solid #1e90ff;">
+                                <span style="color: #aaa; font-size: 0.85rem; display: block;">Fundo de Troco</span>
+                                <strong id="caixa-fundo-troco" style="font-size: 1.1rem; color: #fff;">R$ 0,00</strong>
+                            </div>
+                        </div>
+
+                        <div style="
+                             background: #1e1e24;
+                             padding: 15px;
+                             border-radius: 6px;
+                             border: 1px solid #3d3d4e;
+                             color: #aaa;
+                             line-height: 1.5;
+                             ">
+                            <strong style="color: #fff; display: block; margin-bottom: 6px;">
+                                ℹ️ Operação do Caixa
+                            </strong>
+
+                            <span>
+                                A abertura do caixa, definição do troco inicial,
+                                fechamento e conferência são realizados exclusivamente
+                                na aba <strong style="color: #2ed573;">Venda de Balcão</strong>.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTEÚDO SUB-ABA 2: LOJA VIRTUAL -->
+                <div id="sub-loja" class="sub-aba-content" style="display: none;">
+                    <div style="background: #2a2a35; padding: 20px; border-radius: 8px; border: 1px solid #3d3d4e;">
+                        <h3>🌐 Configurações da Loja Virtual</h3>
+                        <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                            <div class="form-group">
+                                <label>Status do Estabelecimento</label>
+                                <select id="cfg-loja-aberta" class="input-table" style="width: 100%; font-weight: bold;">
+                                    <option value="true">🟢 Loja Aberta (Recebendo Pedidos)</option>
+                                    <option value="false">🔴 Loja Fechada (Bloquear Pedidos no Site)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Valor Mínimo do Pedido (R$)</label>
+                                <input type="number" id="cfg-valor-minimo" step="1.00" min="0" class="input-table" style="width: 100%;">
+                            </div>
+
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                    <input
+                                        type="checkbox"
+                                        id="cfg-whatsapp-notificacoes"
+                                        style="width: 18px; height: 18px; cursor: pointer;"
+                                        >
+
+                                    <span>
+                                        📱 Ativar notificações de pedidos pelo WhatsApp
+                                    </span>
+                                </label>
+
+                                <small style="display: block; margin-top: 6px; color: #aaa;">
+                                    Permite que o cliente escolha receber atualizações
+                                    do pedido pelo WhatsApp.
+                                </small>
+                            </div>
+
+                            <button class="btn-save-prod" id="btn-salvar-cfg" onclick="salvarConfiguracoes()" style="padding: 12px; margin-top: 10px;">💾 Salvar Configurações</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTEÚDO SUB-ABA 3: PERMISSÕES -->
+                <div id="sub-permissoes" class="sub-aba-content" style="display: none;">
+                    <!-- Sub-aba de Gestão de Usuários e Equipe -->
+                    <div style="background: #2a2a35; padding: 20px; border-radius: 8px; border: 1px solid #3d3d4e; margin-top: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3>👥 Cadastro de Colaboradores</h3>
+                            <button onclick="abrirModalNovoUsuario()" style="padding: 8px 15px; background: #2ed573; color: #000; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">
+                                + Novo Colaborador
+                            </button>
+                        </div>
+
+                        <!-- Tabela de Usuários Cadastrados -->
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; color: #fff;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #3d3d4e; color: #aaa; font-size: 0.85rem;">
+                                    <th style="padding: 10px;">NOME</th>
+                                    <th style="padding: 10px;">CARGO</th>
+                                    <th style="padding: 10px;">PIN</th>
+                                    <th style="padding: 10px;">STATUS</th>
+                                    <th style="padding: 10px;">AÇÕES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-usuarios-tabela">
+                                <!-- Renderizado via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="background: #2a2a35; padding: 20px; border-radius: 8px; border: 1px solid #3d3d4e;">
+                        <h3>👥 Níveis de Acesso e Permissões</h3>
+                        <p style="color: #aaa; font-size: 0.85rem; margin-bottom: 20px;">Restrições de tela para operadores do tipo CAIXA/ATENDENTE:</p>
+
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <label style="display: flex; align-items: center; gap: 10px; color: #ddd; cursor: pointer;">
+                                <input type="checkbox" id="perm-ver-financas" style="transform: scale(1.2);"> Bloquear aba "Finanças"
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; color: #ddd; cursor: pointer;">
+                                <input type="checkbox" id="perm-cancelar-pedido" style="transform: scale(1.2);"> Exigir autorização do Gerente para Cancelamentos
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; color: #ddd; cursor: pointer;">
+                                <input type="checkbox" id="perm-alterar-produtos" style="transform: scale(1.2);"> Bloquear alteração de preços e cadastro de produtos
+                            </label>
+                            <button
+                                id="btn-salvar-permissoes"
+                                onclick="salvarPermissoes()"
+                                style="
+                                margin-top: 10px;
+                                padding: 12px;
+                                background: #2ed573;
+                                color: #000;
+                                font-weight: bold;
+                                border: none;
+                                border-radius: 6px;
+                                cursor: pointer;">
+                                💾 Salvar Permissões
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Área oculta reservada para geração do Cupom Térmico de Impressão -->
+        <div id="print-area"></div>
+
+        <!-- ABA: Venda de Balcão (Presencial) -->
+        <main class="config-manager" id="aba-balcao" style="display: none;">
+            <!-- PAINEL DE CONTROLE DE CAIXA -->
+            <div id="card-controle-caixa" style="background: #2a2a35; padding: 20px; border-radius: 8px; border: 1px solid #3d3d4e; margin-bottom: 25px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div>
+                        <h3 style="margin: 0; color: #fff;">📟 Status do Caixa Diário</h3>
+                        <small id="caixa-status-balcao" style="color: #aaa;">Verificando status...</small>
+                    </div>
+                    <span id="caixa-badge-status" style="padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; background: #555; color: #fff;">
+                        CARREGANDO
+                    </span>
+                </div>
+
+                <!-- PAINEL QUANDO O CAIXA ESTÁ FECHADO (Formulário de Abertura) -->
+                <div id="box-abrir-caixa" style="display: none; background: #1e1e24; padding: 15px; border-radius: 6px;">
+                    <label style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 5px;">Valor Inicial / Troco de Abertura (R$):</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" step="0.01" id="caixa-valor-inicial" placeholder="0.00" class="input-table" style="flex: 1; font-size: 1.1rem;">
+                        <button onclick="abrirCaixa()" class="btn-save-prod" style="background: #2ed573; color: #000; font-weight: bold; padding: 0 25px;">
+                            🟢 Abrir Caixa
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PAINEL QUANDO O CAIXA ESTÁ ABERTO (Informações + Fechamento) -->
+                <div id="box-fechar-caixa" style="display: none; background: #1e1e24; padding: 15px; border-radius: 6px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <small style="color: #aaa; display: block;">Troco Inicial</small>
+                            <strong id="caixa-resumo-inicial" style="font-size: 1.1rem; color: #fff;">R$ 0,00</strong>
+                        </div>
+                        <div>
+                            <small style="color: #aaa; display: block;">Entradas (Dinheiro)</small>
+                            <strong id="caixa-resumo-dinheiro" style="font-size: 1.1rem; color: #2ed573;">R$ 0,00</strong>
+                        </div>
+                        <div>
+                            <small style="color: #aaa; display: block;">Entradas (Cartão/PIX)</small>
+                            <strong id="caixa-resumo-outros" style="font-size: 1.1rem; color: #1e90ff;">R$ 0,00</strong>
+                        </div>
+
+                        <div>
+                            <small style="color: #aaa; display: block;">Saídas (Dinheiro)</small>
+                            <strong id="caixa-resumo-saidas" style="font-size: 1.1rem; color: #ff4757;">R$ 0,00</strong>
+                        </div>
+
+                        <div>
+                            <small style="color: #aaa; display: block;">Saldo Esperado em Caixa</small>
+                            <strong id="caixa-resumo-esperado" style="font-size: 1.1rem; color: #ffa502;">R$ 0,00</strong>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:15px;padding:15px;background:#1f1f1f;border-radius:10px;">
+                        <div style="font-weight:bold;margin-bottom:10px;">Movimentação de Caixa</div>
+
+                        <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;">
+                            <input
+                                id="caixa-valor-movimento"
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                placeholder="Valor"
+                                class="input-table"
+                                >
+
+                            <input
+                                id="caixa-motivo-movimento"
+                                type="text"
+                                maxlength="255"
+                                placeholder="Motivo"
+                                class="input-table"
+                                >
+                        </div>
+
+                        <div style="display:flex;gap:10px;margin-top:10px;">
+                            <button
+                                class="btn btn-success"
+                                onclick="registrarMovimentacaoCaixaUI('SUPRIMENTO')">
+                                ➕ Suprimento
+                            </button>
+
+                            <button
+                                class="btn btn-danger"
+                                onclick="registrarMovimentacaoCaixaUI('SANGRIA')">
+                                ➖ Sangria
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:15px;">
+                        <div style="font-weight:bold;margin-bottom:10px;">
+                            Histórico de Movimentações
+                        </div>
+
+                        <div style="overflow-x:auto;">
+                            <table class="tabela-padrao" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Tipo</th>
+                                        <th>Valor</th>
+                                        <th>Motivo</th>
+                                        <th>Usuário</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody id="caixa-historico-movimentacoes">
+                                    <tr>
+                                        <td colspan="5" style="text-align:center;color:#aaa;">
+                                            Carregando...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
+
+                    <div style="display: flex; gap: 10px; align-items: flex-end;">
+                        <div style="flex: 1;">
+                            <label style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 5px;">
+                                Valor Contado na Gaveta / Conferência (R$):
+                            </label>
+                            <input type="number" step="0.01" id="caixa-valor-contado" placeholder="0.00" class="input-table" style="width: 100%;">
+                        </div>
+                        <button onclick="fecharCaixa()" class="btn-save-prod" style="background: #ff4757; color: #fff; font-weight: bold; padding: 12px 20px;">
+                            🔴 Fechar e Conferir Caixa
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 380px; gap: 20px; max-width: 1200px; margin: 0 auto;">
+
+                <!-- LADO ESQUERDO: Busca + Grade de Produtos Unificada -->
+                <div>
+                    <!-- Área de Busca / Leitor de Código -->
+                    <div style="background: #2a2a35; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #3d3d4e;">
+                        <label style="font-weight: bold; font-size: 0.9rem; color: #2ed573; display: block; margin-bottom: 6px;">
+                            📟 Código do Produto ou Leitor de Código de Barras:
+                        </label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="balcao-input-codigo" 
+                                   placeholder="Bipe o código ou digite o nome..." 
+                                   class="input-table" 
+                                   style="flex: 1; font-size: 1.1rem; padding: 12px; border: 2px solid #2ed573;" 
+                                   autofocus 
+                                   oninput="filtrarProdutosBalcao(this.value)"
+                                   onkeypress="tratarEntradaLeitor(event)">
+                            <button class="btn-save-prod" onclick="processarBuscaEntrada()" style="padding: 0 20px;">➕ Adicionar</button>
+                        </div>
+                        <small style="color: #aaa; display: block; margin-top: 6px;">
+                            💡 Digite para filtrar a grade em tempo real ou bipe o código para adicionar direto.
+                        </small>
+                    </div>
+
+                    <!-- Grade Única de Produtos -->
+                    <div id="grid-balcao-produtos" style="
+                         display: grid;
+                         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                         gap: 10px;
+                         width: 100%;
+                         min-height: 200px;">
+                    </div>
+                </div>
+
+                <!-- LADO DIREITO: Caixa & Resumo da Venda -->
+                <div style="background: #1e1e24; padding: 20px; border-radius: 12px; border: 1px solid #333; display: flex; flex-direction: column;">
+                    <h3 style="margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">🛍️ Comanda do Balcão</h3>
+
+                    <div id="lista-carrinho-balcao" style="flex: 1; overflow-y: auto; max-height: 280px; margin-bottom: 15px;">
+                        <!-- Itens do carrinho -->
+                    </div>
+
+                    <div style="border-top: 1px solid #333; padding-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: bold; margin-bottom: 15px;">
+                            <span>Total:</span>
+                            <span id="balcao-total-val" style="color: #2ed573;">R$ 0,00</span>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label>Forma de Pagamento</label>
+                            <select id="balcao-pagamento" class="input-table" style="width: 100%; font-weight: bold;">
+                                <option value="PIX">⚡ PIX</option>
+                                <!--    <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
+                                        <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>   -->
+                                <option value="DINHEIRO">💵 Dinheiro</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nome do Cliente (Opcional)</label>
+                            <input type="text" id="balcao-cliente" placeholder="Ex: Cliente Balcão" class="input-table" style="width: 100%;">
+                        </div>
+
+                        <button class="btn-save-prod" id="btn-finalizar-balcao" onclick="finalizarVendaBalcao()" style="width: 100%; padding: 14px; font-size: 1.1rem; background: #2ed573; color: #000; margin-top: 10px;">
+                            ✅ Finalizar e Imprimir
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- ABA: Finanças e Lucro -->
+        <main class="config-manager" id="aba-financas" style="display: none;">
+
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;">
+
+                <label for="fin-filtro-periodo"
+                       style="color: #aaa; font-size: 0.9rem;">
+                    Período:
+                </label>
+
+                <select
+                    id="fin-filtro-periodo"
+                    class="input-table"
+                    style="width: 180px;"
+                    onchange="carregarResumoFinanceiro()"
+                    >
+                    <option value="todos">Todo o período</option>
+                    <option value="hoje">Hoje</option>
+                    <option value="7dias">Últimos 7 dias</option>
+                    <option value="mes">Este mês</option>
+                </select>
+
+            </div>
+
+            <div style="max-width: 1200px; margin: 0 auto;">
+                <!-- CARDS DE RESUMO FINANCEIRO  -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
+                        <span style="color: #aaa; font-size: 0.85rem; display: block;">Faturamento Total</span>
+                        <strong id="fin-faturamento" style="font-size: 1.4rem; color: #2ed573; display: block; margin-top: 5px;">R$ 0,00</strong>
+                    </div>
+                    <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
+
+                        <span style="color: #aaa; font-size: 0.85rem; display: block;">
+                            Custo Produtos (CMV)
+                        </span>
+
+                        <strong id="fin-cmv"
+                                style="font-size: 1.4rem; color: #ffa502; display: block; margin-top: 5px;">
+                            R$ 0,00
+                        </strong>
+
+                        <div style="margin-top: 10px; font-size: 0.75rem; line-height: 1.6; color: #aaa;">
+
+                            <div>
+                                CMV real:
+                                <strong id="fin-cmv-real" style="color: #ccc;">
+                                    R$ 0,00
+                                </strong>
+                            </div>
+
+                            <div>
+                                CMV estimado:
+                                <strong id="fin-cmv-estimado" style="color: #ccc;">
+                                    R$ 0,00
+                                </strong>
+                            </div>
+
+                        </div>
+
+                    </div>
+                    <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
+                        <span style="color: #aaa; font-size: 0.85rem; display: block;">Lucro Bruto</span>
+                        <strong id="fin-lucro-bruto" style="font-size: 1.4rem; color: #1e90ff; display: block; margin-top: 5px;">R$ 0,00</strong>
+                    </div>
+                    <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
+                        <span style="color: #aaa; font-size: 0.85rem; display: block;">Despesas</span>
+                        <strong id="fin-despesas" style="font-size: 1.4rem; color: #ff4757; display: block; margin-top: 5px;">R$ 0,00</strong>
+                    </div>
+                    <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
+                        <span style="color: #aaa; font-size: 0.85rem; display: block;">Pagamento Dominante</span>
+                        <strong id="fin-pagamento-dominante" style="font-size: 1.2rem; color: #a29bfe; display: block; margin-top: 5px;">-</strong>
+                    </div>
+                    <div style="background: #1e1e24; padding: 18px; border-radius: 8px; border: 2px solid #2ed573;">
+                        <span style="color: #aaa; font-size: 0.85rem; display: block;">Lucro Líquido Real</span>
+                        <strong id="fin-lucro" style="font-size: 1.4rem; color: #2ed573; display: block; margin-top: 5px;">R$ 0,00</strong>
+                    </div>
+                </div>
+
+                <!-- FORMULÁRIO DE NOVA DESPESA + TABELA -->
+                <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px;">
+
+                    <!-- FORMULÁRIO -->
+                    <div style="background: #2a2a35; padding: 20px; border-radius: 8px; border: 1px solid #3d3d4e; height: fit-content;">
+                        <h3 style="margin-top: 0; color: #fff; border-bottom: 1px solid #3d3d4e; padding-bottom: 10px;">💸 Lançar Despesa</h3>
+
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 4px;">Descrição</label>
+                            <input type="text" id="desp-descricao" placeholder="Ex: Aluguel, Conta de Luz..." class="input-table" style="width: 100%;">
+                        </div>
+
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 4px;">Valor (R$)</label>
+                            <input type="number" step="0.01" id="desp-valor" placeholder="0.00" class="input-table" style="width: 100%;">
+                        </div>
+
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 4px;">Categoria</label>
+                            <select id="desp-categoria" class="input-table" style="width: 100%;">
+                                <option value="FIXA">Fixa (Aluguel, Salários...)</option>
+                                <option value="VARIÁVEL">Variável (Embalagens, Fretes...)</option>
+                                <option value="FORNECEDOR">Fornecedor / Insumos</option>
+                                <option value="IMPOSTOS">Impostos e Taxas</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 4px;">Vencimento</label>
+                            <input type="date" id="desp-vencimento" class="input-table" style="width: 100%;">
+                        </div>
+
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 4px;">
+                                Forma de Pagamento
+                            </label>
+
+                            <select id="desp-forma-pagamento" class="input-table" style="width: 100%;">
+                                <option value="DINHEIRO">Dinheiro</option>
+                                <option value="PIX">PIX</option>
+                                <option value="CARTAO">Cartão</option>
+                                <option value="TRANSFERENCIA">Transferência</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="desp-pago" style="width: 18px; height: 18px; cursor: pointer;">
+                            <label for="desp-pago" style="font-size: 0.9rem; cursor: pointer;">Já está pago?</label>
+                        </div>
+
+                        <button onclick="salvarDespesa()" class="btn-save-prod" style="width: 100%; padding: 12px; font-weight: bold; background: #2ed573; color: #000;">
+                            💾 Registrar Despesa
+                        </button>
+                    </div>
+
+                    <!-- TABELA DE DESPESAS -->
+                    <div style="background: #2a2a35; padding: 20px; border-radius: 8px; border: 1px solid #3d3d4e;">
+                        <h3 style="margin-top: 0; color: #fff; border-bottom: 1px solid #3d3d4e; padding-bottom: 10px;">📋 Histórico de Saídas</h3>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <table class="products-table" style="width: 100%; font-size: 0.88rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Descrição</th>
+                                        <th>Categoria</th>
+                                        <th>Vencimento</th>
+                                        <th>Valor</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-despesas">
+                                    <!-- Preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HISTÓRICO DE CAIXAS FECHADOS -->
+                <div style="
+                     background: #2a2a35;
+                     padding: 20px;
+                     border-radius: 8px;
+                     border: 1px solid #3d3d4e;
+                     margin-top: 20px;
+                     ">
+
+                    <div style="
+                         display: flex;
+                         justify-content: space-between;
+                         align-items: center;
+                         margin-bottom: 15px;
+                         ">
+                        <h3 style="
+                            margin: 0;
+                            color: #fff;
+                            ">
+                            🧾 Histórico de Caixas Fechados
+                        </h3>
+
+                        <div style="
+                             display:flex;
+                             gap:10px;
+                             align-items:center;
+                             ">
+
+                            <select
+                                id="filtro-periodo-caixas"
+                                class="input-table"
+                                onchange="carregarHistoricoCaixas()"
+                                style="
+                                min-width:150px;
+                                padding:8px 10px;
+                                "
+                                >
+                                <option value="todos">Todo o período</option>
+                                <option value="hoje">Hoje</option>
+                                <option value="7dias">Últimos 7 dias</option>
+                                <option value="mes">Este mês</option>
+                            </select>
+
+                            <button
+                                onclick="carregarHistoricoCaixas()"
+                                class="btn-save-prod"
+                                style="
+                                padding:8px 15px;
+                                background:#1e90ff;
+                                color:#fff;
+                                ">
+                                🔄 Atualizar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x:auto;">
+                        <table class="products-table"
+                               style="width:100%;font-size:0.88rem;">
+
+                            <thead>
+                                <tr>
+                                    <th>Caixa</th>
+                                    <th>Abertura</th>
+                                    <th>Fechamento</th>
+                                    <th>Saldo Inicial</th>
+                                    <th>Entradas Dinheiro</th>
+                                    <th>Entradas Outras</th>
+                                    <th>Saídas</th>
+                                    <th>Esperado</th>
+                                    <th>Informado</th>
+                                    <th>Diferença</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="historico-caixas-body">
+                                <tr>
+                                    <td colspan="10"
+                                        style="text-align:center;color:#aaa;">
+                                        Carregando...
+                                    </td>
+                                </tr>
+                            </tbody>
+
+                        </table>
+                    </div>
+
+                    <!-- DETALHAMENTO DO CAIXA SELECIONADO -->
+                    <div
+                        id="detalhes-caixa"
+                        style="
+                        display:none;
+                        margin-top:20px;
+                        background:#1e1e24;
+                        padding:22px;
+                        border-radius:8px;
+                        border:1px solid #3d3d4e;
+                        "
+                        >
+                        <div style="
+                             display:flex;
+                             justify-content:space-between;
+                             align-items:center;
+                             margin-bottom:18px;
+                             ">
+                            <h3 id="detalhes-caixa-titulo"
+                                style="margin:0;color:#fff;">
+                                🧾 Detalhamento do Caixa
+                            </h3>
+
+                            <button
+                                onclick="fecharDetalhesCaixa()"
+                                class="btn-save-prod"
+                                style="
+                                padding:8px 15px;
+                                background:#555;
+                                color:#fff;
+                                ">
+                                ✖ Fechar
+                            </button>
+                        </div>
+
+                        <div
+                            id="detalhes-caixa-conteudo"
+                            style="color:#fff;"
+                            >
+                            Carregando...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Tela de Login Sobreposta -->
+        <div id="login-overlay" class="login-overlay">
+            <div class="login-card">
+                <h2>🔒 Acesso Restrito - PDV</h2>
+                <p>Informe suas credenciais para gerenciar a loja.</p>
+
+                <div class="form-group">
+                    <label>E-mail</label>
+                    <input type="email" id="login-email" placeholder="caixa@docesetravessuras.com" class="input-table">
+                </div>
+
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="login-senha" placeholder="••••••••" class="input-table" onkeypress="if (event.key === 'Enter')
+                                fazerLogin()">
+                </div>
+
+                <p id="login-erro" class="login-erro"></p>
+
+                <button id="btn-entrar" onclick="fazerLogin()" class="btn-save-prod" style="width: 100%; margin-top: 10px;">Entrar no Sistema</button>
+            </div>
+        </div>
+
+        <!-- Aba / Modal de Pagamento com PIX -->
+        <main class="config-manager" id="aba-pix" style="display: none;">
+            <div id="modal-pix-impressao" class="login-overlay" style="display: flex;">
+                <div class="login-card" style="max-width: 420px; text-align: center; background: #1e1e24; border: 1px solid #3d3d4e;">
+
+                    <!-- ETAPA 1: FORMULÁRIO PARA DIGITAR OS DADOS -->
+                    <div id="box-form-pix" style="text-align: left; padding: 10px;">
+                        <h3 style="margin: 0 0 15px 0; color: #32bcad; text-align: center;">⚡ Gerar QR Code PIX</h3>
+
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label style="color: #aaa; font-size: 0.85rem;">Chave PIX *</label>
+                            <input type="text" id="input-pix-chave" class="input-table" placeholder="CPF, CNPJ, E-mail ou Telefone" style="width: 100%;" value="suachavepix@email.com">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label style="color: #aaa; font-size: 0.85rem;">Nome do Beneficiário *</label>
+                            <input type="text" id="input-pix-nome" class="input-table" placeholder="Ex: Doces e Travessuras" style="width: 100%;" value="Doces e Travessuras">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="color: #aaa; font-size: 0.85rem;">Valor da Cobrança (R$) *</label>
+                            <input type="number" step="0.01" id="input-pix-valor" class="input-table" placeholder="0.00" style="width: 100%; font-size: 1.1rem; color: #2ed573; font-weight: bold;">
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button type="button" onclick="fecharModalPix()" class="btn-qty" style="flex: 1; background: #555;">Cancelar</button>
+                            <button type="button" onclick="processarEExibirPix()" class="btn-save-prod" style="flex: 2; background: #32bcad; color: #fff; font-weight: bold;">
+                                ✨ Gerar Placa PIX
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ETAPA 2: PLACA GERADA -->
+                    <div id="box-resultado-pix" style="display: none;">
+                        <div id="area-impressao-pix" style="padding: 20px; background: #ffffff; color: #000; border-radius: 8px;">
+                            <h2 style="margin: 0 0 5px 0; color: #32bcad;">❖ Pagamento via PIX</h2>
+                            <p style="font-size: 0.85rem; color: #555;">Escaneie o QR Code abaixo no app do seu banco</p>
+
+                            <img id="pix-img-qrcode" src="" alt="QR Code PIX" style="width: 190px; height: 190px; margin: 10px auto; display: block;">
+
+                            <!-- ADICIONADO: pix-ocultar-impressao (Soma no PDF) -->
+                            <div class="pix-ocultar-impressao" style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 8px;">
+                                <small style="color: #666; display: block; font-size: 0.75rem;">CHAVE PIX:</small>
+                                <strong id="pix-exibir-chave" style="font-size: 0.95rem; color: #000; word-break: break-all;">-</strong>
+                            </div>
+
+                            <!-- ADICIONADO: pix-ocultar-impressao (Soma no PDF) -->
+                            <div class="pix-ocultar-impressao" style="margin-top: 6px;">
+                                <small style="color: #666; display: block; font-size: 0.75rem;">BENEFICIÁRIO:</small>
+                                <strong id="pix-exibir-nome" style="font-size: 0.9rem; color: #333;">-</strong>
+                            </div>
+
+                            <div id="pix-box-valor-pedido" style="margin-top: 10px; background: #f0f0f0; padding: 6px; border-radius: 6px;">
+                                <small style="color: #666; display: block; font-size: 0.75rem;">VALOR TOTAL:</small>
+                                <strong id="pix-exibir-valor" style="font-size: 1.2rem; color: #2ed573;">R$ 0,00</strong>
+                            </div>
+                        </div>
+
+                        <!-- BOTÕES (Aparecem apenas na tela) -->
+                        <div style="display: flex; gap: 10px; margin-top: 15px;" class="no-print">
+                            <button type="button" onclick="voltarParaFormularioPix()" class="btn-qty" style="flex: 1; background: #555;">✏️ Editar</button>
+                            <button type="button" onclick="imprimirPix()" class="btn-save-prod" style="flex: 2; background: #32bcad; color: #fff;">
+                                🖨️ Salvar PDF / Imprimir
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+
+        <!-- Modal de Cadastro de Colaborador -->
+        <div id="modal-usuario" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;">
+            <div style="background: #2a2a35; padding: 25px; border-radius: 8px; width: 100%; max-width: 420px; border: 1px solid #3d3d4e;">
+                <h3 style="margin-bottom: 15px; color: #fff;">👤 Cadastrar Colaborador</h3>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div>
+                        <label style="color: #aaa; font-size: 0.85rem;">Nome Completo</label>
+                        <input type="text" id="usr-nome" placeholder="Ex: João Silva" class="input-table" style="width: 100%; margin-top: 4px;">
+                    </div>
+                    <div>
+                        <label style="color: #aaa; font-size: 0.85rem;">E-mail</label>
+                        <input
+                            type="email"
+                            id="usr-email"
+                            required
+                            placeholder="joao@loja.com"
+                            class="input-table"
+                            style="width: 100%; margin-top: 4px;"
+                            >
+                        <div>
+                            <label style="color: #aaa; font-size: 0.85rem;">
+                                Senha de Login
+                            </label>
+                            <input
+                                type="password"
+                                id="usr-senha"
+                                minlength="6"
+                                autocomplete="new-password"
+                                placeholder="Senha para entrar no PDV"
+                                class="input-table"
+                                style="width: 100%; margin-top: 4px;"
+                                >
+                        </div>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; font-size: 0.85rem;">Cargo / Funçao</label>
+                        <select id="usr-cargo" class="input-table" style="width: 100%; margin-top: 4px;">
+                            <option value="OPERADOR">Operador de Caixa</option>
+                            <option value="ATENDENTE">Atendente / Balcão</option>
+                            <option value="ENTREGADOR">Entregador</option>
+                            <option value="GERENTE">Gerente / Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; font-size: 0.85rem;">PIN de Acesso (4 a 6 números)</label>
+                        <input type="password" id="usr-pin" maxlength="6" placeholder="Ex: 1234" class="input-table" style="width: 100%; margin-top: 4px;">
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button onclick="fecharModalNovoUsuario()" style="flex: 1; padding: 10px; background: #3d3d4e; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
+                        <button onclick="salvarNovoUsuario()" style="flex: 1; padding: 10px; background: #2ed573; color: #000; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="js/pdv.js"></script>
+    </body>
+</html>
