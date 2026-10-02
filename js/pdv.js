@@ -108,6 +108,1134 @@ async function obterUsuarioAtual() {
     }
 }
 
+// ============================================================
+// CONTAS A RECEBER - CARREGAMENTO E LISTAGEM
+// ============================================================
+async function carregarContasReceberUI() {
+
+    const tbody =
+            document.getElementById(
+                    'contas-receber-table-body'
+                    );
+
+    if (!tbody) {
+        return;
+    }
+
+    const busca =
+            document.getElementById(
+                    'fin-ar-busca'
+                    )?.value
+            ?.trim()
+            || '';
+
+    const status =
+            document.getElementById(
+                    'fin-ar-status'
+                    )?.value
+            || 'TODOS';
+
+    tbody.innerHTML = `
+        <tr>
+            <td
+                colspan="8"
+                style="
+                    text-align:center;
+                    color:#aaa;
+                    padding:20px;
+                "
+            >
+                ⏳ Carregando contas a receber...
+            </td>
+        </tr>
+    `;
+
+    try {
+
+        // ----------------------------------------------------
+        // LISTAGEM
+        // ----------------------------------------------------
+        const {
+            data: contas,
+            error: erroContas
+        } = await _supabase.rpc(
+                'listar_contas_receber_admin',
+                {
+                    p_busca: busca || null,
+                    p_status: status
+                }
+        );
+
+        if (erroContas) {
+            throw erroContas;
+        }
+
+        // ----------------------------------------------------
+        // RESUMO
+        // ----------------------------------------------------
+        const {
+            data: resumo,
+            error: erroResumo
+        } = await _supabase.rpc(
+                'resumo_contas_receber_admin'
+                );
+
+        if (erroResumo) {
+            throw erroResumo;
+        }
+
+// ----------------------------------------------------
+// ATUALIZA INDICADORES
+// O RPC retorna uma lista com uma única linha.
+// ----------------------------------------------------
+
+        const resumoLinha =
+                Array.isArray(resumo)
+                ? (resumo[0] || {})
+                : (resumo || {});
+
+        const quantidadeContasAbertas =
+                Number(
+                        resumoLinha.quantidade_contas_abertas || 0
+                        );
+
+        const valorAberto =
+                Number(
+                        resumoLinha.total_em_aberto || 0
+                        );
+
+        const valorVencido =
+                Number(
+                        resumoLinha.total_vencido || 0
+                        );
+
+        const valorRecebido =
+                Number(
+                        resumoLinha.total_recebido || 0
+                        );
+
+        const elemAberto =
+                document.getElementById(
+                        'fin-ar-total-aberto'
+                        );
+
+        const elemVencido =
+                document.getElementById(
+                        'fin-ar-total-vencido'
+                        );
+
+        const elemRecebido =
+                document.getElementById(
+                        'fin-ar-total-recebido'
+                        );
+
+        if (elemAberto) {
+            elemAberto.innerText =
+                    `R$ ${valorAberto.toFixed(2).replace('.', ',')}`;
+        }
+
+        if (elemVencido) {
+            elemVencido.innerText =
+                    `R$ ${valorVencido.toFixed(2).replace('.', ',')}`;
+        }
+
+        if (elemRecebido) {
+            elemRecebido.innerText =
+                    `R$ ${valorRecebido.toFixed(2).replace('.', ',')}`;
+        }
+
+        // ----------------------------------------------------
+        // NENHUMA CONTA
+        // ----------------------------------------------------
+        if (!contas || contas.length === 0) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td
+                        colspan="8"
+                        style="
+                            text-align:center;
+                            color:#aaa;
+                            padding:25px;
+                        "
+                    >
+                        📭 Nenhuma conta encontrada.
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        // ----------------------------------------------------
+        // FORMATAÇÃO
+        // ----------------------------------------------------
+        const dinheiro = valor =>
+                `R$ ${Number(valor || 0)
+                    .toFixed(2)
+                    .replace('.', ',')}`;
+
+        const dataBR = valor => {
+
+            if (!valor) {
+                return '-';
+            }
+
+            const partes =
+                    String(valor)
+                    .substring(0, 10)
+                    .split('-');
+
+            if (partes.length !== 3) {
+                return valor;
+            }
+
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        };
+
+        const escaparHTML = valor =>
+            String(valor ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+
+        // ----------------------------------------------------
+        // RENDERIZA TABELA
+        // ----------------------------------------------------
+        tbody.innerHTML = contas.map(conta => {
+
+            const cliente =
+                    escaparHTML(
+                            conta.cliente_nome || 'Sem nome'
+                            );
+
+            const pedido =
+                    Number(conta.pedido_id || 0);
+
+            const valorTotal =
+                    dinheiro(conta.valor_total);
+
+            const valorPago =
+                    dinheiro(conta.valor_pago);
+
+            const saldo =
+                    dinheiro(conta.saldo_aberto);
+
+            const vencimento =
+                    dataBR(conta.data_vencimento);
+
+            const statusAtual =
+                    String(conta.status || '')
+                    .toUpperCase();
+
+            let statusTexto = statusAtual;
+            let statusCor = '#aaa';
+
+            if (statusAtual === 'PENDENTE') {
+                statusTexto = 'PENDENTE';
+                statusCor = '#ffa502';
+            } else if (statusAtual === 'VENCIDA') {
+                statusTexto = 'VENCIDA';
+                statusCor = '#ff4757';
+            } else if (statusAtual === 'PAGA') {
+                statusTexto = 'PAGA';
+                statusCor = '#2ed573';
+            } else if (statusAtual === 'CANCELADA') {
+                statusTexto = 'CANCELADA';
+                statusCor = '#777';
+            }
+
+            let acao = '-';
+
+
+            if (
+                    statusAtual === 'PENDENTE' ||
+                    statusAtual === 'VENCIDA'
+                    ) {
+
+                acao = `
+                    <button
+                        onclick="abrirRecebimentoContaUI(${Number(conta.id)})"
+                        style="
+                            border:1px solid #2ed573;
+                            background:#2ed57322;
+                            color:#2ed573;
+                            border-radius:5px;
+                            padding:6px 10px;
+                            cursor:pointer;
+                            font-weight:bold;
+                        "
+                    >
+                        💰 Receber
+                    </button>
+                `;
+            }
+
+            return `
+                <tr>
+
+                    <td>
+                        <strong>
+                            ${cliente}
+                        </strong>
+                    </td>
+
+                    <td>
+                        #${pedido}
+                    </td>
+
+                    <td>
+                        ${valorTotal}
+                    </td>
+
+                    <td>
+                        ${valorPago}
+                    </td>
+
+                    <td
+                        style="
+                            font-weight:bold;
+                            color:${
+                    Number(conta.saldo_aberto || 0) > 0
+                    ? '#ffa502'
+                    : '#2ed573'
+                    };
+                        "
+                    >
+                        ${saldo}
+                    </td>
+
+                    <td>
+                        ${vencimento}
+                    </td>
+
+                    <td>
+                        <span
+                            style="
+                                color:${statusCor};
+                                font-weight:bold;
+                            "
+                        >
+                            ${statusTexto}
+                        </span>
+                    </td>
+
+                    <td>
+                        ${acao}
+                    </td>
+
+                </tr>
+            `;
+
+        }).join('');
+
+    } catch (err) {
+
+        console.error(
+                'Erro ao carregar contas a receber:',
+                err
+                );
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="8"
+                    style="
+                        text-align:center;
+                        color:#ff4757;
+                        padding:20px;
+                    "
+                >
+                    ❌ Erro ao carregar Contas a Receber:
+                    ${escaparTextoSeguro(err?.message || err)}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// ============================================================
+// LIMPA FILTROS
+// ============================================================
+function limparFiltrosContasReceberUI() {
+
+    const busca =
+            document.getElementById(
+                    'fin-ar-busca'
+                    );
+
+    const status =
+            document.getElementById(
+                    'fin-ar-status'
+                    );
+
+    if (busca) {
+        busca.value = '';
+    }
+
+    if (status) {
+        status.value = 'TODOS';
+    }
+
+    carregarContasReceberUI();
+}
+
+// ============================================================
+// AUXILIAR DE SEGURANÇA PARA MENSAGENS DE ERRO
+// ============================================================
+function escaparTextoSeguro(valor) {
+
+    return String(valor ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+}
+
+// ============================================================
+// PLACEHOLDER DO PRÓXIMO PASSO
+// ============================================================
+async function abrirRecebimentoContaUI(contaId) {
+
+    const id = Number(contaId);
+
+    if (!Number.isInteger(id) || id <= 0) {
+        alert('❌ Conta a receber inválida.');
+        return;
+    }
+
+    try {
+
+        // ====================================================
+        // BUSCA A CONTA ATUALIZADA NO BANCO
+        // ====================================================
+        const {
+            data: contas,
+            error
+        } = await _supabase.rpc(
+                'listar_contas_receber_admin',
+                {
+                    p_busca: null,
+                    p_status: 'TODOS'
+                }
+        );
+
+        if (error) {
+            throw error;
+        }
+
+        const conta =
+                (contas || []).find(
+                c => Number(c.id) === id
+        );
+
+        if (!conta) {
+            alert(
+                    '⚠️ Esta conta não foi encontrada ou já não está disponível.'
+                    );
+
+            return;
+        }
+
+        const saldo =
+                Number(
+                        conta.saldo_aberto || 0
+                        );
+
+        if (saldo <= 0 || conta.status === 'PAGA') {
+            alert('ℹ️ Esta conta já está paga.');
+            return;
+        }
+
+        // ====================================================
+        // REMOVE MODAL ANTERIOR
+        // ====================================================
+        const modalAntigo =
+                document.getElementById(
+                        'modal-recebimento-conta'
+                        );
+
+        if (modalAntigo) {
+            modalAntigo.remove();
+        }
+
+        // ====================================================
+        // FORMATAÇÃO
+        // ====================================================
+        const dinheiro =
+                Number(saldo)
+                .toFixed(2)
+                .replace('.', ',');
+
+        const valorTotal =
+                Number(conta.valor_total || 0)
+                .toFixed(2)
+                .replace('.', ',');
+
+        const valorPago =
+                Number(conta.valor_pago || 0)
+                .toFixed(2)
+                .replace('.', ',');
+
+        const vencimento =
+                conta.data_vencimento
+                ? String(conta.data_vencimento)
+                .substring(0, 10)
+                .split('-')
+                .reverse()
+                .join('/')
+                : '-';
+
+        // ====================================================
+        // CRIA MODAL
+        // ====================================================
+        const modal =
+                document.createElement('div');
+
+        modal.id =
+                'modal-recebimento-conta';
+
+        modal.className =
+                'login-overlay';
+
+        modal.style.display =
+                'flex';
+
+        modal.innerHTML = `
+
+            <div
+                class="login-card"
+                style="
+                    width: 100%;
+                    max-width: 520px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                "
+            >
+
+                <!-- CABEÇALHO -->
+
+                <div
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:15px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <h2
+                        style="
+                            margin:0;
+                            color:#fff;
+                        "
+                    >
+                        💰 Receber Conta
+                    </h2>
+
+                    <button
+                        type="button"
+                        onclick="fecharRecebimentoContaUI()"
+                        style="
+                            background:none;
+                            border:none;
+                            color:#aaa;
+                            font-size:1.4rem;
+                            cursor:pointer;
+                        "
+                    >
+                        ✖
+                    </button>
+
+                </div>
+
+                <!-- CLIENTE -->
+
+                <div
+                    style="
+                        background:#1e1e24;
+                        border:1px solid #3d3d4e;
+                        border-radius:8px;
+                        padding:15px;
+                        margin-bottom:15px;
+                    "
+                >
+
+                    <div
+                        style="
+                            color:#aaa;
+                            font-size:0.8rem;
+                            margin-bottom:4px;
+                        "
+                    >
+                        CLIENTE
+                    </div>
+
+                    <strong
+                        style="
+                            color:#fff;
+                            font-size:1.1rem;
+                        "
+                    >
+                        ${escaparTextoSeguro(conta.cliente_nome || 'Sem nome')}
+                    </strong>
+
+                    <div
+                        style="
+                            color:#aaa;
+                            margin-top:6px;
+                            font-size:0.85rem;
+                        "
+                    >
+                        ${conta.cliente_documento
+                ? 'CPF: ' + escaparTextoSeguro(conta.cliente_documento)
+                : ''
+                }
+
+                        ${conta.cliente_telefone
+                ? (
+                        conta.cliente_documento
+                        ? ' • '
+                        : ''
+                        ) +
+                'Tel: ' +
+                escaparTextoSeguro(conta.cliente_telefone)
+                : ''
+                }
+                    </div>
+
+                </div>
+
+                <!-- DADOS DA CONTA -->
+
+                <div
+                    style="
+                        display:grid;
+                        grid-template-columns:repeat(2, 1fr);
+                        gap:10px;
+                        margin-bottom:18px;
+                    "
+                >
+
+                    <div
+                        style="
+                            background:#1e1e24;
+                            border:1px solid #3d3d4e;
+                            border-radius:8px;
+                            padding:12px;
+                        "
+                    >
+                        <span
+                            style="
+                                display:block;
+                                color:#aaa;
+                                font-size:0.8rem;
+                            "
+                        >
+                            Pedido
+                        </span>
+
+                        <strong
+                            style="
+                                display:block;
+                                margin-top:4px;
+                                color:#fff;
+                            "
+                        >
+                            #${Number(conta.pedido_id || 0)}
+                        </strong>
+                    </div>
+
+                    <div
+                        style="
+                            background:#1e1e24;
+                            border:1px solid #3d3d4e;
+                            border-radius:8px;
+                            padding:12px;
+                        "
+                    >
+                        <span
+                            style="
+                                display:block;
+                                color:#aaa;
+                                font-size:0.8rem;
+                            "
+                        >
+                            Vencimento
+                        </span>
+
+                        <strong
+                            style="
+                                display:block;
+                                margin-top:4px;
+                                color:#fff;
+                            "
+                        >
+                            ${vencimento}
+                        </strong>
+                    </div>
+
+                </div>
+
+                <!-- RESUMO FINANCEIRO -->
+
+                <div
+                    style="
+                        background:#2a2a35;
+                        border:1px solid #3d3d4e;
+                        border-radius:8px;
+                        padding:15px;
+                        margin-bottom:18px;
+                    "
+                >
+
+                    <div
+                        style="
+                            display:flex;
+                            justify-content:space-between;
+                            margin-bottom:8px;
+                        "
+                    >
+                        <span style="color:#aaa;">
+                            Valor da conta
+                        </span>
+
+                        <strong style="color:#fff;">
+                            R$ ${valorTotal}
+                        </strong>
+                    </div>
+
+                    <div
+                        style="
+                            display:flex;
+                            justify-content:space-between;
+                            margin-bottom:10px;
+                        "
+                    >
+                        <span style="color:#aaa;">
+                            Já pago
+                        </span>
+
+                        <strong style="color:#2ed573;">
+                            R$ ${valorPago}
+                        </strong>
+                    </div>
+
+                    <hr
+                        style="
+                            border:0;
+                            border-top:1px solid #3d3d4e;
+                            margin:10px 0;
+                        "
+                    >
+
+                    <div
+                        style="
+                            display:flex;
+                            justify-content:space-between;
+                            font-size:1.15rem;
+                        "
+                    >
+
+                        <strong style="color:#fff;">
+                            Saldo a receber
+                        </strong>
+
+                        <strong style="color:#ffa502;">
+                            R$ ${dinheiro}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+                <!-- VALOR -->
+
+                <div
+                    style="
+                        margin-bottom:15px;
+                    "
+                >
+
+                    <label
+                        style="
+                            display:block;
+                            color:#aaa;
+                            font-size:0.85rem;
+                            margin-bottom:6px;
+                        "
+                    >
+                        Valor do recebimento
+                    </label>
+
+                    <input
+                        type="text"
+                        id="fin-ar-valor-recebimento"
+                        value="R$ ${dinheiro}"
+                        readonly
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:12px;
+                            font-size:1.15rem;
+                            font-weight:bold;
+                            color:#ffa502;
+                            background:#1e1e24;
+                            border:1px solid #3d3d4e;
+                            border-radius:6px;
+                        "
+                    >
+
+                </div>
+
+                <!-- FORMA DE PAGAMENTO -->
+
+                <div
+                    style="
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <label
+                        style="
+                            display:block;
+                            color:#aaa;
+                            font-size:0.85rem;
+                            margin-bottom:6px;
+                        "
+                    >
+                        Forma de pagamento
+                    </label>
+
+                    <select
+                        id="fin-ar-forma-recebimento"
+                        class="input-table"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                        "
+                    >
+
+                        <option value="DINHEIRO">
+                            💵 Dinheiro
+                        </option>
+
+                        <option value="PIX">
+                            📱 PIX
+                        </option>
+
+                        <option value="CARTAO_DEBITO">
+                            💳 Cartão de Débito
+                        </option>
+
+                        <option value="CARTAO_CREDITO">
+                            💳 Cartão de Crédito
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- AVISO -->
+
+                <div
+                    style="
+                        background:#ffa50215;
+                        border:1px solid #ffa50255;
+                        border-radius:8px;
+                        padding:12px;
+                        margin-bottom:20px;
+                        color:#ffd166;
+                        font-size:0.85rem;
+                    "
+                >
+                    ⚠️ Nesta etapa nenhum valor foi alterado.
+                    O recebimento será confirmado somente ao clicar
+                    em <strong>Confirmar Recebimento</strong>.
+                </div>
+
+                <!-- BOTÕES -->
+
+                <div
+                    style="
+                        display:flex;
+                        justify-content:flex-end;
+                        gap:10px;
+                    "
+                >
+
+                    <button
+                        type="button"
+                        onclick="fecharRecebimentoContaUI()"
+                        style="
+                            padding:11px 18px;
+                            background:#555;
+                            color:#fff;
+                            border:none;
+                            border-radius:6px;
+                            cursor:pointer;
+                        "
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+    type="button"
+    id="btn-confirmar-recebimento"
+    onclick="confirmarRecebimentoContaUI(${id})"
+    style="
+        padding:11px 18px;
+        background:#2ed573;
+        color:#fff;
+        border:none;
+        border-radius:6px;
+        font-weight:bold;
+        opacity:1;
+        cursor:pointer;
+    "
+>
+    ✅ Confirmar Recebimento
+</button>
+
+                </div>
+
+            </div>
+
+        `;
+
+        document.body.appendChild(modal);
+
+        // ====================================================
+        // FECHAR CLICANDO FORA
+        // ====================================================
+        modal.addEventListener(
+                'click',
+                function (event) {
+
+                    if (event.target === modal) {
+                        fecharRecebimentoContaUI();
+                    }
+
+                }
+        );
+
+    } catch (err) {
+
+        console.error(
+                'Erro ao abrir recebimento:',
+                err
+                );
+
+        alert(
+                '❌ Não foi possível abrir o recebimento:\\n\\n' +
+                (err?.message || err)
+                );
+    }
+}
+
+// ============================================================
+// FECHA MODAL
+// ============================================================
+function fecharRecebimentoContaUI() {
+
+    const modal =
+            document.getElementById(
+                    'modal-recebimento-conta'
+                    );
+
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// ============================================================
+// RECEBIMENTO DE CONTA A RECEBER
+// ============================================================
+async function confirmarRecebimentoContaUI(contaId) {
+
+    const id = Number(contaId);
+
+    if (!Number.isInteger(id) || id <= 0) {
+        alert('❌ Conta inválida.');
+        return;
+    }
+
+    const campoValor =
+            document.getElementById('fin-ar-valor-recebimento');
+
+    const campoForma =
+            document.getElementById('fin-ar-forma-recebimento');
+
+    if (!campoValor || !campoForma) {
+        alert('❌ Dados do recebimento não encontrados.');
+        return;
+    }
+
+    const valor = Number(
+            String(campoValor.value || '')
+            .replace('R$', '')
+            .replace(/\./g, '')
+            .replace(',', '.')
+            .trim()
+            );
+
+    const formaPagamento =
+            String(campoForma.value || '')
+            .toUpperCase()
+            .trim();
+
+    if (!Number.isFinite(valor) || valor <= 0) {
+        alert('⚠️ Valor de recebimento inválido.');
+        return;
+    }
+
+    if (
+            ![
+                'DINHEIRO',
+                'PIX',
+                'CARTAO_DEBITO',
+                'CARTAO_CREDITO'
+            ].includes(formaPagamento)
+            ) {
+        alert('⚠️ Selecione uma forma de pagamento válida.');
+        return;
+    }
+
+    const confirmar = confirm(
+            `💰 Confirmar recebimento da conta #${id}?\n\n` +
+            `Valor: R$ ${valor.toFixed(2).replace('.', ',')}\n` +
+            `Forma: ${formaPagamento}`
+            );
+
+    if (!confirmar) {
+        return;
+    }
+
+    const botao =
+            document.getElementById('btn-confirmar-recebimento');
+
+    if (botao) {
+        botao.disabled = true;
+        botao.style.opacity = '0.6';
+        botao.style.cursor = 'wait';
+        botao.innerText = '⏳ Processando...';
+    }
+
+    try {
+
+        const {
+            data,
+            error
+        } = await _supabase.rpc(
+                'receber_conta_receber_admin',
+                {
+                    p_conta_id: id,
+                    p_valor: valor,
+                    p_forma_pagamento: formaPagamento
+                }
+        );
+
+        if (error) {
+            console.error(
+                    'Erro ao receber conta:',
+                    error
+                    );
+
+            const mensagem =
+                    error.message || '';
+
+            if (mensagem.includes('CAIXA_NAO_ABERTO')) {
+
+                alert(
+                        '⚠️ Para recebimento em DINHEIRO, é necessário existir um caixa aberto.'
+                        );
+
+            } else if (
+                    mensagem.includes('VALOR_INVALIDO')
+                    ) {
+
+                alert(
+                        '⚠️ O valor informado não confere com o saldo da conta.'
+                        );
+
+            } else if (
+                    mensagem.includes('ALREADY_PAGA')
+                    ) {
+
+                alert(
+                        '⚠️ Esta conta já foi paga.'
+                        );
+
+            } else if (
+                    mensagem.includes('CANCELADA')
+                    ) {
+
+                alert(
+                        '⚠️ Esta conta está cancelada.'
+                        );
+
+            } else {
+
+                alert(
+                        '❌ Não foi possível receber a conta:\n\n' +
+                        mensagem
+                        );
+            }
+
+            return;
+        }
+
+        if (!data?.sucesso) {
+            throw new Error(
+                    'O banco não confirmou o recebimento.'
+                    );
+        }
+
+        fecharRecebimentoContaUI();
+
+        alert(
+                `✅ Conta #${id} recebida com sucesso!\n\n` +
+                `Valor: R$ ${valor.toFixed(2).replace('.', ',')}\n` +
+                `Forma: ${formaPagamento}`
+                );
+
+        await carregarContasReceberUI();
+
+        if (
+                typeof caixaAtual !== 'undefined' &&
+                caixaAtual &&
+                caixaAtual.status === 'ABERTO'
+                ) {
+            await exibirPainelCaixaAberto();
+        }
+
+    } catch (err) {
+
+        console.error(
+                'Exceção ao receber conta:',
+                err
+                );
+
+        alert(
+                '❌ Erro ao receber conta:\n\n' +
+                (err.message || err)
+                );
+
+    } finally {
+
+        if (botao) {
+            botao.disabled = false;
+            botao.style.opacity = '1';
+            botao.style.cursor = 'pointer';
+            botao.innerText = '✅ Confirmar Recebimento';
+        }
+    }
+}
+
 // Substitua a escuta inicial do DOMContentLoaded no pdv.js
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -621,6 +1749,7 @@ async function alternarAba(nomeAba) {
     const abaBalcao = document.getElementById('aba-balcao');
     const abaProdutos = document.getElementById('aba-produtos');
     const abaFichaTecnica = document.getElementById('aba-ficha-tecnica');
+    const abaCadastros = document.getElementById('aba-cadastros');
     const abaCompras = document.getElementById('aba-compras');
     const abaHistorico = document.getElementById('aba-historico');
     const abaMovEstoque = document.getElementById('aba-mov-estoque');
@@ -632,6 +1761,7 @@ async function alternarAba(nomeAba) {
     const btnBalcao = document.getElementById('btn-tab-balcao');
     const btnProdutos = document.getElementById('btn-tab-produtos');
     const btnFichaTecnica = document.getElementById('btn-tab-ficha-tecnica');
+    const btnCadastros = document.getElementById('btn-tab-cadastros');
     const btnCompras = document.getElementById('btn-tab-compras');
     const btnHistorico = document.getElementById('btn-tab-historico');
     const btnMovEstoque = document.getElementById('btn-tab-mov-estoque');
@@ -645,6 +1775,7 @@ async function alternarAba(nomeAba) {
     abaProdutos.style.display = 'none';
     abaCompras.style.display = 'none';
     abaFichaTecnica.style.display = 'none';
+    abaCadastros.style.display = 'none';
     abaHistorico.style.display = 'none';
     abaMovEstoque.style.display = 'none';
     abaConfig.style.display = 'none';
@@ -656,6 +1787,7 @@ async function alternarAba(nomeAba) {
     btnProdutos.classList.remove('active');
     btnCompras.classList.remove('active');
     btnFichaTecnica.classList.remove('active');
+    btnCadastros.classList.remove('active');
     btnHistorico.classList.remove('active');
     btnMovEstoque.classList.remove('active');
     btnConfig.classList.remove('active');
@@ -698,6 +1830,26 @@ async function alternarAba(nomeAba) {
         btnFichaTecnica.classList.add('active');
 
         carregarFichaTecnicaUI();
+    } else if (nomeAba === 'cadastros') {
+        const cargo = String(
+                window.usuarioAtual?.cargo || ''
+                ).toUpperCase();
+
+        const ehGerente =
+                cargo === 'GERENTE' ||
+                cargo === 'ADMIN';
+        if (!ehGerente) {
+            alert(
+                    '⛔ Apenas GERENTE ou ADMIN podem acessar os Cadastros.'
+                    );
+            return;
+        }
+
+        abaCadastros.style.display = 'block';
+        btnCadastros.classList.add('active');
+
+        //await carregarCadastroInsumosUI();
+
     } else if (nomeAba === 'compras') {
         abaCompras.style.display = 'block';
         btnCompras.classList.add('active');
@@ -722,6 +1874,494 @@ async function alternarAba(nomeAba) {
         abaConfig.style.display = 'block';
         btnConfig.classList.add('active');
         carregarConfiguracoesPDV();
+    }
+}
+
+//
+// ============================================================
+// CADASTRO DE INSUMOS
+// CARREGAMENTO DA LISTA
+// ============================================================
+async function carregarCadastroInsumosUI() {
+
+    const tbody =
+            document.getElementById(
+                    'insumos-table-body'
+                    );
+
+    if (!tbody) {
+
+        console.error(
+                '⛔ Tabela de Insumos não encontrada.'
+                );
+
+        return;
+    }
+
+    tbody.innerHTML = `
+        <tr>
+            <td
+                colspan="7"
+                style="
+                    text-align:center;
+                    color:#aaa;
+                    padding:25px;
+                "
+            >
+                ⏳ Carregando insumos...
+            </td>
+        </tr>
+    `;
+
+    try {
+
+        // ----------------------------------------------------
+        // 1. INSUMOS
+        // ----------------------------------------------------
+
+        const {
+            data: insumos,
+            error: erroInsumos
+        } = await _supabase
+                .from('insumos')
+                .select(`
+                    id,
+                    nome,
+                    produto_id,
+                    unidade_base_id,
+                    unidade_compra_id,
+                    fator_compra_base,
+                    estoque_minimo_base,
+                    ativo,
+                    observacao
+                `)
+                .order('nome');
+
+        if (erroInsumos) {
+            throw erroInsumos;
+        }
+
+        // ----------------------------------------------------
+        // 2. UNIDADES DE MEDIDA
+        // ----------------------------------------------------
+
+        const {
+            data: unidades,
+            error: erroUnidades
+        } = await _supabase
+                .from('unidades_medida')
+                .select(`
+                    id,
+                    codigo,
+                    nome,
+                    fator_base,
+                    ativa
+                `)
+                .order('nome');
+
+        if (erroUnidades) {
+            throw erroUnidades;
+        }
+
+        // ----------------------------------------------------
+        // 3. PRODUTOS
+        // ----------------------------------------------------
+
+        const {
+            data: produtos,
+            error: erroProdutos
+        } = await _supabase
+                .from('produtos')
+                .select(`
+                    id,
+                    nome,
+                    ativo
+                `)
+                .order('nome');
+
+        if (erroProdutos) {
+            throw erroProdutos;
+        }
+
+        const listaInsumos =
+                Array.isArray(insumos)
+                ? insumos
+                : [];
+
+        const listaUnidades =
+                Array.isArray(unidades)
+                ? unidades
+                : [];
+
+        const listaProdutos =
+                Array.isArray(produtos)
+                ? produtos
+                : [];
+
+        // ----------------------------------------------------
+        // NENHUM INSUMO
+        // ----------------------------------------------------
+
+        if (listaInsumos.length === 0) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td
+                        colspan="7"
+                        style="
+                            text-align:center;
+                            color:#aaa;
+                            padding:30px;
+                        "
+                    >
+                        🧪 Nenhum insumo cadastrado.
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        // ----------------------------------------------------
+        // RENDERIZA A TABELA
+        // ----------------------------------------------------
+
+        tbody.innerHTML = '';
+
+        listaInsumos.forEach(insumo => {
+
+            const unidadeCompra =
+                    listaUnidades.find(
+                            unidade =>
+                        Number(unidade.id) ===
+                                Number(insumo.unidade_compra_id)
+                    );
+
+            const unidadeBase =
+                    listaUnidades.find(
+                            unidade =>
+                        Number(unidade.id) ===
+                                Number(insumo.unidade_base_id)
+                    );
+
+            const produtoRelacionado =
+                    listaProdutos.find(
+                            produto =>
+                        Number(produto.id) ===
+                                Number(insumo.produto_id)
+                    );
+
+            const fator =
+                    Number(
+                            insumo.fator_compra_base || 0
+                            );
+
+            const estoqueMinimo =
+                    Number(
+                            insumo.estoque_minimo_base || 0
+                            );
+
+            const tr =
+                    document.createElement('tr');
+
+            // ------------------------------------------------
+            // INSUMO
+            // ------------------------------------------------
+
+            const tdNome =
+                    document.createElement('td');
+
+            const nome =
+                    document.createElement('strong');
+
+            nome.textContent =
+                    insumo.nome || '-';
+
+            tdNome.appendChild(nome);
+
+            // Mostra produto relacionado, quando existir.
+            if (produtoRelacionado) {
+
+                const detalhe =
+                        document.createElement('div');
+
+                detalhe.style.cssText =
+                        'color:#888;font-size:0.8rem;margin-top:4px;';
+
+                detalhe.textContent =
+                        `Produto: ${produtoRelacionado.nome}`;
+
+                tdNome.appendChild(detalhe);
+            }
+
+            tr.appendChild(tdNome);
+
+            // ------------------------------------------------
+            // UNIDADE DE COMPRA
+            // ------------------------------------------------
+
+            const tdCompra =
+                    document.createElement('td');
+
+            tdCompra.textContent =
+                    unidadeCompra
+                    ? `${unidadeCompra.codigo} — ${unidadeCompra.nome}`
+                    : '—';
+
+            tr.appendChild(tdCompra);
+
+            // ------------------------------------------------
+            // UNIDADE BASE
+            // ------------------------------------------------
+
+            const tdBase =
+                    document.createElement('td');
+
+            tdBase.textContent =
+                    unidadeBase
+                    ? `${unidadeBase.codigo} — ${unidadeBase.nome}`
+                    : '—';
+
+            tr.appendChild(tdBase);
+
+            // ------------------------------------------------
+            // FATOR
+            // ------------------------------------------------
+
+            const tdFator =
+                    document.createElement('td');
+
+            tdFator.style.textAlign =
+                    'center';
+
+            tdFator.textContent =
+                    fator
+                    .toLocaleString(
+                            'pt-BR',
+                            {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 6
+                            }
+                    );
+
+            tr.appendChild(tdFator);
+
+            // ------------------------------------------------
+            // ESTOQUE MÍNIMO
+            // ------------------------------------------------
+
+            const tdMinimo =
+                    document.createElement('td');
+
+            tdMinimo.style.textAlign =
+                    'right';
+
+            tdMinimo.textContent =
+                    estoqueMinimo
+                    .toLocaleString(
+                            'pt-BR',
+                            {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 3
+                            }
+                    );
+
+            if (unidadeBase) {
+
+                tdMinimo.title =
+                        `Unidade-base: ${unidadeBase.nome}`;
+            }
+
+            tr.appendChild(tdMinimo);
+
+            // ------------------------------------------------
+            // STATUS
+            // ------------------------------------------------
+
+            const tdStatus =
+                    document.createElement('td');
+
+            tdStatus.style.textAlign =
+                    'center';
+
+            const status =
+                    document.createElement('span');
+
+            status.textContent =
+                    insumo.ativo
+                    ? 'Ativo'
+                    : 'Inativo';
+
+            status.style.cssText =
+                    insumo.ativo
+                    ? `
+                        display:inline-block;
+                        padding:5px 10px;
+                        border-radius:15px;
+                        background:rgba(46,213,115,0.15);
+                        color:#2ed573;
+                        font-weight:bold;
+                      `
+                    : `
+                        display:inline-block;
+                        padding:5px 10px;
+                        border-radius:15px;
+                        background:rgba(255,71,87,0.15);
+                        color:#ff4757;
+                        font-weight:bold;
+                      `;
+
+            tdStatus.appendChild(status);
+
+            tr.appendChild(tdStatus);
+
+
+            // ------------------------------------------------
+            // AÇÕES
+            // ------------------------------------------------
+
+            const tdAcoes =
+                    document.createElement('td');
+
+            tdAcoes.style.textAlign = 'center';
+
+            const containerAcoes =
+                    document.createElement('div');
+
+            containerAcoes.style.cssText = `
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+`;
+
+
+            // ------------------------------------------------
+            // EDITAR
+            // ------------------------------------------------
+
+            const btnEditar =
+                    document.createElement('button');
+
+            btnEditar.type =
+                    'button';
+
+            btnEditar.className =
+                    'btn-qty';
+
+            btnEditar.textContent =
+                    '✏️';
+
+            btnEditar.title =
+                    'Editar insumo';
+
+            btnEditar.disabled =
+                    false;
+
+            btnEditar.style.cssText = `
+    width:40px;
+    height:36px;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    white-space:nowrap;
+`;
+
+            btnEditar.onclick =
+                    function () {
+                        editarInsumoUI(
+                                insumo.id
+                                );
+                    };
+
+
+            containerAcoes.appendChild(
+                    btnEditar
+                    );
+
+
+            // ------------------------------------------------
+            // ATIVAR / DESATIVAR
+            // ------------------------------------------------
+
+            const btnStatus =
+                    document.createElement('button');
+
+            btnStatus.type =
+                    'button';
+
+            btnStatus.className =
+                    'btn-qty';
+
+            btnStatus.textContent =
+                    insumo.ativo
+                    ? '🚫 '
+                    : '✅ ';
+
+            btnStatus.title =
+                    insumo.ativo
+                    ? 'Desativar insumo'
+                    : 'Ativar insumo';
+
+            btnStatus.style.cssText = `
+    width:40px;
+    height:36px;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    white-space:nowrap;
+`;
+
+            btnStatus.onclick =
+                    function () {
+                        alterarStatusInsumoUI(
+                                insumo.id,
+                                insumo.ativo
+                                );
+                    };
+
+
+            containerAcoes.appendChild(
+                    btnStatus
+                    );
+
+
+            tdAcoes.appendChild(
+                    containerAcoes
+                    );
+
+            tr.appendChild(tdAcoes);
+            tbody.appendChild(tr);
+        });
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao carregar cadastro de insumos:',
+                erro
+                );
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="7"
+                    style="
+                        text-align:center;
+                        color:#ff4757;
+                        padding:25px;
+                    "
+                >
+                    ❌ Erro ao carregar os insumos.
+                    <br>
+                    <small style="color:#aaa;">
+                        ${erro?.message || 'Erro desconhecido.'}
+                    </small>
+                </td>
+            </tr>
+        `;
     }
 }
 
@@ -3082,8 +4722,11 @@ async function carregarInterfaceCompras() {
         campoData.value = dataAtual;
     }
 
+    configurarTipoItemCompraUI();
+
     await carregarFornecedoresCompras();
     await carregarProdutosCompras();
+    await carregarInsumosCompras();
 
     renderizarItensCompraUI();
     recalcularCompraUI();
@@ -3441,12 +5084,17 @@ async function carregarHistoricoComprasUI() {
                 nome
             ),
             itens_compra (
-                id,
-                produto_id,
-                produto_nome,
-                quantidade,
-                custo_unitario,
-                total_item
+                        id,
+                        produto_id,
+                        insumo_id,
+                        produto_nome,
+                        quantidade,
+                        custo_unitario,
+                        total_item,
+                insumos (
+                       id,
+                       nome
+                )
             )
         `)
             .order('id', {
@@ -3887,11 +5535,16 @@ function abrirDetalhesCompraUI(compraId) {
                 .toFixed(2)
                 .replace('.', ',');
 
+        const nomeItem =
+                item.insumos?.nome ||
+                item.produto_nome ||
+                'Item não identificado';
+
         itensHTML += `
             <tr>
 
                 <td>
-                    ${item.produto_nome}
+                    ${nomeItem}
                 </td>
 
                 <td style="text-align:center;">
@@ -4254,7 +5907,9 @@ async function receberCompraUI(compraId) {
                 `🟢 Compra marcada como RECEBIDA`
                 );
 
+// Atualiza imediatamente as duas listas.
         await carregarComprasAbertasUI();
+        await carregarHistoricoComprasUI();
 
     } catch (err) {
         console.error(
@@ -4273,22 +5928,162 @@ async function receberCompraUI(compraId) {
 }
 
 async function carregarProdutosCompras() {
-    const select = document.getElementById('compra-produto');
+    const select =
+            document.getElementById('compra-produto');
 
     if (!select) {
         return;
     }
 
     select.innerHTML = `
-        <option value="">Carregando produtos...</option>
+        <option value="">
+            Carregando produtos...
+        </option>
+    `;
+
+    try {
+        const [
+            resultadoProdutos,
+            resultadoFichas
+        ] = await Promise.all([
+
+            _supabase
+                    .from('produtos')
+                    .select(`
+                    id,
+                    nome,
+                    preco_custo,
+                    ativo
+                `)
+                    .eq('ativo', true)
+                    .order('nome'),
+
+            _supabase
+                    .from('fichas_tecnicas')
+                    .select(`
+                    produto_id
+                `)
+                    .eq('ativa', true)
+
+        ]);
+
+        const {
+            data: produtos,
+            error: erroProdutos
+        } = resultadoProdutos;
+
+        const {
+            data: fichas,
+            error: erroFichas
+        } = resultadoFichas;
+
+        if (erroProdutos) {
+            throw erroProdutos;
+        }
+
+        if (erroFichas) {
+            throw erroFichas;
+        }
+
+        /*
+         * Produtos com Ficha Técnica ativa
+         * são produzidos internamente.
+         * Portanto, não entram como compra.
+         */
+        const produtosProduzidos =
+                new Set(
+                        (fichas || []).map(
+                        ficha => Number(ficha.produto_id)
+                )
+                        );
+
+        const produtosCompraveis =
+                (produtos || []).filter(
+                produto =>
+            !produtosProduzidos.has(
+                    Number(produto.id)
+                    )
+        );
+
+        select.innerHTML = `
+            <option value="">
+                Selecione o produto
+            </option>
+        `;
+
+        produtosCompraveis.forEach(produto => {
+            select.innerHTML += `
+                <option
+                    value="${produto.id}"
+                    data-custo="${produto.preco_custo || 0}"
+                >
+                    ${produto.nome}
+                </option>
+            `;
+        });
+
+        /*
+         * Caso não exista nenhum produto de revenda,
+         * deixa isso explícito na lista.
+         */
+        if (produtosCompraveis.length === 0) {
+            select.innerHTML = `
+                <option value="">
+                    Nenhum produto comprável cadastrado
+                </option>
+            `;
+        }
+
+        select.onchange = function () {
+            const optionSelecionada =
+                    this.options[this.selectedIndex];
+
+            const custo =
+                    optionSelecionada?.dataset?.custo || '0';
+
+            const campoCusto =
+                    document.getElementById('compra-custo');
+
+            if (campoCusto) {
+                campoCusto.value =
+                        Number(custo).toFixed(2);
+            }
+        };
+
+    } catch (error) {
+
+        console.error(
+                'Erro ao carregar produtos para compra:',
+                error
+                );
+
+        select.innerHTML = `
+            <option value="">
+                Erro ao carregar produtos
+            </option>
+        `;
+    }
+}
+
+async function carregarInsumosCompras() {
+    const select = document.getElementById('compra-insumo');
+
+    if (!select) {
+        return;
+    }
+
+    select.innerHTML = `
+        <option value="">Carregando insumos...</option>
     `;
 
     const {data, error} = await _supabase
-            .from('produtos')
+            .from('insumos')
             .select(`
             id,
             nome,
-            preco_custo,
+            unidade_compra_id,
+            unidade_base_id,
+            fator_compra_base,
             ativo
         `)
             .eq('ativo', true)
@@ -4296,52 +6091,95 @@ async function carregarProdutosCompras() {
 
     if (error) {
         console.error(
-                'Erro ao carregar produtos para compra:',
+                'Erro ao carregar insumos para compra:',
                 error
                 );
 
         select.innerHTML = `
-            <option value="">Erro ao carregar produtos</option>
+            <option value="">Erro ao carregar insumos</option>
         `;
 
         return;
     }
 
     select.innerHTML = `
-        <option value="">Selecione o produto</option>
+        <option value="">Selecione o insumo</option>
     `;
 
-    (data || []).forEach(produto => {
+    (data || []).forEach(insumo => {
         select.innerHTML += `
             <option
-                value="${produto.id}"
-                data-custo="${produto.preco_custo || 0}"
+                value="${insumo.id}"
+                data-unidade-compra-id="${insumo.unidade_compra_id || ''}"
+                data-unidade-base-id="${insumo.unidade_base_id || ''}"
+                data-fator="${insumo.fator_compra_base || 1}"
             >
-                ${produto.nome}
+                ${insumo.nome}
             </option>
         `;
     });
+}
 
-    select.onchange = function () {
-        const optionSelecionada =
-                this.options[this.selectedIndex];
 
-        const custo =
-                optionSelecionada?.dataset?.custo || '0';
+function configurarTipoItemCompraUI() {
+    const tipoSelect = document.getElementById('compra-tipo-item');
 
-        const campoCusto =
-                document.getElementById('compra-custo');
+    const containerProduto =
+            document.getElementById('compra-container-produto');
 
-        if (campoCusto) {
-            campoCusto.value =
-                    Number(custo).toFixed(2);
+    const containerInsumo =
+            document.getElementById('compra-container-insumo');
+
+    const produtoSelect =
+            document.getElementById('compra-produto');
+
+    const insumoSelect =
+            document.getElementById('compra-insumo');
+
+    if (
+            !tipoSelect ||
+            !containerProduto ||
+            !containerInsumo
+            ) {
+        return;
+    }
+
+    function atualizarVisibilidade() {
+        const tipo = tipoSelect.value;
+
+        const comprandoInsumo = tipo === 'insumo';
+
+        containerProduto.style.display =
+                comprandoInsumo ? 'none' : '';
+
+        containerInsumo.style.display =
+                comprandoInsumo ? '' : 'none';
+
+        if (comprandoInsumo) {
+            if (produtoSelect) {
+                produtoSelect.value = '';
+            }
+        } else {
+            if (insumoSelect) {
+                insumoSelect.value = '';
+            }
         }
-    };
+    }
+
+    tipoSelect.onchange = atualizarVisibilidade;
+
+    atualizarVisibilidade();
 }
 
 function adicionarItemCompraUI() {
+    const tipoSelect =
+            document.getElementById('compra-tipo-item');
+
     const produtoSelect =
             document.getElementById('compra-produto');
+
+    const insumoSelect =
+            document.getElementById('compra-insumo');
 
     const quantidadeInput =
             document.getElementById('compra-quantidade');
@@ -4349,23 +6187,23 @@ function adicionarItemCompraUI() {
     const custoInput =
             document.getElementById('compra-custo');
 
-    if (!produtoSelect || !quantidadeInput || !custoInput) {
+    if (
+            !tipoSelect ||
+            !produtoSelect ||
+            !insumoSelect ||
+            !quantidadeInput ||
+            !custoInput
+            ) {
         return;
     }
 
-    const produtoId =
-            Number(produtoSelect.value);
+    const tipo = tipoSelect.value;
 
     const quantidade =
             parseInt(quantidadeInput.value, 10);
 
     const custoUnitario =
             parseFloat(custoInput.value);
-
-    if (!produtoId) {
-        alert('Selecione um produto.');
-        return;
-    }
 
     if (
             !Number.isInteger(quantidade) ||
@@ -4383,28 +6221,72 @@ function adicionarItemCompraUI() {
         return;
     }
 
-    const optionSelecionada =
-            produtoSelect.options[
-                    produtoSelect.selectedIndex
-            ];
+    let produtoId = null;
+    let insumoId = null;
+    let itemNome = '';
 
-    const produtoNome =
-            optionSelecionada?.textContent?.trim() ||
-            'Produto';
+    if (tipo === 'produto') {
+
+        produtoId = Number(produtoSelect.value);
+
+        if (!produtoId) {
+            alert('Selecione um produto.');
+            return;
+        }
+
+        const optionSelecionada =
+                produtoSelect.options[
+                        produtoSelect.selectedIndex
+                ];
+
+        itemNome =
+                optionSelecionada?.textContent?.trim() ||
+                'Produto';
+
+    } else if (tipo === 'insumo') {
+
+        insumoId = Number(insumoSelect.value);
+
+        if (!insumoId) {
+            alert('Selecione um insumo.');
+            return;
+        }
+
+        const optionSelecionada =
+                insumoSelect.options[
+                        insumoSelect.selectedIndex
+                ];
+
+        itemNome =
+                optionSelecionada?.textContent?.trim() ||
+                'Insumo';
+
+    } else {
+        alert('Tipo de item inválido.');
+        return;
+    }
 
     const itemExistente =
-            itensCompraRascunho.find(
-                    item => item.produto_id === produtoId
+            itensCompraRascunho.find(item =>
+                tipo === 'produto'
+                        ? item.produto_id === produtoId
+                        : item.insumo_id === insumoId
             );
 
     if (itemExistente) {
+
         itemExistente.quantidade += quantidade;
+
         itemExistente.custo_unitario =
                 custoUnitario;
+
     } else {
+
         itensCompraRascunho.push({
+            tipo,
             produto_id: produtoId,
-            produto_nome: produtoNome,
+            insumo_id: insumoId,
+            produto_nome: itemNome,
             quantidade,
             custo_unitario: custoUnitario
         });
@@ -4414,8 +6296,18 @@ function adicionarItemCompraUI() {
     recalcularCompraUI();
 
     produtoSelect.value = '';
+    insumoSelect.value = '';
+
     quantidadeInput.value = '1';
     custoInput.value = '0.00';
+
+    // Volta para Produto após adicionar.
+    tipoSelect.value = 'produto';
+
+    const evento =
+            new Event('change');
+
+    tipoSelect.dispatchEvent(evento);
 }
 
 function removerItemCompraUI(index) {
@@ -4690,8 +6582,19 @@ async function salvarCompraUI() {
 
     const itensRPC =
             itensCompraRascunho.map(item => ({
-                    produto_id: Number(item.produto_id),
-                    quantidade: Number(item.quantidade),
+                    produto_id:
+                            item.produto_id != null
+                            ? Number(item.produto_id)
+                            : null,
+
+                    insumo_id:
+                            item.insumo_id != null
+                            ? Number(item.insumo_id)
+                            : null,
+
+                    quantidade:
+                            Number(item.quantidade),
+
                     custo_unitario:
                             Number(item.custo_unitario)
                 }));
@@ -4822,9 +6725,9 @@ async function carregarProdutosGerenciador() {
     produtos.forEach(p => {
         const tr = document.createElement('tr');
         const img = p.imagem_url || 'https://via.placeholder.com/40';
-        const custo = p.preco_custo || 0;
-        const margem = p.margem_lucro || 0;
-        const precoVenda = p.preco || 0;
+        const custo = Number(p.preco_custo || 0);
+        const precoVenda = Number(p.preco || 0);
+        const margem = custo > 0 ? ((precoVenda - custo) / custo) * 100 : 0;
 
         tr.innerHTML = `
             <td>
@@ -4852,7 +6755,7 @@ async function carregarProdutosGerenciador() {
                 </div>
             </td>
             <td>
-                <select id="ativo-${p.id}" class="input-table" style="width: 90px;">
+                <select id="ativo-${p.id}" class="input-table" style="width: 100px;">
                     <option value="true" ${p.ativo ? 'selected' : ''}>Ativo</option>
                     <option value="false" ${!p.ativo ? 'selected' : ''}>Pausado</option>
                 </select>
@@ -4930,7 +6833,6 @@ async function carregarHistoricoProducoes() {
         </tr>
     `;
 
-
     const {
         data: producoes,
         error
@@ -4945,8 +6847,18 @@ async function carregarHistoricoProducoes() {
             observacao,
             usuario_nome,
             criado_em,
+
             produtos (
                 nome
+            ),
+
+            lotes_producao (
+                numero_lote,
+                data_fabricacao,
+                data_validade,
+                quantidade_inicial,
+                quantidade_disponivel,
+                status
             )
         `)
             .order(
@@ -4955,7 +6867,6 @@ async function carregarHistoricoProducoes() {
                         ascending: false
                     }
             );
-
 
     if (error) {
 
@@ -4981,8 +6892,10 @@ async function carregarHistoricoProducoes() {
         return;
     }
 
-
-    if (!producoes || producoes.length === 0) {
+    if (
+            !producoes ||
+            producoes.length === 0
+            ) {
 
         tbody.innerHTML = `
             <tr>
@@ -4998,15 +6911,12 @@ async function carregarHistoricoProducoes() {
         return;
     }
 
-
     tbody.innerHTML = '';
-
 
     producoes.forEach(producao => {
 
         const tr =
                 document.createElement('tr');
-
 
         const dataHora =
                 producao.criado_em
@@ -5015,31 +6925,178 @@ async function carregarHistoricoProducoes() {
                         ).toLocaleString('pt-BR')
                 : '-';
 
-
         const nomeProduto =
                 producao.produtos?.nome ||
                 'Produto não encontrado';
-
 
         const quantidade =
                 Number(
                         producao.quantidade_produzida || 0
                         );
 
-
         const custoTotal =
                 Number(
                         producao.custo_total || 0
                         );
-
 
         const custoUnitario =
                 Number(
                         producao.custo_unitario || 0
                         );
 
+        /*
+         * A relação pode retornar objeto ou array.
+         */
+        const lote =
+                Array.isArray(
+                        producao.lotes_producao
+                        )
+                ? producao.lotes_producao[0]
+                : producao.lotes_producao;
+
+        let loteHTML = '';
+
+        if (lote) {
+
+            const dataFabricacao =
+                    lote.data_fabricacao
+                    ? lote.data_fabricacao
+                    .split('-')
+                    .reverse()
+                    .join('/')
+                    : '-';
+
+            const dataValidade =
+                    lote.data_validade
+                    ? lote.data_validade
+                    .split('-')
+                    .reverse()
+                    .join('/')
+                    : '-';
+
+            let validadeHTML =
+                    `<span>${dataValidade}</span>`;
+
+            if (lote.data_validade) {
+
+                const hoje =
+                        new Date();
+
+                hoje.setHours(
+                        0,
+                        0,
+                        0,
+                        0
+                        );
+
+                const validade =
+                        new Date(
+                                lote.data_validade +
+                                'T00:00:00'
+                                );
+
+                const diferencaMs =
+                        validade.getTime() -
+                        hoje.getTime();
+
+                const diasRestantes =
+                        Math.ceil(
+                                diferencaMs /
+                                (
+                                        1000 *
+                                        60 *
+                                        60 *
+                                        24
+                                        )
+                                );
+
+                if (diasRestantes < 0) {
+
+                    validadeHTML =
+                            `<span style="color:#ff4757;font-weight:bold;">
+                            ❌ Vencido
+                        </span>`;
+
+                } else if (
+                        diasRestantes === 0
+                        ) {
+
+                    validadeHTML =
+                            `<span style="color:#ff4757;font-weight:bold;">
+                            ⚠️ Vence hoje
+                        </span>`;
+
+                } else if (
+                        diasRestantes <= 7
+                        ) {
+
+                    validadeHTML =
+                            `<span style="color:#ffa502;font-weight:bold;">
+                            ⚠️ ${dataValidade}
+                        </span>`;
+
+                } else {
+
+                    validadeHTML =
+                            `<span>
+                            ${dataValidade}
+                        </span>`;
+                }
+            }
+
+            loteHTML = `
+                <div style="
+                    margin-top:6px;
+                    padding-top:6px;
+                    border-top:1px solid #ddd;
+                    font-size:0.82rem;
+                    color:#666;
+                    line-height:1.6;
+                ">
+
+                    <div>
+                        <strong>🏷️ Lote:</strong>
+                        ${lote.numero_lote || '-'}
+                    </div>
+
+                    <div>
+                        <strong>🗓️ Fabricação:</strong>
+                        ${dataFabricacao}
+                    </div>
+
+                    <div>
+                        <strong>⏳ Validade:</strong>
+                        ${validadeHTML}
+                    </div>
+
+                    <div>
+                        <strong>📦 Lote disponível:</strong>
+                        ${Number(
+                    lote.quantidade_disponivel || 0
+                    )}
+                        /
+                        ${Number(
+                    lote.quantidade_inicial || 0
+                    )}
+                    </div>
+
+                    <div>
+                        <strong>Status:</strong>
+                        ${
+                    lote.status === 'ATIVO'
+                    ? '🟢 ATIVO'
+                    : lote.status === 'ESGOTADO'
+                    ? '⚪ ESGOTADO'
+                    : '🔴 VENCIDO'
+                    }
+                    </div>
+
+                </div>
+            `;
+        }
 
         tr.innerHTML = `
+
             <td>
                 ${dataHora}
             </td>
@@ -5051,7 +7108,11 @@ async function carregarHistoricoProducoes() {
             </td>
 
             <td>
-                ${nomeProduto}
+                <strong>
+                    ${nomeProduto}
+                </strong>
+
+                ${loteHTML}
             </td>
 
             <td style="text-align:center;">
@@ -5111,6 +7172,8 @@ async function abrirModalProducao() {
 
     modal.style.display = 'flex';
 
+    configurarDatasLoteProducao();
+
     const select = document.getElementById('producao-produto');
 
     if (!select) {
@@ -5169,6 +7232,331 @@ function fecharModalProducao() {
     if (modal) {
         modal.style.display = 'none';
     }
+}
+
+
+// ============================================================
+// PRODUÇÃO - DATAS E VALIDADE DO LOTE
+// ============================================================
+
+function configurarDatasLoteProducao() {
+
+    const campoFabricacao =
+            document.getElementById(
+                    'producao-data-fabricacao'
+                    );
+
+    const campoValidade =
+            document.getElementById(
+                    'producao-data-validade'
+                    );
+
+    if (!campoFabricacao || !campoValidade) {
+        return;
+    }
+
+    // --------------------------------------------------------
+    // DATA DE FABRICAÇÃO
+    // --------------------------------------------------------
+
+    const hoje =
+            new Date();
+
+    const ano =
+            hoje.getFullYear();
+
+    const mes =
+            String(
+                    hoje.getMonth() + 1
+                    ).padStart(2, '0');
+
+    const dia =
+            String(
+                    hoje.getDate()
+                    ).padStart(2, '0');
+
+    const dataHoje =
+            `${ano}-${mes}-${dia}`;
+
+    // Preenche somente se estiver vazia
+    if (!campoFabricacao.value) {
+        campoFabricacao.value =
+                dataHoje;
+    }
+
+    // --------------------------------------------------------
+    // VALIDADE NÃO PODE SER ANTERIOR À FABRICAÇÃO
+    // --------------------------------------------------------
+
+    campoValidade.min =
+            campoFabricacao.value;
+
+
+    // --------------------------------------------------------
+    // EVENTO: FABRICAÇÃO ALTERADA
+    // --------------------------------------------------------
+
+    campoFabricacao.onchange =
+            function () {
+
+                campoValidade.min =
+                        campoFabricacao.value;
+
+                validarValidadeLoteProducao();
+            };
+
+
+    // --------------------------------------------------------
+    // EVENTO: VALIDADE ALTERADA
+    // --------------------------------------------------------
+
+    campoValidade.onchange =
+            function () {
+
+                validarValidadeLoteProducao();
+            };
+
+    campoValidade.oninput =
+            function () {
+
+                validarValidadeLoteProducao();
+            };
+
+
+    // --------------------------------------------------------
+    // VALIDAÇÃO INICIAL
+    // --------------------------------------------------------
+
+    validarValidadeLoteProducao();
+}
+
+
+// ============================================================
+// VALIDA DATA DE VALIDADE + ALERTA
+// ============================================================
+
+function validarValidadeLoteProducao() {
+
+    const campoFabricacao =
+            document.getElementById(
+                    'producao-data-fabricacao'
+                    );
+
+    const campoValidade =
+            document.getElementById(
+                    'producao-data-validade'
+                    );
+
+    const alerta =
+            document.getElementById(
+                    'producao-alerta-validade'
+                    );
+
+    if (
+            !campoFabricacao ||
+            !campoValidade ||
+            !alerta
+            ) {
+        return false;
+    }
+
+    const dataFabricacao =
+            campoFabricacao.value;
+
+    const dataValidade =
+            campoValidade.value;
+
+
+    // --------------------------------------------------------
+    // SEM DATA DE VALIDADE
+    // --------------------------------------------------------
+
+    if (!dataValidade) {
+
+        alerta.style.display =
+                'none';
+
+        alerta.innerHTML = '';
+
+        campoValidade.setCustomValidity('');
+
+        return false;
+    }
+
+
+    // --------------------------------------------------------
+    // VALIDADE ANTERIOR À FABRICAÇÃO
+    // --------------------------------------------------------
+
+    if (
+            dataFabricacao &&
+            dataValidade < dataFabricacao
+            ) {
+
+        // Remove imediatamente a data inválida
+        campoValidade.value = '';
+
+        alerta.innerHTML =
+                '❌ A data de validade não pode ser anterior à data de fabricação.';
+
+        alerta.style.display =
+                'block';
+
+        alerta.style.background =
+                '#f8d7da';
+
+        alerta.style.color =
+                '#842029';
+
+        campoValidade.setCustomValidity(
+                'Informe uma data de validade igual ou posterior à fabricação.'
+                );
+
+        return false;
+    }
+
+
+    // --------------------------------------------------------
+    // DATA VÁLIDA
+    // --------------------------------------------------------
+
+    campoValidade.setCustomValidity('');
+
+
+    // --------------------------------------------------------
+    // CALCULA DIAS ENTRE FABRICAÇÃO E VALIDADE
+    // --------------------------------------------------------
+
+    const inicio =
+            new Date(
+                    `${dataFabricacao || dataHojeLocalProducao()}T00:00:00`
+                    );
+
+    const fim =
+            new Date(
+                    `${dataValidade}T00:00:00`
+                    );
+
+    const diferencaMs =
+            fim.getTime() -
+            inicio.getTime();
+
+    const diasRestantes =
+            Math.ceil(
+                    diferencaMs /
+                    (1000 * 60 * 60 * 24)
+                    );
+
+
+    // --------------------------------------------------------
+    // BUSCA CONFIGURAÇÃO DO ALERTA
+    // --------------------------------------------------------
+
+    obterDiasAlertaValidadeProducao()
+            .then(
+                    diasAlerta => {
+
+                        if (
+                                diasRestantes <= diasAlerta
+                                ) {
+
+                            alerta.innerHTML =
+                                    `⚠️ Validade próxima: faltam ${diasRestantes} dia${diasRestantes === 1 ? '' : 's'} para vencer.`;
+
+                            alerta.style.display =
+                                    'block';
+
+                            alerta.style.background =
+                                    '#fff3cd';
+
+                            alerta.style.color =
+                                    '#856404';
+
+                        } else {
+
+                            alerta.innerHTML =
+                                    `✅ Validade do lote: ${diasRestantes} dias restantes.`;
+
+                            alerta.style.display =
+                                    'block';
+
+                            alerta.style.background =
+                                    '#d1e7dd';
+
+                            alerta.style.color =
+                                    '#0f5132';
+                        }
+                    }
+            )
+            .catch(
+                    erro => {
+
+                        console.error(
+                                'Erro ao consultar configuração de validade:',
+                                erro
+                                );
+
+                    }
+            );
+
+    return true;
+}
+
+
+// ============================================================
+// BUSCA DIAS DE ALERTA CONFIGURADOS NO BANCO
+// ============================================================
+
+async function obterDiasAlertaValidadeProducao() {
+
+    const {
+        data,
+        error
+    } = await _supabase
+            .from('configuracoes')
+            .select(
+                    'dias_alerta_validade'
+                    )
+            .limit(1)
+            .maybeSingle();
+
+    if (error) {
+
+        console.error(
+                'Erro ao carregar dias de alerta de validade:',
+                error
+                );
+
+        // Segurança: usa 7 como padrão
+        return 7;
+    }
+
+    return Number(
+            data?.dias_alerta_validade ?? 7
+            );
+}
+
+
+// ============================================================
+// DATA LOCAL YYYY-MM-DD
+// ============================================================
+
+function dataHojeLocalProducao() {
+
+    const hoje =
+            new Date();
+
+    return (
+            hoje.getFullYear() +
+            '-' +
+            String(
+                    hoje.getMonth() + 1
+                    ).padStart(2, '0') +
+            '-' +
+            String(
+                    hoje.getDate()
+                    ).padStart(2, '0')
+            );
 }
 
 async function carregarDadosProducaoUI() {
@@ -5754,50 +8142,280 @@ async function registrarProducaoUI() {
     const quantidadeInput =
             document.getElementById('producao-quantidade');
 
-    const observacaoInput =
-            document.getElementById('producao-observacao');
+    const dataFabricacaoInput =
+            document.getElementById(
+                    'producao-data-fabricacao'
+                    );
 
-    if (!select || !quantidadeInput) {
-        alert('❌ Elementos da produção não encontrados.');
+    const dataValidadeInput =
+            document.getElementById(
+                    'producao-data-validade'
+                    );
+
+    const observacaoInput =
+            document.getElementById(
+                    'producao-observacao'
+                    );
+
+
+    // ========================================================
+    // 1. ELEMENTOS OBRIGATÓRIOS
+    // ========================================================
+
+    if (
+            !select ||
+            !quantidadeInput ||
+            !dataFabricacaoInput ||
+            !dataValidadeInput
+            ) {
+
+        alert(
+                '❌ Elementos da produção não encontrados.'
+                );
+
         return;
     }
 
+
+    // ========================================================
+    // 2. DADOS DA PRODUÇÃO
+    // ========================================================
+
     const produtoId =
-            Number(select.value || 0);
+            Number(
+                    select.value || 0
+                    );
 
     const quantidade =
-            Number(quantidadeInput.value || 0);
+            Number(
+                    quantidadeInput.value || 0
+                    );
+
+    const dataFabricacao =
+            dataFabricacaoInput.value;
+
+    const dataValidade =
+            dataValidadeInput.value;
 
     const observacao =
             observacaoInput?.value.trim() || null;
 
+
+    // ========================================================
+    // 3. VALIDA PRODUTO
+    // ========================================================
+
     if (!produtoId) {
-        alert('⚠️ Selecione o produto.');
+
+        alert(
+                '⚠️ Selecione o produto.'
+                );
+
         return;
     }
+
+
+    // ========================================================
+    // 4. VALIDA QUANTIDADE
+    // ========================================================
 
     if (
             !Number.isInteger(quantidade) ||
             quantidade <= 0
             ) {
-        alert('⚠️ Informe uma quantidade válida.');
+
+        alert(
+                '⚠️ Informe uma quantidade válida.'
+                );
+
         return;
     }
 
+
+    // ========================================================
+    // 5. VALIDA DATA DE FABRICAÇÃO
+    // ========================================================
+
+    if (!dataFabricacao) {
+
+        alert(
+                '⚠️ Informe a data de fabricação.'
+                );
+
+        dataFabricacaoInput.focus();
+
+        return;
+    }
+
+
+    // ========================================================
+    // 6. VALIDA DATA DE VALIDADE
+    // ========================================================
+
+    if (!dataValidade) {
+
+        alert(
+                '⚠️ Informe a data de validade.'
+                );
+
+        dataValidadeInput.focus();
+
+        return;
+    }
+
+
+    // ========================================================
+    // 7. VALIDADE NÃO PODE SER ANTERIOR À FABRICAÇÃO
+    // ========================================================
+
+    if (
+            dataValidade < dataFabricacao
+            ) {
+
+        alert(
+                '❌ A data de validade não pode ser anterior à data de fabricação.'
+                );
+
+        dataValidadeInput.value = '';
+
+        validarValidadeLoteProducao();
+
+        dataValidadeInput.focus();
+
+        return;
+    }
+
+
+    // ========================================================
+    // 8. PRODUTO E FICHA
+    // ========================================================
+
     const produto =
             producaoUI.produtos.find(
-                    p => p.id === produtoId
+                    p =>
+                Number(p.id) === produtoId
             );
 
     const ficha =
             producaoUI.fichas.find(
-                    f => f.produto_id === produtoId
+                    f =>
+                Number(f.produto_id) === produtoId
             );
+
 
     if (!produto || !ficha) {
         alert(
                 '❌ Produto ou Ficha Técnica não encontrada.'
                 );
+        return;
+    }
+
+    /*
+     * ========================================================
+     * TRAVA DE ESTOQUE ANTES DA CONFIRMAÇÃO
+     * ========================================================
+     *
+     * A interface já calcula o estoque necessário.
+     * Aqui repetimos a mesma regra antes de abrir
+     * a confirmação, evitando que o usuário confirme
+     * uma produção que certamente será recusada.
+     */
+
+    const rendimento =
+            Number(ficha.rendimento || 0);
+
+    if (
+            !Number.isFinite(rendimento) ||
+            rendimento <= 0
+            ) {
+        alert(
+                '❌ Rendimento da Ficha Técnica inválido.'
+                );
+        return;
+    }
+
+    const fatorProducao =
+            quantidade / rendimento;
+
+    let estoqueInsuficienteAntesConfirmar = false;
+    let detalhesFaltaEstoque = '';
+
+    (producaoUI.itens || []).forEach(item => {
+
+        const insumo =
+                producaoUI.insumos.find(
+                        i =>
+                    Number(i.id) ===
+                            Number(item.insumo_id)
+                );
+
+        const unidadeItem =
+                producaoUI.unidades.find(
+                        u =>
+                    Number(u.id) ===
+                            Number(item.unidade_id)
+                );
+
+        const unidadeBase =
+                producaoUI.unidades.find(
+                        u =>
+                    Number(u.id) ===
+                            Number(insumo?.unidade_base_id)
+                );
+
+        const estoque =
+                producaoUI.estoques.find(
+                        e =>
+                    Number(e.insumo_id) ===
+                            Number(item.insumo_id)
+                );
+
+        if (
+                !insumo ||
+                !unidadeItem ||
+                !unidadeBase
+                ) {
+            return;
+        }
+
+        const quantidadeNecessariaBase =
+                Number(item.quantidade_bruta || 0) *
+                fatorProducao *
+                Number(unidadeItem.fator_base || 0) /
+                Number(unidadeBase.fator_base || 1);
+
+        const estoqueAtualBase =
+                Number(
+                        estoque?.quantidade_base || 0
+                        );
+
+        if (
+                estoqueAtualBase <
+                quantidadeNecessariaBase
+                ) {
+
+            estoqueInsuficienteAntesConfirmar = true;
+
+            const falta =
+                    quantidadeNecessariaBase -
+                    estoqueAtualBase;
+
+            detalhesFaltaEstoque +=
+                    `• ${insumo.nome}: ` +
+                    `necessário ${quantidadeNecessariaBase.toFixed(3).replace('.', ',')} ${unidadeBase.codigo}, ` +
+                    `disponível ${estoqueAtualBase.toFixed(3).replace('.', ',')} ${unidadeBase.codigo}, ` +
+                    `falta ${falta.toFixed(3).replace('.', ',')} ${unidadeBase.codigo}\n`;
+        }
+    });
+
+    if (estoqueInsuficienteAntesConfirmar) {
+
+        alert(
+                '⚠️ Produção não permitida por falta de estoque.\n\n' +
+                detalhesFaltaEstoque +
+                '\nAbasteça os insumos necessários e tente novamente.'
+                );
+
         return;
     }
 
@@ -5810,56 +8428,157 @@ async function registrarProducaoUI() {
             'Os insumos serão consumidos automaticamente.'
             );
 
+
     if (!confirmar) {
         return;
     }
 
+    // ========================================================
+    // 10. BOTÃO
+    // ========================================================
     const btn =
             document.querySelector(
                     '#modal-producao button[onclick="registrarProducaoUI()"]'
                     );
 
     const textoOriginal =
-            btn?.innerHTML || '🏭 Produzir';
+            btn?.innerHTML ||
+            '🏭 Produzir';
+
 
     try {
 
+        // ----------------------------------------------------
+        // FEEDBACK IMEDIATO
+        // ----------------------------------------------------
+
         if (btn) {
+
             btn.disabled = true;
-            btn.innerHTML = '⏳ Produzindo...';
+
+            btn.innerHTML =
+                    '⏳ Produzindo...';
         }
+
+
+        // ====================================================
+        // 11. REGISTRA PRODUÇÃO + LOTE
+        // ====================================================
 
         const {
             data,
             error
         } = await _supabase.rpc(
-                'registrar_producao',
+                'registrar_producao_com_lote',
                 {
-                    p_produto_id: produtoId,
-                    p_quantidade_produzida: quantidade,
-                    p_observacao: observacao
+                    p_produto_id:
+                            produtoId,
+
+                    p_quantidade_produzida:
+                            quantidade,
+
+                    p_data_fabricacao:
+                            dataFabricacao,
+
+                    p_data_validade:
+                            dataValidade,
+
+                    p_observacao:
+                            observacao
                 }
         );
+
 
         if (error) {
             throw error;
         }
 
-        alert(
+
+        // ====================================================
+        // 12. TENTA RECUPERAR O LOTE CRIADO
+        // ====================================================
+
+        let lote = null;
+
+        const {
+            data: dadosLote,
+            error: erroLote
+        } = await _supabase
+                .from('lotes_producao')
+                .select(`
+                    id,
+                    numero_lote,
+                    data_fabricacao,
+                    data_validade,
+                    quantidade_inicial,
+                    quantidade_disponivel,
+                    status
+                `)
+                .eq(
+                        'producao_id',
+                        Number(data)
+                        )
+                .maybeSingle();
+
+
+        if (erroLote) {
+
+            console.warn(
+                    'Produção registrada, mas não foi possível consultar o lote:',
+                    erroLote
+                    );
+
+        } else {
+
+            lote =
+                    dadosLote || null;
+        }
+
+
+        // ====================================================
+        // 13. MENSAGEM DE SUCESSO
+        // ====================================================
+
+        let mensagemSucesso =
                 '✅ Produção registrada com sucesso!\n\n' +
                 `Produção #${data}\n` +
                 `Produto: ${produto.nome}\n` +
-                `Quantidade: ${quantidade}`
+                `Quantidade: ${quantidade}\n` +
+                `Fabricação: ${dataFabricacao.split('-').reverse().join('/')}\n` +
+                `Validade: ${dataValidade.split('-').reverse().join('/')}`;
+
+
+        if (lote) {
+
+            mensagemSucesso +=
+                    '\n\n' +
+                    `Lote: ${lote.numero_lote}`;
+        }
+
+
+        alert(
+                mensagemSucesso
                 );
+
+
+        // ====================================================
+        // 14. FECHA MODAL
+        // ====================================================
 
         fecharModalProducao();
 
+
+        // ====================================================
+        // 15. ATUALIZA PRODUTOS
+        // ====================================================
+
         await carregarProdutosGerenciador();
+
 
     } catch (err) {
 
         console.error(
-                'Erro ao registrar produção:',
+                'Erro ao registrar produção com lote:',
                 err
                 );
 
@@ -5868,23 +8587,18 @@ async function registrarProducaoUI() {
                 (err.message || err)
                 );
 
+
     } finally {
 
         if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = textoOriginal;
-        }
 
+            btn.disabled = false;
+
+            btn.innerHTML =
+                    textoOriginal;
+        }
     }
 }
-
-
-
-
-
-
-
-
 
 // Recalcula o Preço de Venda quando o Custo ou a Margem mudam
 function calcularPrecoPeloCusto(id) {
@@ -6270,12 +8984,22 @@ async function carregarHistoricoVendas() {
     let query = _supabase
             .from('pedidos')
             .select(`
+        *,
+        itens_pedido (
             *,
-            itens_pedido (
-                *,
-                produtos (nome)
+            produtos (nome),
+            consumos_lotes (
+                id,
+                quantidade,
+                lote:lotes_producao (
+                    id,
+                    numero_lote,
+                    data_fabricacao,
+                    data_validade
+                )
             )
-        `)
+        )
+    `)
             .order('criado_em', {ascending: false});
 
     // Filtros de data
@@ -6335,21 +9059,137 @@ async function carregarHistoricoVendas() {
     }
 
     pedidos.forEach(p => {
+
         const tr = document.createElement('tr');
-        const dataHora = new Date(p.criado_em).toLocaleString('pt-BR');
-        const badgeClasse = p.status === 'CONCLUIDO' ? 'status-concluido' : (p.status === 'CANCELADO' ? 'status-cancelado' : 'status-concluido');
+
+        const dataHora =
+                new Date(p.criado_em).toLocaleString('pt-BR');
+
+        const badgeClasse =
+                p.status === 'CONCLUIDO'
+                ? 'status-concluido'
+                : (
+                        p.status === 'CANCELADO'
+                        ? 'status-cancelado'
+                        : 'status-concluido'
+                        );
+
+        // ========================================================
+        // LOTES CONSUMIDOS PELOS ITENS DO PEDIDO
+        // ========================================================
+
+        const itensPedido =
+                Array.isArray(p.itens_pedido)
+                ? p.itens_pedido
+                : [];
+
+        const listaLotes = [];
+
+        itensPedido.forEach(item => {
+
+            const consumos =
+                    Array.isArray(item.consumos_lotes)
+                    ? item.consumos_lotes
+                    : [];
+
+            consumos.forEach(consumo => {
+
+                const lote =
+                        consumo.lote || {};
+
+                const numeroLote =
+                        lote.numero_lote || '-';
+
+                const validade =
+                        lote.data_validade
+                        ? new Date(
+                                lote.data_validade + 'T00:00:00'
+                                ).toLocaleDateString('pt-BR')
+                        : '-';
+
+                const quantidade =
+                        Number(
+                                consumo.quantidade || 0
+                                );
+
+                listaLotes.push(`
+                <div style="
+                    margin-bottom:4px;
+                    line-height:1.25;
+                ">
+                    <strong>${numeroLote}</strong>
+                    <br>
+                    <span style="color:#aaa;">
+                        Val.: ${validade}
+                        &nbsp;|&nbsp;
+                        Qtd.: ${quantidade}
+                    </span>
+                </div>
+            `);
+            });
+        });
+
+        const lotesHTML =
+                listaLotes.length > 0
+                ? listaLotes.join('')
+                : '<span style="color:#777;">—</span>';
+
+        // ========================================================
+        // LINHA
+        // ========================================================
 
         tr.innerHTML = `
-            <td style="text-align: center;">
-                <input type="checkbox" class="chk-pedido" value="${p.id}" style="cursor: pointer; transform: scale(1.2);">
-            </td>
-            <td><strong>#${p.id}</strong></td>
-            <td>${dataHora}</td>
-            <td>${p.tipo || 'PDV'} / ${p.forma_pagamento}</td>
-            <td>${p.endereco_snapshot || 'Balcão'}</td>
-            <td><strong>R$ ${(p.valor_total || 0).toFixed(2).replace('.', ',')}</strong></td>
-            <td><span class="status-badge-table ${badgeClasse}">${p.status}</span></td>
-        `;
+        <td style="text-align: center;">
+            <input
+                type="checkbox"
+                class="chk-pedido"
+                value="${p.id}"
+                style="
+                    cursor:pointer;
+                    transform:scale(1.2);
+                "
+            >
+        </td>
+
+        <td>
+            <strong>#${p.id}</strong>
+        </td>
+
+        <td>
+            ${dataHora}
+        </td>
+
+        <td>
+            ${p.tipo || 'PDV'}
+            /
+            ${p.forma_pagamento || '-'}
+        </td>
+
+        <td>
+            ${p.endereco_snapshot || 'Balcão'}
+        </td>
+
+        <td style="
+            min-width:190px;
+            font-size:0.82rem;
+        ">
+            ${lotesHTML}
+        </td>
+
+        <td>
+            <strong>
+                R$ ${(p.valor_total || 0)
+                .toFixed(2)
+                .replace('.', ',')}
+            </strong>
+        </td>
+
+        <td>
+            <span class="status-badge-table ${badgeClasse}">
+                ${p.status}
+            </span>
+        </td>
+    `;
 
         tbody.appendChild(tr);
     });
@@ -6800,6 +9640,19 @@ function aplicarPermissoes() {
     }
 
     // ========================================================
+    // CADASTROS
+    // GERENTE/ADMIN: pode acessar
+    // OPERADOR: não exibe a aba
+    // ========================================================
+    const btnMenuCadastros =
+            document.getElementById('btn-tab-cadastros');
+
+    if (btnMenuCadastros) {
+        btnMenuCadastros.style.display =
+                ehGerente ? 'block' : 'none';
+    }
+
+    // ========================================================
 // FICHA TÉCNICA
 // GERENTE/ADMIN: pode acessar
 // OPERADOR: não exibe a aba
@@ -7073,7 +9926,14 @@ async function salvarNovoProduto(event) {
 
         // 2. Coleta dos dados usando os IDs corretos da modal
         const nome = document.getElementById('np-nome').value;
-        const codigoBarra = document.getElementById('np-codigo').value;
+        const campoCodigo = document.getElementById('np-codigo');
+        const codigoBarra = campoCodigo?.value.trim() || '';
+
+        if (!/^\d+$/.test(codigoBarra)) {
+            alert('⚠️ O código de barras deve conter somente números.');
+            campoCodigo?.focus();
+            return;
+        }
         const descricao = document.getElementById('np-descricao').value;
         const categoriaId = document.getElementById('np-categoria').value || null;
         const estoque = parseInt(document.getElementById('np-estoque').value) || 0;
@@ -7116,6 +9976,13 @@ async function salvarNovoProduto(event) {
         btn.disabled = false;
         btn.innerHTML = textoOriginal;
     }
+}
+
+function somenteNumerosCodigoBarras(input) {
+    input.value =
+            String(input.value || '')
+            .replace(/\D/g, '')
+            .slice(0, 14);
 }
 
 let carrinhoBalcao = [];
@@ -7266,75 +10133,667 @@ function atualizarCarrinhoBalcaoUI() {
 }
 
 // --- FINALIZAÇÃO DA VENDA, BAIXA NO ESTOQUE E COMPROVANTE ---
-// --- FINALIZAÇÃO DA VENDA DE BALCÃO VIA RPC ---
+// PIX / DINHEIRO / FIADO
+// ============================================================
+
 async function finalizarVendaBalcao() {
-    if (!caixaAtual || caixaAtual.status !== 'ABERTO') {
-        alert('⚠️ O caixa está FECHADO! Abra o caixa no painel para poder realizar vendas.');
+    // --------------------------------------------------------
+    // 1. CAIXA
+    // --------------------------------------------------------
+    if (
+            !caixaAtual ||
+            caixaAtual.status !== 'ABERTO'
+            ) {
+
+        alert(
+                '⚠️ O caixa está FECHADO! Abra o caixa no painel para poder realizar vendas.'
+                );
+
         return;
     }
 
-    if (carrinhoBalcao.length === 0) {
-        alert('Adicione ao menos um produto no carrinho do balcão.');
+    // --------------------------------------------------------
+    // 2. CARRINHO
+    // --------------------------------------------------------
+    if (
+            !Array.isArray(carrinhoBalcao) ||
+            carrinhoBalcao.length === 0
+            ) {
+
+        alert(
+                'Adicione ao menos um produto no carrinho do balcão.'
+                );
+
         return;
     }
 
-    const btn = document.getElementById('btn-finalizar-balcao');
+    // --------------------------------------------------------
+    // 3. BOTÃO
+    // --------------------------------------------------------
+    const btn =
+            document.getElementById(
+                    'btn-finalizar-balcao'
+                    );
 
     if (!btn) {
-        console.error('Botão btn-finalizar-balcao não encontrado.');
+
+        console.error(
+                'Botão btn-finalizar-balcao não encontrado.'
+                );
+
         return;
     }
 
-    btn.textContent = '⏳ Processando Venda...';
+    const textoOriginal =
+            btn.textContent;
+
+    btn.textContent =
+            '⏳ Processando Venda...';
+
     btn.disabled = true;
 
     try {
-        const formaPagamento = document.getElementById('balcao-pagamento').value;
-        const nomeCliente = document.getElementById('balcao-cliente').value.trim();
+        // ----------------------------------------------------
+        // 4. DADOS DA VENDA
+        // ----------------------------------------------------
+        const formaPagamento =
+                document
+                .getElementById(
+                        'balcao-pagamento'
+                        )
+                ?.value
+                ?.trim()
+                ?.toUpperCase() || '';
 
-        // O banco passa a ser a fonte da verdade para preço e estoque.
-        const itensRPC = carrinhoBalcao.map(item => ({
-                produto_id: Number(item.id),
-                quantidade: Number(item.qtd)
-            }));
 
-        // Uma única operação:
-        // pedido + itens + baixa de estoque.
-        const {data: pedidoId, error: erroVenda} = await _supabase.rpc(
+        const nomeCliente =
+                document
+                .getElementById(
+                        'balcao-cliente'
+                        )
+                ?.value
+                ?.trim() || '';
+
+
+        const itensRPC =
+                carrinhoBalcao.map(item => ({
+                        produto_id:
+                                Number(item.id),
+
+                        quantidade:
+                                Number(item.qtd)
+                    }));
+
+        // ====================================================
+        // 5. FIADO
+        // ====================================================
+        if (
+                formaPagamento === 'FIADO'
+                ) {
+
+            // ------------------------------------------------
+            // Cliente selecionado
+            // ------------------------------------------------
+            const selectClienteFiado =
+                    document.getElementById(
+                            'balcao-cliente-id'
+                            );
+
+            const clienteId =
+                    selectClienteFiado?.value
+                    ? Number(
+                            selectClienteFiado.value
+                            )
+                    : null;
+
+            if (
+                    !Number.isInteger(clienteId) ||
+                    clienteId <= 0
+                    ) {
+
+                alert(
+                        '⚠️ Para venda FIADO, selecione um cliente cadastrado.'
+                        );
+
+                document
+                        .getElementById(
+                                'balcao-cliente'
+                                )
+                        ?.focus();
+
+                return;
+            }
+
+            // ------------------------------------------------
+            // Data de vencimento
+            // ------------------------------------------------
+            const dataVencimento =
+                    document
+                    .getElementById(
+                            'balcao-data-vencimento'
+                            )
+                    ?.value || '';
+
+            if (!dataVencimento) {
+
+                alert(
+                        '⚠️ Informe a data de vencimento do FIADO.'
+                        );
+
+                document
+                        .getElementById(
+                                'balcao-data-vencimento'
+                                )
+                        ?.focus();
+
+                return;
+            }
+
+            // ------------------------------------------------
+            // Validação de data
+            // ------------------------------------------------
+            const dataHoje =
+                    new Date();
+
+            dataHoje.setHours(
+                    0,
+                    0,
+                    0,
+                    0
+                    );
+
+            const partesData =
+                    dataVencimento
+                    .split('-')
+                    .map(Number);
+
+            if (
+                    partesData.length !== 3
+                    ) {
+
+                alert(
+                        '⚠️ Data de vencimento inválida.'
+                        );
+
+                return;
+            }
+
+            const dataVenc =
+                    new Date(
+                            partesData[0],
+                            partesData[1] - 1,
+                            partesData[2]
+                            );
+
+            dataVenc.setHours(
+                    0,
+                    0,
+                    0,
+                    0
+                    );
+
+            if (
+                    Number.isNaN(
+                            dataVenc.getTime()
+                            ) ||
+                    dataVenc < dataHoje
+                    ) {
+
+                alert(
+                        '⚠️ A data de vencimento não pode ser anterior a hoje.'
+                        );
+
+                return;
+            }
+
+            // ------------------------------------------------
+            // Confirmação do FIADO
+            // ------------------------------------------------
+            const confirmarFiado =
+                    confirm(
+                            '📒 VENDA FIADO\n\n' +
+                            'Esta venda será registrada na Conta a Receber do cliente.\n\n' +
+                            'O estoque será baixado normalmente.\n\n' +
+                            'Deseja continuar?'
+                            );
+
+            if (!confirmarFiado) {
+                return;
+            }
+
+            // ------------------------------------------------
+            // PIN DO GERENTE
+            // ------------------------------------------------
+            const pinGerente =
+                    prompt(
+                            '🔐 AUTORIZAÇÃO DO GERENTE\n\n' +
+                            'Informe o PIN do GERENTE ou ADMIN para autorizar esta venda FIADO:'
+                            );
+
+            if (
+                    pinGerente === null
+                    ) {
+
+                alert(
+                        '⚠️ Venda FIADO cancelada. A autorização é obrigatória.'
+                        );
+
+                return;
+            }
+
+            if (
+                    pinGerente.trim() === ''
+                    ) {
+
+                alert(
+                        '⚠️ Informe o PIN do GERENTE ou ADMIN.'
+                        );
+
+                return;
+            }
+
+            // ------------------------------------------------
+            // RPC FIADO
+            // ------------------------------------------------
+            const {
+                data,
+                error
+            } = await _supabase.rpc(
+                    'registrar_venda_balcao_fiado',
+                    {
+                        p_caixa_id:
+                                Number(
+                                        caixaAtual.id
+                                        ),
+
+                        p_cliente_id:
+                                clienteId,
+
+                        p_pin_gerente:
+                                pinGerente.trim(),
+
+                        p_data_vencimento:
+                                dataVencimento,
+
+                        p_itens:
+                                itensRPC
+                    }
+            );
+
+
+            if (error) {
+
+                console.error(
+                        'Erro na RPC registrar_venda_balcao_fiado:',
+                        error
+                        );
+
+                const mensagem =
+                        error?.message || '';
+
+
+                if (
+                        mensagem.includes(
+                                'CLIENTE_OBRIGATORIO_FIADO'
+                                )
+                        ) {
+
+                    alert(
+                            '⚠️ Selecione um cliente cadastrado para o FIADO.'
+                            );
+
+                } else if (
+                        mensagem.includes(
+                                'CLIENTE_NAO_ENCONTRADO'
+                                )
+                        ) {
+
+                    alert(
+                            '⚠️ O cliente selecionado não foi encontrado.'
+                            );
+
+                } else if (
+                        mensagem.includes(
+                                'AUTORIZACAO_GERENTE_NECESSARIA'
+                                )
+                        ) {
+
+                    alert(
+                            '🔐 A autorização do gerente é obrigatória para o FIADO.'
+                            );
+
+                } else if (
+                        mensagem.includes(
+                                'PIN_GERENTE_INVALIDO'
+                                )
+                        ) {
+
+                    alert(
+                            '❌ PIN do GERENTE ou ADMIN inválido.'
+                            );
+
+                } else if (
+                        mensagem.includes(
+                                'DATA_VENCIMENTO_INVALIDA'
+                                )
+                        ) {
+
+                    alert(
+                            '⚠️ A data de vencimento informada é inválida.'
+                            );
+
+                } else if (
+                        mensagem.includes(
+                                'ESTOQUE_INSUFICIENTE'
+                                )
+                        ) {
+
+                    alert(
+                            '⚠️ Estoque insuficiente para um ou mais produtos.'
+                            );
+
+                } else if (
+                        mensagem.includes(
+                                'CAIXA_FECHADO'
+                                )
+                        ) {
+
+                    alert(
+                            '🔒 O caixa está fechado.'
+                            );
+
+                } else if (
+                        mensagem.includes(
+                                'ACESSO_RESTRITO'
+                                )
+                        ) {
+
+                    alert(
+                            '🔒 Usuário sem autorização para realizar esta operação.'
+                            );
+
+                } else {
+
+                    alert(
+                            '❌ Não foi possível registrar o FIADO:\n\n' +
+                            mensagem
+                            );
+                }
+
+                return;
+            }
+
+            if (
+                    !data ||
+                    !data.sucesso ||
+                    !data.pedido_id ||
+                    !data.conta_receber_id
+                    ) {
+
+                throw new Error(
+                        'O banco não retornou corretamente os dados da venda FIADO.'
+                        );
+            }
+
+            const pedidoId =
+                    Number(
+                            data.pedido_id
+                            );
+
+            const contaReceberId =
+                    Number(
+                            data.conta_receber_id
+                            );
+
+            // ------------------------------------------------
+            // Recarrega pedido
+            // ------------------------------------------------
+            const {
+                data: novoPedido,
+                error: erroBuscaPedido
+            } = await _supabase
+                    .from('pedidos')
+                    .select(`
+                    *,
+                    itens_pedido (
+                        *,
+                        produtos (nome),
+                        consumos_lotes (
+                            id,
+                            quantidade,
+                            lote:lotes_producao (
+                                id,
+                                numero_lote,
+                                data_fabricacao,
+                                data_validade
+                            )
+                        )
+                    ),
+                    clientes (
+                        id,
+                        nome,
+                        documento,
+                        telefone,
+                        rua,
+                        numero,
+                        bairro,
+                        complemento,
+                        ponto_referencia
+                    )
+                `)
+                    .eq(
+                            'id',
+                            pedidoId
+                            )
+                    .single();
+
+            if (erroBuscaPedido) {
+                throw erroBuscaPedido;
+            }
+
+            // ------------------------------------------------
+            // Atualiza lista global
+            // ------------------------------------------------
+            if (
+                    !Array.isArray(
+                            listaPedidosGlobal
+                            )
+                    ) {
+
+                listaPedidosGlobal = [];
+            }
+
+            listaPedidosGlobal.push(
+                    novoPedido
+                    );
+
+            // ------------------------------------------------
+            // Imprime
+            // ------------------------------------------------
+            if (
+                    typeof window.imprimirPedido === 'function'
+                    ) {
+
+                window.imprimirPedido(
+                        pedidoId
+                        );
+            }
+
+            // ------------------------------------------------
+            // Limpa seleção FIADO
+            // ------------------------------------------------
+            clienteFiadoSelecionadoId =
+                    null;
+
+            // ------------------------------------------------
+            // Limpa carrinho
+            // ------------------------------------------------
+            carrinhoBalcao = [];
+
+            const campoCliente =
+                    document.getElementById(
+                            'balcao-cliente'
+                            );
+
+            if (campoCliente) {
+                campoCliente.value = '';
+            }
+
+            const seletorCliente =
+                    document.getElementById(
+                            'balcao-cliente-id'
+                            );
+
+            if (seletorCliente) {
+
+                seletorCliente.innerHTML = `
+                    <option value="">
+                        Selecione o cliente...
+                    </option>
+                `;
+            }
+
+            const vencimento =
+                    document.getElementById(
+                            'balcao-data-vencimento'
+                            );
+
+            if (vencimento) {
+                vencimento.value = '';
+            }
+
+            // Volta para uma forma normal
+            // para esconder os campos do FIADO.
+            const pagamento =
+                    document.getElementById(
+                            'balcao-pagamento'
+                            );
+
+            if (pagamento) {
+                pagamento.value = 'PIX';
+
+                alterarFormaPagamentoBalcaoUI(
+                        'PIX'
+                        );
+            }
+
+            atualizarCarrinhoBalcaoUI();
+
+            await carregarBalcao();
+
+            await exibirPainelCaixaAberto();
+
+            alert(
+                    `✅ Venda FIADO #${pedidoId} realizada com sucesso!\n\n` +
+                    `📒 Conta a Receber #${contaReceberId} criada.\n` +
+                    `💰 Valor: R$ ${Number(data.valor_total || 0).toFixed(2).replace('.', ',')}\n` +
+                    `📅 Vencimento: ${dataVencimento.split('-').reverse().join('/')}`
+                    );
+
+            return;
+        }
+
+        // ====================================================
+        // 6. VENDA NORMAL
+        // ====================================================
+        const {
+            data: pedidoId,
+            error: erroVenda
+        } = await _supabase.rpc(
                 'registrar_venda_balcao',
                 {
-                    p_caixa_id: Number(caixaAtual.id),
-                    p_forma_pagamento: formaPagamento,
-                    p_nome_cliente: nomeCliente || null,
-                    p_itens: itensRPC
+                    p_caixa_id:
+                            Number(
+                                    caixaAtual.id
+                                    ),
+
+                    p_forma_pagamento:
+                            formaPagamento,
+
+                    p_nome_cliente:
+                            nomeCliente || null,
+
+                    p_itens:
+                            itensRPC
                 }
         );
 
+        // ----------------------------------------------------
+        // Erro
+        // ----------------------------------------------------
         if (erroVenda) {
-            console.error('Erro na RPC registrar_venda_balcao:', erroVenda);
 
-            if (erroVenda.message?.includes('CAIXA_FECHADO')) {
-                alert('🔒 O caixa está fechado.');
-            } else if (erroVenda.message?.includes('ESTOQUE_INSUFICIENTE')) {
-                alert('⚠️ Estoque insuficiente para um ou mais produtos.');
-            } else if (erroVenda.message?.includes('PRODUTO_NAO_ENCONTRADO')) {
-                alert('⚠️ Um dos produtos não está mais disponível.');
-            } else if (erroVenda.message?.includes('FORMA_PAGAMENTO_INVALIDA')) {
-                alert('⚠️ Forma de pagamento inválida.');
+            console.error(
+                    'Erro na RPC registrar_venda_balcao:',
+                    erroVenda
+                    );
+
+
+            if (
+                    erroVenda.message?.includes(
+                            'CAIXA_FECHADO'
+                            )
+                    ) {
+
+                alert(
+                        '🔒 O caixa está fechado.'
+                        );
+
+            } else if (
+                    erroVenda.message?.includes(
+                            'ESTOQUE_INSUFICIENTE'
+                            )
+                    ) {
+
+                alert(
+                        '⚠️ Estoque insuficiente para um ou mais produtos.'
+                        );
+
+            } else if (
+                    erroVenda.message?.includes(
+                            'PRODUTO_NAO_ENCONTRADO'
+                            )
+                    ) {
+
+                alert(
+                        '⚠️ Um dos produtos não está mais disponível.'
+                        );
+
+            } else if (
+                    erroVenda.message?.includes(
+                            'FORMA_PAGAMENTO_INVALIDA'
+                            )
+                    ) {
+
+                alert(
+                        '⚠️ Forma de pagamento inválida.'
+                        );
+
             } else {
-                alert('❌ Não foi possível registrar a venda: ' + erroVenda.message);
+
+                alert(
+                        '❌ Não foi possível registrar a venda: ' +
+                        erroVenda.message
+                        );
             }
 
             return;
         }
 
         if (!pedidoId) {
-            throw new Error('A venda foi processada, mas nenhum ID de pedido foi retornado.');
+
+            throw new Error(
+                    'A venda foi processada, mas nenhum ID de pedido foi retornado.'
+                    );
         }
 
-        // Recarrega o pedido criado pelo banco para manter
-        // listaPedidosGlobal e a impressão compatíveis com o sistema atual.
-        const {data: novoPedido, error: erroBuscaPedido} = await _supabase
+        // ----------------------------------------------------
+        // Recarrega pedido
+        // ----------------------------------------------------
+        const {
+            data: novoPedido,
+            error: erroBuscaPedido
+        } = await _supabase
                 .from('pedidos')
                 .select(`
                 *,
@@ -7343,49 +10802,95 @@ async function finalizarVendaBalcao() {
                     produtos (nome)
                 )
             `)
-                .eq('id', pedidoId)
+                .eq(
+                        'id',
+                        pedidoId
+                        )
                 .single();
 
         if (erroBuscaPedido) {
             throw erroBuscaPedido;
         }
 
-        // Atualiza a lista global usada pelo PDV.
-        if (!Array.isArray(listaPedidosGlobal)) {
+        // ----------------------------------------------------
+        // Atualiza lista global
+        // ----------------------------------------------------
+        if (
+                !Array.isArray(
+                        listaPedidosGlobal
+                        )
+                ) {
+
             listaPedidosGlobal = [];
         }
 
-        listaPedidosGlobal.push(novoPedido);
+        listaPedidosGlobal.push(
+                novoPedido
+                );
 
-        // Imprime usando o ID criado pela RPC.
-        if (typeof window.imprimirPedido === 'function') {
-            window.imprimirPedido(pedidoId);
+        // ----------------------------------------------------
+        // Imprime
+        // ----------------------------------------------------
+        if (
+                typeof window.imprimirPedido === 'function'
+                ) {
+
+            window.imprimirPedido(
+                    pedidoId
+                    );
         }
 
-        // Limpa o carrinho.
+        // ----------------------------------------------------
+        // Limpa carrinho
+        // ----------------------------------------------------
         carrinhoBalcao = [];
 
-        const campoCliente = document.getElementById('balcao-cliente');
-        if (campoCliente) {
-            campoCliente.value = '';
+        const campoClienteNormal =
+                document.getElementById(
+                        'balcao-cliente'
+                        );
+
+        if (campoClienteNormal) {
+            campoClienteNormal.value = '';
         }
 
         atualizarCarrinhoBalcaoUI();
 
-        // Recarrega produtos para refletir o novo estoque.
+        // ----------------------------------------------------
+        // Atualiza estoque
+        // ----------------------------------------------------
         await carregarBalcao();
 
-        // Atualiza o resumo do caixa.
+        // ----------------------------------------------------
+        // Atualiza caixa
+        // ----------------------------------------------------
         await exibirPainelCaixaAberto();
 
-        alert(`✅ Venda #${pedidoId} realizada com sucesso!`);
+
+        alert(
+                `✅ Venda #${pedidoId} realizada com sucesso!`
+                );
+
 
     } catch (err) {
-        console.error('Exceção ao finalizar venda:', err);
-        alert('❌ Erro ao finalizar venda: ' + (err.message || err));
+
+        console.error(
+                'Exceção ao finalizar venda:',
+                err
+                );
+
+
+        alert(
+                '❌ Erro ao finalizar venda: ' +
+                (err.message || err)
+                );
+
 
     } finally {
-        btn.textContent = '✅ Finalizar e Imprimir';
+
+        btn.textContent =
+                textoOriginal;
+
         btn.disabled = false;
     }
 }
@@ -7913,6 +11418,15 @@ async function carregarResumoFinanceiro() {
 
     const lucroLiquido = lucroBruto - totalDespesas;
 
+// Margens sobre o faturamento
+    const margemBruta = faturamento > 0
+            ? (lucroBruto / faturamento) * 100
+            : 0;
+
+    const margemLiquida = faturamento > 0
+            ? (lucroLiquido / faturamento) * 100
+            : 0;
+
     // Atualização dos cards na interface
     document.getElementById('fin-faturamento').innerText = `R$ ${faturamento.toFixed(2).replace('.', ',')}`;
     document.getElementById('fin-cmv').innerText = `R$ ${cmvTotal.toFixed(2).replace('.', ',')}`;
@@ -7932,11 +11446,31 @@ async function carregarResumoFinanceiro() {
                 `R$ ${cmvEstimadoTotal.toFixed(2).replace('.', ',')}`;
     }
     document.getElementById('fin-lucro-bruto').innerText = `R$ ${lucroBruto.toFixed(2).replace('.', ',')}`;
+
+    const elemLucroBrutoPercentual =
+            document.getElementById('fin-lucro-bruto-percentual');
+
+    if (elemLucroBrutoPercentual) {
+        elemLucroBrutoPercentual.innerText =
+                `${margemBruta.toFixed(2).replace('.', ',')}%`;
+    }
+
+    document.getElementById('fin-despesas').innerText =
+            `R$ ${totalDespesas.toFixed(2).replace('.', ',')}`;
+
     document.getElementById('fin-despesas').innerText = `R$ ${totalDespesas.toFixed(2).replace('.', ',')}`;
 
     const elemLucro = document.getElementById('fin-lucro');
     elemLucro.innerText = `R$ ${lucroLiquido.toFixed(2).replace('.', ',')}`;
     elemLucro.style.color = lucroLiquido >= 0 ? '#2ed573' : '#ff4757';
+
+    const elemLucroPercentual =
+            document.getElementById('fin-lucro-percentual');
+
+    if (elemLucroPercentual) {
+        elemLucroPercentual.innerText =
+                `${margemLiquida.toFixed(2).replace('.', ',')}%`;
+    }
 
     const elemDominante = document.getElementById('fin-pagamento-dominante');
     if (elemDominante) {
@@ -8936,11 +12470,7 @@ async function exibirPainelCaixaAberto() {
         query = query.gte('created_at', dataInicio);
     }
 
-    const {data: vendas, error} = await query;
-
-    if (error) {
-        console.error('Erro ao buscar vendas do caixa:', error.message);
-    }
+    const {data: vendas, error: erroVendas} = await query;
 
     let totalDinheiro = 0;
     let totalOutros = 0;
@@ -8952,10 +12482,61 @@ async function exibirPainelCaixaAberto() {
 
             if (pgto === 'DINHEIRO') {
                 totalDinheiro += val;
-            } else {
+
+            } else if (
+                    pgto === 'PIX' ||
+                    pgto === 'CARTAO_DEBITO' ||
+                    pgto === 'CARTAO_CREDITO'
+                    ) {
                 totalOutros += val;
+
+            } else if (pgto === 'FIADO') {
+                // FIADO não entra no caixa no momento da venda.
             }
         });
+    }
+
+    /* ============================================================
+     RECEBIMENTOS DE CONTAS A RECEBER
+     ============================================================ */
+
+    let totalRecebimentosOutros = 0;
+
+    if (caixaAtual.id) {
+
+        const {
+            data: recebimentos,
+            error: erroRecebimentos
+        } = await _supabase
+                .from('contas_receber')
+                .select(`
+            valor_pago,
+            forma_pagamento_recebimento
+        `)
+                .eq('caixa_id_recebimento', caixaAtual.id)
+                .eq('status', 'PAGA')
+                .in('forma_pagamento_recebimento', [
+                    'PIX',
+                    'CARTAO_DEBITO',
+                    'CARTAO_CREDITO'
+                ]);
+
+        if (erroRecebimentos) {
+            console.error(
+                    'Erro ao carregar recebimentos de contas a receber:',
+                    erroRecebimentos
+                    );
+        }
+
+        if (recebimentos) {
+            recebimentos.forEach(r => {
+                const val = parseFloat(r.valor_pago || 0);
+
+                totalRecebimentosOutros += val;
+            });
+        }
+
+        totalOutros += totalRecebimentosOutros;
     }
 
     let totalSaidasDinheiro = 0;
@@ -9334,7 +12915,7 @@ function calcularCRC16Pix(payload) {
 }
 
 // Monta a string oficial do PIX (EMV BR Code)
-function criarPayloadPix(chave, nome, valor, cidade = 'SAO PAULO') {
+function criarPayloadPix(chave, nome, valor, cidade = 'TARUMÃ') {
     const valorFmt = parseFloat(valor).toFixed(2);
 
     function blk(id, val) {
@@ -9358,50 +12939,481 @@ function criarPayloadPix(chave, nome, valor, cidade = 'SAO PAULO') {
     return payload + calcularCRC16Pix(payload);
 }
 
-// Função acionada ao clicar em "Gerar Placa PIX"
-function processarEExibirPix() {
-    // Esconde o cupom de fundo para não vazar na impressão
-    const cupom = document.getElementById('comprovante-venda');
-    if (cupom)
-        cupom.style.display = 'none';
+// ============================================================
+// PIX — CHAVES SALVAS
+// ============================================================
 
-    const chave = document.getElementById('input-pix-chave').value.trim();
-    const nome = document.getElementById('input-pix-nome').value.trim();
-    const valor = parseFloat(document.getElementById('input-pix-valor').value);
+let pixChavesDisponiveis = [];
+let pixCidadeSelecionada = 'TARUMÃ';
 
-    if (!chave || !nome || isNaN(valor) || valor <= 0) {
-        alert('⚠️ Preencha a chave PIX, o nome do beneficiário e um valor válido!');
+
+// ============================================================
+// CARREGA AS CHAVES PIX SALVAS
+// ============================================================
+
+async function carregarChavesPix() {
+
+    const select =
+            document.getElementById(
+                    'select-pix-chave-salva'
+                    );
+
+    if (!select) {
         return;
     }
 
-    // 1. Gera o código oficial do PIX
-    const payloadPix = criarPayloadPix(chave, nome, valor);
+    select.innerHTML =
+            '<option value="">Selecione uma chave salva...</option>';
 
-    // 2. Gera a imagem do QR Code usando a API gratuita
-    const urlQrCodeImg = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payloadPix)}`;
+    const {
+        data,
+        error
+    } = await _supabase
+            .from('pix_chaves')
+            .select(`
+                id,
+                chave,
+                nome_beneficiario,
+                cidade,
+                principal,
+                ativo
+            `)
+            .eq('ativo', true)
+            .order(
+                    'principal',
+                    {
+                        ascending: false
+                    }
+            )
+            .order(
+                    'nome_beneficiario',
+                    {
+                        ascending: true
+                    }
+            );
 
-    // 3. Atualiza os dados da placa visual
-    document.getElementById('pix-img-qrcode').src = urlQrCodeImg;
-    document.getElementById('pix-exibir-chave').innerText = chave;
-    document.getElementById('pix-exibir-nome').innerText = nome;
-    document.getElementById('pix-exibir-valor').innerText = `R$ ${valor.toFixed(2).replace('.', ',')}`;
+    if (error) {
 
-    // 4. Alterna a visão do formulário para a placa gerada
-    document.getElementById('box-form-pix').style.display = 'none';
-    document.getElementById('box-resultado-pix').style.display = 'block';
+        console.error(
+                'Erro ao carregar chaves PIX:',
+                error
+                );
+
+        select.innerHTML =
+                '<option value="">Não foi possível carregar as chaves</option>';
+
+        return;
+    }
+
+    pixChavesDisponiveis =
+            Array.isArray(data)
+            ? data
+            : [];
+
+    pixChavesDisponiveis.forEach(item => {
+
+        const option =
+                document.createElement(
+                        'option'
+                        );
+
+        option.value =
+                String(item.id);
+
+        option.textContent =
+                item.principal
+                ? `⭐ ${item.nome_beneficiario} — ${item.chave}`
+                : `${item.nome_beneficiario} — ${item.chave}`;
+
+        select.appendChild(option);
+
+    });
+
+    const principal =
+            pixChavesDisponiveis.find(
+                    item =>
+                item.principal === true
+            )
+            ||
+            pixChavesDisponiveis[0];
+
+    if (principal) {
+
+        select.value =
+                String(principal.id);
+
+        preencherChavePixSelecionada(
+                principal
+                );
+    }
+}
+
+
+// ============================================================
+// PREENCHE OS CAMPOS COM A CHAVE SELECIONADA
+// ============================================================
+
+function preencherChavePixSelecionada(item) {
+
+    if (!item) {
+        return;
+    }
+
+    const campoChave =
+            document.getElementById(
+                    'input-pix-chave'
+                    );
+
+    const campoNome =
+            document.getElementById(
+                    'input-pix-nome'
+                    );
+
+    if (campoChave) {
+
+        campoChave.value =
+                item.chave || '';
+    }
+
+    if (campoNome) {
+
+        campoNome.value =
+                item.nome_beneficiario || '';
+    }
+
+    pixCidadeSelecionada =
+            String(
+                    item.cidade
+                    ||
+                    'TARUMÃ'
+                    )
+            .trim()
+            ||
+            'TARUMÃ';
+}
+
+
+// ============================================================
+// QUANDO O USUÁRIO ESCOLHE UMA CHAVE NO SELECT
+// ============================================================
+
+function selecionarChavePixSalva() {
+
+    const select =
+            document.getElementById(
+                    'select-pix-chave-salva'
+                    );
+
+    if (
+            !select ||
+            !select.value
+            ) {
+
+        return;
+    }
+
+    const item =
+            pixChavesDisponiveis.find(
+                    chave =>
+                String(chave.id) ===
+                        String(select.value)
+            );
+
+    preencherChavePixSelecionada(
+            item
+            );
+}
+
+
+// ============================================================
+// SALVA UMA NOVA CHAVE PIX
+// ============================================================
+
+async function salvarChavePix() {
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    )
+            .toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+    if (!ehGerente) {
+
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem salvar chaves PIX.'
+                );
+
+        return;
+    }
+
+    const campoChave =
+            document.getElementById(
+                    'input-pix-chave'
+                    );
+
+    const campoNome =
+            document.getElementById(
+                    'input-pix-nome'
+                    );
+
+    const select =
+            document.getElementById(
+                    'select-pix-chave-salva'
+                    );
+
+    const chave =
+            campoChave?.value.trim()
+            ||
+            '';
+
+    const nome =
+            campoNome?.value.trim()
+            ||
+            '';
+
+    const cidade =
+            String(
+                    pixCidadeSelecionada
+                    ||
+                    'TARUMÃ'
+                    )
+            .trim()
+            .toUpperCase();
+
+    if (!chave) {
+
+        alert(
+                '⚠️ Informe a chave PIX antes de salvar.'
+                );
+
+        campoChave?.focus();
+
+        return;
+    }
+
+    if (!nome) {
+
+        alert(
+                '⚠️ Informe o nome do beneficiário antes de salvar.'
+                );
+
+        campoNome?.focus();
+
+        return;
+    }
+
+    const usuarioAuthId =
+            window.usuarioAtual?.auth_user_id
+            ||
+            null;
+
+    const {
+        data,
+        error
+    } = await _supabase
+            .from('pix_chaves')
+            .insert([{
+                    chave: chave,
+                    nome_beneficiario: nome,
+                    cidade: cidade,
+                    principal:
+                            pixChavesDisponiveis.length === 0,
+                    ativo: true,
+                    usuario_auth_id:
+                            usuarioAuthId
+                }])
+            .select(`
+                id,
+                chave,
+                nome_beneficiario,
+                cidade,
+                principal,
+                ativo
+            `)
+            .single();
+
+    if (error) {
+
+        console.error(
+                'Erro ao salvar chave PIX:',
+                error
+                );
+
+        if (
+                error.code === '23505'
+                ) {
+
+            alert(
+                    '⚠️ Esta chave PIX já está cadastrada.'
+                    );
+
+        } else {
+
+            alert(
+                    '❌ Não foi possível salvar a chave PIX: ' +
+                    error.message
+                    );
+        }
+
+        return;
+    }
+
+    await carregarChavesPix();
+
+    if (
+            select &&
+            data?.id
+            ) {
+
+        select.value =
+                String(data.id);
+    }
+
+    alert(
+            '✅ Chave PIX salva com sucesso!'
+            );
+}
+
+// Função acionada ao clicar em "Gerar Placa PIX"
+function processarEExibirPix() {
+
+    // Esconde o cupom de fundo para não vazar na impressão
+    const cupom =
+            document.getElementById(
+                    'comprovante-venda'
+                    );
+
+    if (cupom) {
+
+        cupom.style.display =
+                'none';
+    }
+
+    // Campos
+    const chave =
+            document.getElementById(
+                    'input-pix-chave'
+                    )
+            .value
+            .trim();
+
+    const nome =
+            document.getElementById(
+                    'input-pix-nome'
+                    )
+            .value
+            .trim();
+
+    const valor =
+            parseFloat(
+                    document.getElementById(
+                            'input-pix-valor'
+                            )
+                    .value
+                    );
+
+    // Validação
+    if (
+            !chave ||
+            !nome ||
+            isNaN(valor) ||
+            valor <= 0
+            ) {
+
+        alert(
+                '⚠️ Preencha a chave PIX, o nome do beneficiário e um valor válido!'
+                );
+
+        return;
+    }
+
+    // Gera o código oficial do PIX
+    const payloadPix =
+            criarPayloadPix(
+                    chave,
+                    nome,
+                    valor,
+                    pixCidadeSelecionada
+                    );
+
+    // Gera a imagem do QR Code
+    const urlQrCodeImg =
+            `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payloadPix)}`;
+
+    // Atualiza os dados da placa
+    document.getElementById(
+            'pix-img-qrcode'
+            )
+            .src =
+            urlQrCodeImg;
+
+    document.getElementById(
+            'pix-exibir-chave'
+            )
+            .innerText =
+            chave;
+
+    document.getElementById(
+            'pix-exibir-nome'
+            )
+            .innerText =
+            nome;
+
+    document.getElementById(
+            'pix-exibir-valor'
+            )
+            .innerText =
+            `R$ ${valor.toFixed(2).replace('.', ',')}`;
+
+    // Mostra a placa
+    document.getElementById(
+            'box-form-pix'
+            )
+            .style.display =
+            'none';
+
+    document.getElementById(
+            'box-resultado-pix'
+            )
+            .style.display =
+            'block';
 }
 
 // Abre o modal na etapa de formulário
 function abrirPlacaPix(valorSugerido = null) {
-    const abaPix = document.getElementById('aba-pix');
-    if (abaPix)
-        abaPix.style.display = 'block';
 
-    if (valorSugerido) {
-        document.getElementById('input-pix-valor').value = parseFloat(valorSugerido).toFixed(2);
+    const abaPix =
+            document.getElementById(
+                    'aba-pix'
+                    );
+
+    if (abaPix) {
+
+        abaPix.style.display =
+                'block';
     }
 
+    if (valorSugerido) {
+
+        document.getElementById(
+                'input-pix-valor'
+                )
+                .value =
+                parseFloat(
+                        valorSugerido
+                        )
+                .toFixed(2);
+    }
+
+    // Volta para o formulário
     voltarParaFormularioPix();
+
+    // Carrega as chaves salvas no banco
+    carregarChavesPix();
 }
 
 function voltarParaFormularioPix() {
@@ -9672,4 +13684,3602 @@ async function alternarStatusUsuario(id, statusAtual) {
             );
 
     await carregarListaUsuarios();
+}
+
+//
+// ============================================================
+// INSUMOS — ABRIR MODAL DE NOVO INSUMO
+// ============================================================
+
+async function abrirModalNovoInsumo() {
+
+    const modal =
+            document.getElementById(
+                    'modal-insumo'
+                    );
+
+    if (!modal) {
+
+        console.error(
+                '⛔ Modal de Insumo não encontrado.'
+                );
+
+        return;
+    }
+
+    const campoNome =
+            document.getElementById(
+                    'insumo-nome'
+                    );
+
+    const selectProduto =
+            document.getElementById(
+                    'insumo-produto'
+                    );
+
+    const selectUnidadeCompra =
+            document.getElementById(
+                    'insumo-unidade-compra'
+                    );
+
+    const selectUnidadeBase =
+            document.getElementById(
+                    'insumo-unidade-base'
+                    );
+
+    const campoFator =
+            document.getElementById(
+                    'insumo-fator'
+                    );
+
+    const campoEstoqueMinimo =
+            document.getElementById(
+                    'insumo-estoque-minimo'
+                    );
+
+    const campoObservacao =
+            document.getElementById(
+                    'insumo-observacao'
+                    );
+
+    // --------------------------------------------------------
+    // LIMPA O FORMULÁRIO
+    // --------------------------------------------------------
+
+    if (campoNome) {
+        campoNome.value = '';
+    }
+
+    if (campoFator) {
+        campoFator.value = '1';
+    }
+
+    if (campoEstoqueMinimo) {
+        campoEstoqueMinimo.value = '0';
+    }
+
+    if (campoObservacao) {
+        campoObservacao.value = '';
+    }
+
+    // --------------------------------------------------------
+    // CARREGA PRODUTOS
+    // --------------------------------------------------------
+
+    if (selectProduto) {
+
+        selectProduto.innerHTML = `
+            <option value="">
+                Nenhum produto relacionado
+            </option>
+        `;
+
+        const {
+            data: produtos,
+            error
+        } = await _supabase
+                .from('produtos')
+                .select(`
+                    id,
+                    nome,
+                    ativo
+                `)
+                .eq('ativo', true)
+                .order('nome');
+
+        if (error) {
+
+            console.error(
+                    'Erro ao carregar produtos:',
+                    error
+                    );
+
+        } else {
+
+            (produtos || []).forEach(produto => {
+
+                const option =
+                        document.createElement(
+                                'option'
+                                );
+
+                option.value =
+                        produto.id;
+
+                option.textContent =
+                        produto.nome;
+
+                selectProduto.appendChild(
+                        option
+                        );
+            });
+        }
+    }
+
+    // --------------------------------------------------------
+    // CARREGA UNIDADES
+    // --------------------------------------------------------
+
+    let unidades = [];
+
+    const {
+        data: unidadesBanco,
+        error: erroUnidades
+    } = await _supabase
+            .from('unidades_medida')
+            .select(`
+            id,
+            codigo,
+            nome,
+            fator_base,
+            categoria,
+            ativa
+        `)
+            .eq('ativa', true)
+            .order('nome');
+
+    if (erroUnidades) {
+
+        console.error(
+                'Erro ao carregar unidades:',
+                erroUnidades
+                );
+
+        alert(
+                '❌ Não foi possível carregar as unidades de medida.'
+                );
+
+        return;
+    }
+
+    unidades =
+            Array.isArray(unidadesBanco)
+            ? unidadesBanco
+            : [];
+
+    // --------------------------------------------------------
+    // PREENCHIMENTO DAS UNIDADES
+    // --------------------------------------------------------
+    function preencherUnidades(select) {
+
+        if (!select) {
+            return;
+        }
+
+        select.innerHTML = `
+            <option value="">
+                Selecione...
+            </option>
+        `;
+
+        unidades.forEach(unidade => {
+            const option =
+                    document.createElement(
+                            'option'
+                            );
+
+            option.value =
+                    unidade.id;
+
+            option.textContent =
+                    `${unidade.codigo} — ${unidade.nome}`;
+
+            option.dataset.fatorBase =
+                    unidade.fator_base;
+
+            option.dataset.categoria =
+                    unidade.categoria || '';
+
+            select.appendChild(
+                    option
+                    );
+        });
+    }
+
+    preencherUnidades(
+            selectUnidadeCompra
+            );
+
+// --------------------------------------------------------
+// FILTRO DE UNIDADE-BASE COMPATÍVEL
+// --------------------------------------------------------
+
+    function preencherUnidadesBaseCompativeis() {
+
+        if (!selectUnidadeBase) {
+            return;
+        }
+
+        const unidadeCompraId =
+                Number(
+                        selectUnidadeCompra?.value || 0
+                        );
+
+        // Sem unidade de compra selecionada.
+        if (
+                !Number.isInteger(unidadeCompraId) ||
+                unidadeCompraId <= 0
+                ) {
+
+            selectUnidadeBase.innerHTML = `
+            <option value="">
+                Selecione primeiro a unidade de compra
+            </option>
+        `;
+
+            selectUnidadeBase.value = '';
+            selectUnidadeBase.disabled = true;
+
+            return;
+        }
+
+        const unidadeCompra =
+                unidades.find(
+                        unidade =>
+                    Number(unidade.id) ===
+                            unidadeCompraId
+                );
+
+        if (!unidadeCompra) {
+
+            selectUnidadeBase.innerHTML = `
+            <option value="">
+                Unidade de compra inválida
+            </option>
+        `;
+
+            selectUnidadeBase.value = '';
+            selectUnidadeBase.disabled = true;
+
+            return;
+        }
+
+        const categoriaCompra =
+                String(
+                        unidadeCompra.categoria || ''
+                        ).toUpperCase();
+
+        const codigoCompra =
+                String(
+                        unidadeCompra.codigo || ''
+                        ).toUpperCase();
+
+        const unidadesCompativeis =
+                unidades.filter(unidadeBase => {
+
+                    const categoriaBase =
+                            String(
+                                    unidadeBase.categoria || ''
+                                    ).toUpperCase();
+
+                    const codigoBase =
+                            String(
+                                    unidadeBase.codigo || ''
+                                    ).toUpperCase();
+
+                    // Mesma categoria:
+                    // G  ↔ KG
+                    // KG ↔ G
+                    // ML ↔ L
+                    // L  ↔ ML
+                    // UN ↔ UN
+                    if (
+                            categoriaCompra &&
+                            categoriaCompra === categoriaBase
+                            ) {
+                        return true;
+                    }
+
+                    // Regra especial:
+                    // compra em UN pode ter base em:
+                    // UN, G ou ML
+                    if (
+                            codigoCompra === 'UN' &&
+                            ['UN', 'G', 'ML'].includes(codigoBase)
+                            ) {
+                        return true;
+                    }
+
+                    return false;
+                });
+
+        selectUnidadeBase.innerHTML = `
+        <option value="">
+            Selecione a unidade-base
+        </option>
+    `;
+
+        unidadesCompativeis.forEach(unidade => {
+
+            const option =
+                    document.createElement(
+                            'option'
+                            );
+
+            option.value =
+                    unidade.id;
+
+            option.textContent =
+                    `${unidade.codigo} — ${unidade.nome}`;
+
+            option.dataset.fatorBase =
+                    unidade.fator_base;
+
+            option.dataset.categoria =
+                    unidade.categoria || '';
+
+            selectUnidadeBase.appendChild(
+                    option
+                    );
+        });
+
+        selectUnidadeBase.disabled =
+                unidadesCompativeis.length === 0;
+
+        selectUnidadeBase.value = '';
+    }
+
+// --------------------------------------------------------
+// EVENTO DA UNIDADE DE COMPRA
+// --------------------------------------------------------
+    if (selectUnidadeCompra) {
+
+        selectUnidadeCompra.onchange =
+                preencherUnidadesBaseCompativeis;
+    }
+
+// Estado inicial
+    preencherUnidadesBaseCompativeis();
+
+    // --------------------------------------------------------
+    // ATIVA O MODAL
+    // --------------------------------------------------------
+    modal.style.display = 'flex';
+    if (campoNome) {
+        setTimeout(
+                function () {
+                    campoNome.focus();
+                },
+                50
+                );
+    }
+}
+
+//
+// ============================================================
+// INSUMOS — FECHAR MODAL
+// ============================================================
+
+function fecharModalNovoInsumo() {
+
+    const modal =
+            document.getElementById(
+                    'modal-insumo'
+                    );
+
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
+    // --------------------------------------------------------
+    // LIMPA O ESTADO DE EDIÇÃO
+    // --------------------------------------------------------
+
+    window.insumoEditandoId = null;
+
+    // --------------------------------------------------------
+    // RESTAURA O BOTÃO DE CADASTRO
+    // --------------------------------------------------------
+
+    const btnSalvar =
+            document.getElementById(
+                    'btn-salvar-insumo'
+                    );
+
+    if (btnSalvar) {
+        btnSalvar.innerHTML =
+                '💾 Cadastrar Insumo';
+
+        btnSalvar.disabled = false;
+    }
+}
+
+//
+// ============================================================
+// INSUMOS — CÁLCULO DO FATOR DE CONVERSÃO
+// ============================================================
+
+function atualizarFatorInsumoUI() {
+
+    const selectCompra =
+            document.getElementById(
+                    'insumo-unidade-compra'
+                    );
+
+    const selectBase =
+            document.getElementById(
+                    'insumo-unidade-base'
+                    );
+
+    const campoFator =
+            document.getElementById(
+                    'insumo-fator'
+                    );
+
+    const labelMinimo =
+            document.getElementById(
+                    'insumo-estoque-minimo-unidade'
+                    );
+
+    if (!selectCompra || !selectBase) {
+        return;
+    }
+
+    const opcaoCompra =
+            selectCompra.options[
+                    selectCompra.selectedIndex
+            ];
+
+    const opcaoBase =
+            selectBase.options[
+                    selectBase.selectedIndex
+            ];
+
+    const fatorCompra =
+            Number(
+                    opcaoCompra?.dataset?.fatorBase || 0
+                    );
+
+    const fatorBase =
+            Number(
+                    opcaoBase?.dataset?.fatorBase || 0
+                    );
+
+    const categoriaCompra =
+            opcaoCompra?.dataset?.categoria || '';
+
+    const categoriaBase =
+            opcaoBase?.dataset?.categoria || '';
+
+    // Atualiza a unidade exibida no estoque mínimo.
+    if (labelMinimo) {
+
+        const codigoBase =
+                opcaoBase?.textContent
+                ?.split('—')[0]
+                ?.trim() || '';
+
+        labelMinimo.textContent =
+                codigoBase
+                ? `Unidade-base: ${codigoBase}`
+                : 'Unidade-base';
+    }
+
+    if (
+            fatorCompra <= 0 ||
+            fatorBase <= 0
+            ) {
+        return;
+    }
+
+// Conversão automática somente entre unidades
+// da mesma categoria.
+//
+// Exemplo:
+// KG -> G = 1000
+// L  -> ML = 1000
+// UN -> UN = 1
+//
+// Quando a compra é uma embalagem (UN) e a
+// unidade-base é peso ou volume, o fator depende
+// do conteúdo da embalagem e deve ser informado
+// manualmente.
+//
+// Exemplo:
+// 1 UN de leite condensado = 295 ML
+    if (
+            categoriaCompra !== categoriaBase
+            ) {
+
+        if (campoFator) {
+
+            campoFator.value = '';
+
+            campoFator.placeholder =
+                    'Informe manualmente';
+
+            campoFator.title =
+                    'Informe quantas unidades-base existem em uma unidade de compra.';
+        }
+
+        return;
+    }
+
+    const fator =
+            fatorCompra / fatorBase;
+
+    if (campoFator) {
+
+        campoFator.placeholder =
+                '';
+
+        campoFator.title =
+                '';
+
+        campoFator.value =
+                Number(fator.toFixed(6))
+                .toString();
+    }
+}
+
+//
+// ============================================================
+// INSUMOS — SALVAR NOVO INSUMO
+// ============================================================
+
+async function salvarNovoInsumo() {
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    ).toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+    if (!ehGerente) {
+
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem cadastrar ou editar insumos.'
+                );
+
+        return;
+    }
+
+    const btn =
+            document.getElementById(
+                    'btn-salvar-insumo'
+                    );
+
+    if (!btn) {
+
+        console.error(
+                '⛔ Botão de salvar insumo não encontrado.'
+                );
+
+        return;
+    }
+
+    if (btn.disabled) {
+        return;
+    }
+
+    const textoOriginal =
+            btn.innerHTML;
+
+    try {
+
+        // ----------------------------------------------------
+        // CAMPOS
+        // ----------------------------------------------------
+
+        const campoNome =
+                document.getElementById(
+                        'insumo-nome'
+                        );
+
+        const selectProduto =
+                document.getElementById(
+                        'insumo-produto'
+                        );
+
+        const selectUnidadeCompra =
+                document.getElementById(
+                        'insumo-unidade-compra'
+                        );
+
+        const selectUnidadeBase =
+                document.getElementById(
+                        'insumo-unidade-base'
+                        );
+
+        const campoFator =
+                document.getElementById(
+                        'insumo-fator'
+                        );
+
+        const campoEstoqueMinimo =
+                document.getElementById(
+                        'insumo-estoque-minimo'
+                        );
+
+        const campoObservacao =
+                document.getElementById(
+                        'insumo-observacao'
+                        );
+
+
+        // ----------------------------------------------------
+        // DADOS
+        // ----------------------------------------------------
+
+        const nome =
+                campoNome?.value
+                ?.trim() || '';
+
+        const produtoId =
+                selectProduto?.value
+                ? Number(selectProduto.value)
+                : null;
+
+        const unidadeCompraId =
+                Number(
+                        selectUnidadeCompra?.value || 0
+                        );
+
+        const unidadeBaseId =
+                Number(
+                        selectUnidadeBase?.value || 0
+                        );
+
+        const fator =
+                Number(
+                        campoFator?.value || 0
+                        );
+
+        const estoqueMinimo =
+                Number(
+                        campoEstoqueMinimo?.value || 0
+                        );
+
+        const observacao =
+                campoObservacao?.value
+                ?.trim() || null;
+
+
+        // ----------------------------------------------------
+        // ID DO INSUMO EM EDIÇÃO
+        // ----------------------------------------------------
+
+        const insumoEditandoId =
+                Number(
+                        window.insumoEditandoId || 0
+                        );
+
+        const editando =
+                Number.isInteger(insumoEditandoId) &&
+                insumoEditandoId > 0;
+
+
+        // ----------------------------------------------------
+        // VALIDAÇÕES
+        // ----------------------------------------------------
+
+        if (!nome) {
+
+            alert(
+                    '⚠️ Informe o nome do insumo.'
+                    );
+
+            campoNome?.focus();
+
+            return;
+        }
+
+        if (nome.length > 150) {
+
+            alert(
+                    '⚠️ O nome do insumo pode ter no máximo 150 caracteres.'
+                    );
+
+            campoNome?.focus();
+
+            return;
+        }
+
+        if (
+                !Number.isInteger(unidadeCompraId) ||
+                unidadeCompraId <= 0
+                ) {
+
+            alert(
+                    '⚠️ Selecione a unidade de compra.'
+                    );
+
+            selectUnidadeCompra?.focus();
+
+            return;
+        }
+
+        if (
+                !Number.isInteger(unidadeBaseId) ||
+                unidadeBaseId <= 0
+                ) {
+
+            alert(
+                    '⚠️ Selecione a unidade-base.'
+                    );
+
+            selectUnidadeBase?.focus();
+
+            return;
+        }
+
+        if (
+                !Number.isFinite(fator) ||
+                fator <= 0
+                ) {
+
+            alert(
+                    '⚠️ O fator de conversão deve ser maior que zero.'
+                    );
+
+            campoFator?.focus();
+
+            return;
+        }
+
+        if (
+                !Number.isFinite(estoqueMinimo) ||
+                estoqueMinimo < 0
+                ) {
+
+            alert(
+                    '⚠️ O estoque mínimo não pode ser negativo.'
+                    );
+
+            campoEstoqueMinimo?.focus();
+
+            return;
+        }
+
+
+        // ----------------------------------------------------
+        // USUÁRIO
+        // ----------------------------------------------------
+
+        const usuarioAuthId =
+                window.usuarioAtual?.auth_user_id || null;
+
+        if (!usuarioAuthId) {
+
+            alert(
+                    '❌ Não foi possível identificar o usuário autenticado.'
+                    );
+
+            return;
+        }
+
+
+        // ----------------------------------------------------
+        // BOTÃO
+        // ----------------------------------------------------
+
+        btn.disabled = true;
+
+        btn.innerHTML =
+                editando
+                ? '⏳ Salvando alterações...'
+                : '⏳ Cadastrando...';
+
+
+        // ====================================================
+        // EDIÇÃO
+        // ====================================================
+
+        if (editando) {
+
+            const {
+                data,
+                error
+            } = await _supabase
+                    .from('insumos')
+                    .update({
+                        nome: nome,
+                        produto_id: produtoId,
+                        unidade_base_id: unidadeBaseId,
+                        unidade_compra_id: unidadeCompraId,
+                        fator_compra_base: fator,
+                        estoque_minimo_base: estoqueMinimo,
+                        observacao: observacao,
+                        usuario_auth_id: usuarioAuthId,
+                        atualizado_em: new Date().toISOString()
+                    })
+                    .eq('id', insumoEditandoId)
+                    .select(`
+                        id,
+                        nome
+                    `)
+                    .single();
+
+            if (error) {
+
+                console.error(
+                        '⛔ Erro ao editar insumo:',
+                        error
+                        );
+
+                throw error;
+            }
+
+            if (!data) {
+
+                throw new Error(
+                        'O banco não retornou o insumo editado.'
+                        );
+            }
+
+            console.log(
+                    '✅ Insumo editado:',
+                    data
+                    );
+
+            alert(
+                    `✅ Insumo "${data.nome}" atualizado com sucesso!`
+                    );
+
+
+            // ====================================================
+            // NOVO CADASTRO
+            // ====================================================
+
+        } else {
+
+            const {
+                data,
+                error
+            } = await _supabase
+                    .from('insumos')
+                    .insert([{
+                            nome: nome,
+                            produto_id: produtoId,
+                            unidade_base_id: unidadeBaseId,
+                            unidade_compra_id: unidadeCompraId,
+                            fator_compra_base: fator,
+                            estoque_minimo_base: estoqueMinimo,
+                            ativo: true,
+                            observacao: observacao,
+                            usuario_auth_id: usuarioAuthId
+                        }])
+                    .select(`
+                        id,
+                        nome
+                    `)
+                    .single();
+
+            if (error) {
+
+                console.error(
+                        '⛔ Erro ao cadastrar insumo:',
+                        error
+                        );
+
+                throw error;
+            }
+
+            if (!data) {
+
+                throw new Error(
+                        'O banco não retornou o insumo cadastrado.'
+                        );
+            }
+
+            console.log(
+                    '✅ Insumo cadastrado:',
+                    data
+                    );
+
+            alert(
+                    `✅ Insumo "${data.nome}" cadastrado com sucesso!`
+                    );
+        }
+
+
+        // ----------------------------------------------------
+        // LIMPA E FECHA
+        // ----------------------------------------------------
+
+        fecharModalNovoInsumo();
+
+
+        // ----------------------------------------------------
+        // ATUALIZA A LISTA
+        // ----------------------------------------------------
+
+        await carregarCadastroInsumosUI();
+
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao salvar insumo:',
+                erro
+                );
+
+        alert(
+                '❌ Não foi possível salvar o insumo:\n\n' +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+
+    } finally {
+
+        btn.disabled = false;
+
+        btn.innerHTML =
+                '💾 Cadastrar Insumo';
+    }
+}
+
+// ============================================================
+// CADASTROS — ALTERNÂNCIA ENTRE INSUMOS E FORNECEDORES
+// ============================================================
+
+function atualizarBotoesCadastrosUI(abaAtiva) {
+
+    const botoes =
+            document.querySelectorAll(
+                    '#aba-cadastros .sub-tabs-nav .btn-sub-tab'
+                    );
+
+    botoes.forEach(botao => {
+
+        const texto =
+                botao.textContent
+                .trim()
+                .toLowerCase();
+
+        const ativo =
+                (
+                        abaAtiva === 'insumos' &&
+                        texto.includes('insumos')
+                        ) ||
+                (
+                        abaAtiva === 'fornecedores' &&
+                        texto.includes('fornecedores')
+                        ) ||
+                (
+                        abaAtiva === 'clientes' &&
+                        texto.includes('clientes')
+                        );
+
+        botao.classList.toggle(
+                'active',
+                ativo
+                );
+
+        botao.style.background =
+                ativo
+                ? '#2a2a35'
+                : '#1e1e24';
+
+        botao.style.color =
+                ativo
+                ? '#fff'
+                : '#aaa';
+    });
+}
+
+async function abrirCadastroInsumosUI() {
+
+    const cadastroInsumos =
+            document.getElementById(
+                    'cadastro-insumos'
+                    );
+
+    const cadastroFornecedores =
+            document.getElementById(
+                    'cadastro-fornecedores'
+                    );
+
+    const cadastroClientes =
+            document.getElementById(
+                    'cadastro-clientes'
+                    );
+
+    if (!cadastroInsumos) {
+        console.error(
+                '⛔ Conteúdo de Insumos não encontrado.'
+                );
+        return;
+    }
+
+    // Mostra somente INSUMOS
+    cadastroInsumos.style.display = 'block';
+
+    // Esconde os demais
+    if (cadastroFornecedores) {
+        cadastroFornecedores.style.display = 'none';
+    }
+
+    if (cadastroClientes) {
+        cadastroClientes.style.display = 'none';
+    }
+
+    atualizarBotoesCadastrosUI('insumos');
+
+    await carregarCadastroInsumosUI();
+}
+
+// ============================================================
+// FORNECEDORES
+// ============================================================
+async function abrirCadastroFornecedoresUI() {
+
+    const cadastroInsumos =
+            document.getElementById(
+                    'cadastro-insumos'
+                    );
+
+    const cadastroFornecedores =
+            document.getElementById(
+                    'cadastro-fornecedores'
+                    );
+
+    const cadastroClientes =
+            document.getElementById(
+                    'cadastro-clientes'
+                    );
+
+    if (!cadastroFornecedores) {
+        console.error(
+                '⛔ Conteúdo de Fornecedores não encontrado.'
+                );
+        return;
+    }
+
+    // Esconde os demais
+    if (cadastroInsumos) {
+        cadastroInsumos.style.display = 'none';
+    }
+
+    if (cadastroClientes) {
+        cadastroClientes.style.display = 'none';
+    }
+
+    // Mostra somente FORNECEDORES
+    cadastroFornecedores.style.display = 'block';
+
+    atualizarBotoesCadastrosUI('fornecedores');
+
+    await carregarCadastroFornecedoresUI();
+}
+
+async function carregarCadastroFornecedoresUI() {
+
+    const tbody =
+            document.getElementById(
+                    'fornecedores-table-body'
+                    );
+
+    if (!tbody) {
+        console.error(
+                '⛔ Tabela de Fornecedores não encontrada.'
+                );
+        return;
+    }
+
+    tbody.innerHTML = `
+        <tr>
+            <td
+                colspan="6"
+                style="
+                    text-align:center;
+                    color:#aaa;
+                    padding:25px;
+                "
+            >
+                ⏳ Carregando fornecedores...
+            </td>
+        </tr>
+    `;
+
+    try {
+
+        const {
+            data: fornecedores,
+            error
+        } = await _supabase
+                .from('fornecedores')
+                .select(`
+                id,
+                nome,
+                documento,
+                telefone,
+                email,
+                observacao,
+                ativo,
+                criado_em
+            `)
+                .order('nome');
+
+        if (error) {
+            throw error;
+        }
+
+        const lista =
+                Array.isArray(fornecedores)
+                ? fornecedores
+                : [];
+
+        if (lista.length === 0) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td
+                        colspan="6"
+                        style="
+                            text-align:center;
+                            color:#aaa;
+                            padding:30px;
+                        "
+                    >
+                        🏭 Nenhum fornecedor cadastrado.
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        tbody.innerHTML = '';
+
+        lista.forEach(fornecedor => {
+
+            const tr =
+                    document.createElement('tr');
+
+            // FORNECEDOR
+            const tdNome =
+                    document.createElement('td');
+
+            const nome =
+                    document.createElement('strong');
+
+            nome.textContent =
+                    fornecedor.nome || '-';
+
+            tdNome.appendChild(nome);
+
+            tr.appendChild(tdNome);
+
+            // DOCUMENTO
+            const tdDocumento =
+                    document.createElement('td');
+
+            tdDocumento.textContent =
+                    fornecedor.documento || '—';
+
+            tr.appendChild(tdDocumento);
+
+            // TELEFONE
+            const tdTelefone =
+                    document.createElement('td');
+
+            tdTelefone.textContent =
+                    fornecedor.telefone || '—';
+
+            tr.appendChild(tdTelefone);
+
+            // E-MAIL
+            const tdEmail =
+                    document.createElement('td');
+
+            tdEmail.textContent =
+                    fornecedor.email || '—';
+
+            tr.appendChild(tdEmail);
+
+            // STATUS
+            const tdStatus =
+                    document.createElement('td');
+
+            tdStatus.style.textAlign =
+                    'center';
+
+            tdStatus.textContent =
+                    fornecedor.ativo
+                    ? '🟢 Ativo'
+                    : '⚪ Inativo';
+
+            tr.appendChild(tdStatus);
+
+            // AÇÕES
+            const tdAcoes =
+                    document.createElement('td');
+
+            tdAcoes.style.textAlign =
+                    'center';
+
+            tdAcoes.innerHTML = `
+                <button
+                    type="button"
+                    class="btn-qty"
+                    title="Editar fornecedor"
+                    onclick="editarFornecedorUI(${Number(fornecedor.id)})"
+                >
+                    ✏️
+                </button>
+
+                <button
+                    type="button"
+                    class="btn-qty"
+                    title="${
+                    fornecedor.ativo
+                    ? 'Inativar fornecedor'
+                    : 'Ativar fornecedor'
+                    }"
+                    onclick="alternarStatusFornecedorUI(
+                        ${Number(fornecedor.id)},
+                        ${fornecedor.ativo ? 'true' : 'false'}
+                    )"
+                >
+                    ${
+                    fornecedor.ativo
+                    ? '🚫'
+                    : '✅'
+                    }
+                </button>
+            `;
+
+            tr.appendChild(tdAcoes);
+
+            tbody.appendChild(tr);
+        });
+
+    } catch (error) {
+
+        console.error(
+                '⛔ Erro ao carregar fornecedores:',
+                error
+                );
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="6"
+                    style="
+                        text-align:center;
+                        color:#ff6b6b;
+                        padding:30px;
+                    "
+                >
+                    ❌ Não foi possível carregar os fornecedores.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// ============================================================
+// FORNECEDORES — CONTROLE DE EDIÇÃO
+// ============================================================
+let fornecedorEditandoId = null;
+
+// ============================================================
+// FORNECEDORES — ABRIR MODAL
+// ============================================================
+function abrirModalNovoFornecedor() {
+
+    fornecedorEditandoId = null;
+
+    const modal =
+            document.getElementById(
+                    'modal-fornecedor'
+                    );
+
+    if (!modal) {
+        console.error(
+                '⛔ Modal de Fornecedor não encontrado.'
+                );
+        return;
+    }
+
+    const campoNome =
+            document.getElementById(
+                    'fornecedor-nome'
+                    );
+
+    const campoDocumento =
+            document.getElementById(
+                    'fornecedor-documento'
+                    );
+
+    const campoTelefone =
+            document.getElementById(
+                    'fornecedor-telefone'
+                    );
+
+    const campoEmail =
+            document.getElementById(
+                    'fornecedor-email'
+                    );
+
+    const campoObservacao =
+            document.getElementById(
+                    'fornecedor-observacao'
+                    );
+
+    // --------------------------------------------------------
+// CONFIGURAÇÃO DOS CAMPOS DE TELEFONE E DOCUMENTO
+// --------------------------------------------------------
+
+    if (campoTelefone) {
+
+        campoTelefone.setAttribute(
+                'inputmode',
+                'numeric'
+                );
+
+        campoTelefone.setAttribute(
+                'maxlength',
+                '15'
+                );
+
+        campoTelefone.oninput =
+                function () {
+                    formatarTelefoneFornecedorInput(this);
+                };
+    }
+
+    if (campoDocumento) {
+
+        campoDocumento.setAttribute(
+                'inputmode',
+                'numeric'
+                );
+
+        campoDocumento.setAttribute(
+                'maxlength',
+                '18'
+                );
+
+        campoDocumento.oninput =
+                function () {
+                    formatarDocumentoFornecedorInput(this);
+                };
+    }
+
+    if (campoNome)
+        campoNome.value = '';
+    if (campoDocumento)
+        campoDocumento.value = '';
+    if (campoTelefone)
+        campoTelefone.value = '';
+    if (campoEmail)
+        campoEmail.value = '';
+    if (campoObservacao)
+        campoObservacao.value = '';
+
+    const titulo =
+            modal.querySelector('h2');
+
+    if (titulo) {
+        titulo.textContent =
+                '🏭 Novo Fornecedor';
+    }
+
+    const btn =
+            document.getElementById(
+                    'btn-salvar-fornecedor'
+                    );
+
+    if (btn) {
+        btn.innerHTML =
+                '💾 Cadastrar Fornecedor';
+    }
+
+    modal.style.display = 'flex';
+
+    setTimeout(() => {
+
+        if (campoNome) {
+            campoNome.focus();
+        }
+
+    }, 50);
+}
+
+// ============================================================
+// FORNECEDORES — EDITAR
+// ============================================================
+async function editarFornecedorUI(id) {
+
+    const fornecedorId =
+            Number(id);
+
+    if (!fornecedorId) {
+        alert(
+                'Fornecedor inválido.'
+                );
+        return;
+    }
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    ).toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+    if (!ehGerente) {
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem editar fornecedores.'
+                );
+        return;
+    }
+
+    try {
+
+        const {
+            data,
+            error
+        } = await _supabase
+                .from('fornecedores')
+                .select(`
+                id,
+                nome,
+                documento,
+                telefone,
+                email,
+                observacao,
+                ativo
+            `)
+                .eq('id', fornecedorId)
+                .single();
+
+        if (error) {
+            throw error;
+        }
+
+        if (!data) {
+            alert(
+                    'Fornecedor não encontrado.'
+                    );
+            return;
+        }
+
+        fornecedorEditandoId =
+                Number(data.id);
+
+        const modal =
+                document.getElementById(
+                        'modal-fornecedor'
+                        );
+
+        if (!modal) {
+            return;
+        }
+
+        document.getElementById(
+                'fornecedor-nome'
+                ).value =
+                data.nome || '';
+
+        document.getElementById(
+                'fornecedor-documento'
+                ).value =
+                data.documento || '';
+
+        document.getElementById(
+                'fornecedor-telefone'
+                ).value =
+                data.telefone || '';
+
+        document.getElementById(
+                'fornecedor-email'
+                ).value =
+                data.email || '';
+
+        document.getElementById(
+                'fornecedor-observacao'
+                ).value =
+                data.observacao || '';
+
+        const titulo =
+                modal.querySelector('h2');
+
+        if (titulo) {
+            titulo.textContent =
+                    '🏭 Editar Fornecedor';
+        }
+
+        const btn =
+                document.getElementById(
+                        'btn-salvar-fornecedor'
+                        );
+
+        if (btn) {
+            btn.innerHTML =
+                    '💾 Salvar Alterações';
+        }
+
+        modal.style.display =
+                'flex';
+
+        setTimeout(() => {
+
+            document.getElementById(
+                    'fornecedor-nome'
+                    )?.focus();
+
+        }, 50);
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao carregar fornecedor para edição:',
+                erro
+                );
+
+        alert(
+                '❌ Não foi possível carregar o fornecedor.'
+                );
+    }
+}
+
+// ============================================================
+// FORNECEDORES — SALVAR NOVO / EDITADO
+// ============================================================
+async function salvarNovoFornecedor() {
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    ).toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+    if (!ehGerente) {
+
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem cadastrar fornecedores.'
+                );
+
+        return;
+    }
+
+    const btn =
+            document.getElementById(
+                    'btn-salvar-fornecedor'
+                    );
+
+    const nome =
+            document.getElementById(
+                    'fornecedor-nome'
+                    )?.value.trim() || '';
+
+    const documento =
+            document.getElementById(
+                    'fornecedor-documento'
+                    )?.value.trim() || null;
+
+    const telefone =
+            document.getElementById(
+                    'fornecedor-telefone'
+                    )?.value.trim() || null;
+
+    const email =
+            document.getElementById(
+                    'fornecedor-email'
+                    )?.value.trim() || null;
+
+    const observacao =
+            document.getElementById(
+                    'fornecedor-observacao'
+                    )?.value.trim() || null;
+
+    if (!nome) {
+
+        alert(
+                'Informe o nome do fornecedor.'
+                );
+
+        return;
+    }
+
+    if (email) {
+
+        const emailValido =
+                /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                .test(email);
+
+        if (!emailValido) {
+
+            alert(
+                    'Informe um e-mail válido.'
+                    );
+
+            return;
+        }
+    }
+
+    const textoOriginal =
+            btn?.innerHTML || '';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML =
+                fornecedorEditandoId
+                ? '⏳ Salvando...'
+                : '⏳ Cadastrando...';
+    }
+
+    try {
+
+        let data;
+        let error;
+
+        if (fornecedorEditandoId) {
+
+            const resultado =
+                    await _supabase
+                    .from('fornecedores')
+                    .update({
+                        nome,
+                        documento,
+                        telefone,
+                        email,
+                        observacao
+                    })
+                    .eq(
+                            'id',
+                            fornecedorEditandoId
+                            )
+                    .select(`
+                        id,
+                        nome,
+                        documento,
+                        telefone,
+                        email,
+                        observacao,
+                        ativo,
+                        criado_em
+                    `)
+                    .single();
+
+            data = resultado.data;
+            error = resultado.error;
+
+        } else {
+
+            const resultado =
+                    await _supabase
+                    .from('fornecedores')
+                    .insert({
+                        nome,
+                        documento,
+                        telefone,
+                        email,
+                        observacao,
+                        ativo: true
+                    })
+                    .select(`
+                        id,
+                        nome,
+                        documento,
+                        telefone,
+                        email,
+                        observacao,
+                        ativo,
+                        criado_em
+                    `)
+                    .single();
+
+            data = resultado.data;
+            error = resultado.error;
+        }
+
+        if (error) {
+            throw error;
+        }
+
+        console.log(
+                fornecedorEditandoId
+                ? '✅ Fornecedor atualizado:'
+                : '✅ Fornecedor cadastrado:',
+                data
+                );
+
+        alert(
+                fornecedorEditandoId
+                ? `✅ Fornecedor atualizado com sucesso!\n\nNome: ${data.nome}`
+                : `✅ Fornecedor cadastrado com sucesso!\n\nNome: ${data.nome}`
+                );
+
+        fornecedorEditandoId = null;
+
+        fecharModalNovoFornecedor();
+
+        await carregarCadastroFornecedoresUI();
+
+        await carregarFornecedoresCompras();
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao salvar fornecedor:',
+                erro
+                );
+
+        alert(
+                '❌ Não foi possível salvar o fornecedor:\n\n' +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+
+    } finally {
+
+        if (btn) {
+            btn.disabled = false;
+
+            btn.innerHTML =
+                    textoOriginal ||
+                    '💾 Cadastrar Fornecedor';
+        }
+    }
+}
+
+// ============================================================
+// FORNECEDORES — ATIVAR / INATIVAR
+// ============================================================
+async function alternarStatusFornecedorUI(id, statusAtual) {
+
+    const fornecedorId =
+            Number(id);
+
+    if (!fornecedorId) {
+        alert(
+                'Fornecedor inválido.'
+                );
+        return;
+    }
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    ).toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+    if (!ehGerente) {
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem alterar o status de fornecedores.'
+                );
+        return;
+    }
+
+    const estaAtivo =
+            statusAtual === true ||
+            statusAtual === 'true';
+
+    const novoStatus =
+            !estaAtivo;
+
+    const mensagem =
+            novoStatus
+            ? 'Deseja ativar este fornecedor?'
+            : 'Deseja inativar este fornecedor?';
+
+    if (!confirm(mensagem)) {
+        return;
+    }
+
+    try {
+
+        const {
+            data,
+            error
+        } = await _supabase
+                .from('fornecedores')
+                .update({
+                    ativo: novoStatus
+                })
+                .eq(
+                        'id',
+                        fornecedorId
+                        )
+                .select(`
+                id,
+                nome,
+                ativo
+            `)
+                .single();
+
+        if (error) {
+            throw error;
+        }
+
+        alert(
+                novoStatus
+                ? `✅ Fornecedor "${data.nome}" ativado.`
+                : `✅ Fornecedor "${data.nome}" inativado.`
+                );
+
+        await carregarCadastroFornecedoresUI();
+
+        await carregarFornecedoresCompras();
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao alterar status do fornecedor:',
+                erro
+                );
+
+        alert(
+                '❌ Não foi possível alterar o status do fornecedor:\n\n' +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+    }
+}
+// ============================================================
+// FORNECEDORES — FECHAR MODAL
+// ============================================================
+function fecharModalNovoFornecedor() {
+
+    const modal =
+            document.getElementById(
+                    'modal-fornecedor'
+                    );
+
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// ============================================================
+// CADASTRO DE CLIENTES
+// ============================================================
+let clienteEditandoId = null;
+let clientesCadastroCache = [];
+let timerBuscaClientesCadastro = null;
+
+// ============================================================
+// ABRIR ABA CLIENTES
+// ============================================================
+async function abrirCadastroClientesUI() {
+
+    const cadastroInsumos =
+            document.getElementById(
+                    'cadastro-insumos'
+                    );
+
+    const cadastroFornecedores =
+            document.getElementById(
+                    'cadastro-fornecedores'
+                    );
+
+    const cadastroClientes =
+            document.getElementById(
+                    'cadastro-clientes'
+                    );
+
+    if (!cadastroClientes) {
+        console.error(
+                '⛔ Conteúdo de Clientes não encontrado.'
+                );
+        return;
+    }
+
+    // Esconde os demais
+    if (cadastroInsumos) {
+        cadastroInsumos.style.display = 'none';
+    }
+
+    if (cadastroFornecedores) {
+        cadastroFornecedores.style.display = 'none';
+    }
+
+    // Mostra somente CLIENTES
+    cadastroClientes.style.display = 'block';
+
+    atualizarBotoesCadastrosUI('clientes');
+
+    await carregarCadastroClientesUI();
+}
+
+// ============================================================
+// CARREGAR CLIENTES
+// ============================================================
+async function carregarCadastroClientesUI(busca = '') {
+
+    const tbody = document.getElementById('clientes-table-body');
+
+    if (!tbody) {
+        console.error(
+                'Tabela de clientes não encontrada.'
+                );
+        return;
+    }
+
+    tbody.innerHTML = `
+        <tr>
+            <td
+                colspan="5"
+                style="
+                text-align:center;
+                color:#aaa;
+                padding:25px;
+                "
+            >
+                ⏳ Carregando clientes...
+            </td>
+        </tr>
+    `;
+
+    try {
+
+        const {data, error} =
+                await _supabase.rpc(
+                        'listar_clientes_admin',
+                        {
+                            p_busca:
+                                    busca?.trim() || null
+                        }
+                );
+
+        if (error) {
+            throw error;
+        }
+
+        clientesCadastroCache =
+                Array.isArray(data)
+                ? data
+                : [];
+
+        renderizarTabelaClientesUI(
+                clientesCadastroCache
+                );
+
+    } catch (erro) {
+
+        console.error(
+                'Erro ao carregar clientes:',
+                erro
+                );
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="5"
+                    style="
+                    text-align:center;
+                    color:#ff6b6b;
+                    padding:25px;
+                    "
+                >
+                    ❌ Não foi possível carregar os clientes.
+                </td>
+            </tr>
+        `;
+}
+}
+
+// ============================================================
+// RENDERIZAR CLIENTES
+// ============================================================
+function renderizarTabelaClientesUI(clientes) {
+
+    const tbody =
+            document.getElementById(
+                    'clientes-table-body'
+                    );
+
+    if (!tbody) {
+        return;
+    }
+
+    if (
+            !Array.isArray(clientes) ||
+            clientes.length === 0
+            ) {
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="5"
+                    style="
+                    text-align:center;
+                    color:#aaa;
+                    padding:25px;
+                    "
+                >
+                    Nenhum cliente encontrado.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    tbody.innerHTML =
+            clientes.map(cliente => {
+
+                const nome =
+                        escaparHTMLClienteUI(
+                                cliente.nome || ''
+                                );
+
+                const documento =
+                        cliente.documento
+                        ? escaparHTMLClienteUI(
+                                formatarDocumentoClienteUI(
+                                        cliente.documento
+                                        )
+                                )
+                        : '—';
+
+                const telefone =
+                        cliente.telefone
+                        ? escaparHTMLClienteUI(
+                                formatarTelefoneClienteUI(
+                                        cliente.telefone
+                                        )
+                                )
+                        : '—';
+
+                const endereco =
+                        montarEnderecoClienteUI(
+                                cliente
+                                );
+
+                return `
+                <tr>
+
+                    <td>
+                        <strong>
+                            ${nome}
+                        </strong>
+                    </td>
+
+                    <td>
+                        ${documento}
+                    </td>
+
+                    <td>
+                        ${telefone}
+                    </td>
+
+                    <td>
+                        ${endereco}
+                    </td>
+
+                    <td style="text-align:center;">
+
+                        <button
+                            type="button"
+                            class="btn-qty"
+                            onclick="editarClienteUI(${Number(cliente.id)})"
+                            style="
+                            margin-right:5px;
+                            "
+                        >
+                            ✏️ Editar
+                        </button>
+
+                    </td>
+
+                </tr>
+            `;
+
+            }).join('');
+}
+
+// ============================================================
+// BUSCA
+// ============================================================
+function filtrarCadastroClientesUI(valor) {
+
+    clearTimeout(
+            timerBuscaClientesCadastro
+            );
+
+    timerBuscaClientesCadastro =
+            setTimeout(() => {
+
+                carregarCadastroClientesUI(
+                        valor || ''
+                        );
+
+            }, 250);
+}
+
+// ============================================================
+// NOVO CLIENTE
+// ============================================================
+function abrirModalNovoCliente() {
+
+    clienteEditandoId = null;
+
+    const modal =
+            document.getElementById(
+                    'modal-cliente'
+                    );
+
+    const titulo =
+            document.getElementById(
+                    'modal-cliente-titulo'
+                    );
+
+    const botao =
+            document.getElementById(
+                    'btn-salvar-cliente'
+                    );
+
+    if (titulo) {
+        titulo.textContent =
+                '👤 Novo Cliente';
+    }
+
+    if (botao) {
+        botao.textContent =
+                '💾 Cadastrar Cliente';
+    }
+
+    limparFormularioClienteUI();
+
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+
+    setTimeout(() => {
+
+        document
+                .getElementById('cliente-nome')
+                ?.focus();
+
+    }, 50);
+}
+
+// ============================================================
+// FECHAR MODAL
+// ============================================================
+function fecharModalCliente() {
+
+    const modal =
+            document.getElementById(
+                    'modal-cliente'
+                    );
+
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
+    clienteEditandoId = null;
+
+    limparFormularioClienteUI();
+}
+
+// ============================================================
+// LIMPAR FORMULÁRIO
+// ============================================================
+function limparFormularioClienteUI() {
+
+    const campos = [
+        'cliente-nome',
+        'cliente-documento',
+        'cliente-telefone',
+        'cliente-rua',
+        'cliente-numero',
+        'cliente-bairro',
+        'cliente-complemento',
+        'cliente-ponto-referencia'
+    ];
+
+    campos.forEach(id => {
+
+        const campo =
+                document.getElementById(id);
+
+        if (campo) {
+            campo.value = '';
+        }
+
+    });
+}
+
+// ============================================================
+// EDITAR CLIENTE
+// ============================================================
+function editarClienteUI(id) {
+
+    const cliente =
+            clientesCadastroCache.find(
+                    item =>
+                Number(item.id) === Number(id)
+            );
+
+    if (!cliente) {
+
+        alert(
+                '❌ Cliente não encontrado na lista atual.'
+                );
+
+        return;
+    }
+
+    clienteEditandoId =
+            Number(cliente.id);
+
+    document.getElementById(
+            'cliente-nome'
+            ).value =
+            cliente.nome || '';
+
+    document.getElementById(
+            'cliente-documento'
+            ).value =
+            cliente.documento || '';
+
+    document.getElementById(
+            'cliente-telefone'
+            ).value =
+            formatarTelefoneClienteUI(
+                    cliente.telefone || ''
+                    );
+
+    document.getElementById(
+            'cliente-rua'
+            ).value =
+            cliente.rua || '';
+
+    document.getElementById(
+            'cliente-numero'
+            ).value =
+            cliente.numero || '';
+
+    document.getElementById(
+            'cliente-bairro'
+            ).value =
+            cliente.bairro || '';
+
+    document.getElementById(
+            'cliente-complemento'
+            ).value =
+            cliente.complemento || '';
+
+    document.getElementById(
+            'cliente-ponto-referencia'
+            ).value =
+            cliente.ponto_referencia || '';
+
+
+    const titulo =
+            document.getElementById(
+                    'modal-cliente-titulo'
+                    );
+
+    const botao =
+            document.getElementById(
+                    'btn-salvar-cliente'
+                    );
+
+    if (titulo) {
+        titulo.textContent =
+                '✏️ Editar Cliente';
+    }
+
+    if (botao) {
+        botao.textContent =
+                '💾 Salvar Alterações';
+    }
+
+
+    const modal =
+            document.getElementById(
+                    'modal-cliente'
+                    );
+
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+// ============================================================
+// SALVAR CLIENTE
+// ============================================================
+async function salvarClienteUI() {
+
+    const nome =
+            document
+            .getElementById('cliente-nome')
+            ?.value
+            .trim() || '';
+
+    const documentoFormatado =
+            document
+            .getElementById('cliente-documento')
+            ?.value
+            .trim() || '';
+
+    const documento =
+            documentoFormatado.replace(/\D/g, '');
+
+    const telefoneFormatado =
+            document
+            .getElementById('cliente-telefone')
+            ?.value
+            .trim() || '';
+
+    const telefone =
+            telefoneFormatado.replace(/\D/g, '');
+
+    const rua =
+            document
+            .getElementById('cliente-rua')
+            ?.value
+            .trim() || '';
+
+    const numero =
+            document
+            .getElementById('cliente-numero')
+            ?.value
+            .trim() || '';
+
+    const bairro =
+            document
+            .getElementById('cliente-bairro')
+            ?.value
+            .trim() || '';
+
+    const complemento =
+            document
+            .getElementById('cliente-complemento')
+            ?.value
+            .trim() || '';
+
+    const pontoReferencia =
+            document
+            .getElementById('cliente-ponto-referencia')
+            ?.value
+            .trim() || '';
+
+    /* --------------------------------------------------------
+     NOME
+     -------------------------------------------------------- */
+    if (!nome) {
+
+        alert(
+                '⚠️ Informe o nome do cliente.'
+                );
+
+        document
+                .getElementById('cliente-nome')
+                ?.focus();
+
+        return;
+    }
+
+    /* --------------------------------------------------------
+     CPF — SE INFORMADO, DEVE TER EXATAMENTE 11 DÍGITOS
+     -------------------------------------------------------- */
+    if (
+            documento !== '' &&
+            !/^\d{11}$/.test(documento)
+            ) {
+
+        alert(
+                '⚠️ O CPF deve conter exatamente 11 dígitos.'
+                );
+
+        document
+                .getElementById('cliente-documento')
+                ?.focus();
+
+        return;
+    }
+
+    /* --------------------------------------------------------
+     TELEFONE — EXATAMENTE 10 OU 11 DÍGITOS
+     -------------------------------------------------------- */
+    if (!/^\d{10,11}$/.test(telefone)) {
+
+        alert(
+                '⚠️ O telefone deve conter 10 ou 11 dígitos com DDD.'
+                );
+
+        document
+                .getElementById('cliente-telefone')
+                ?.focus();
+
+        return;
+    }
+
+    /* --------------------------------------------------------
+     NÚMERO — SOMENTE DÍGITOS
+     -------------------------------------------------------- */
+    if (!/^\d+$/.test(numero)) {
+
+        alert(
+                '⚠️ O número do endereço deve conter somente números.'
+                );
+
+        document
+                .getElementById('cliente-numero')
+                ?.focus();
+
+        return;
+    }
+
+    // --------------------------------------------------------
+    // BOTÃO
+    // --------------------------------------------------------
+    const botao =
+            document.getElementById(
+                    'btn-salvar-cliente'
+                    );
+
+    const textoOriginal =
+            botao
+            ? botao.textContent
+            : '💾 Salvar Cliente';
+
+    if (botao) {
+        botao.disabled = true;
+        botao.textContent =
+                '⏳ Salvando...';
+    }
+
+    try {
+
+        const {data, error} =
+                await _supabase.rpc(
+                        'salvar_cliente_admin',
+                        {
+                            p_id:
+                                    clienteEditandoId !== null
+                                    ? Number(clienteEditandoId)
+                                    : null,
+
+                            p_nome: nome,
+
+                            p_documento:
+                                    documento || null,
+
+                            p_telefone:
+                                    telefone,
+
+                            p_rua: rua,
+
+                            p_numero: numero,
+
+                            p_bairro: bairro,
+
+                            p_complemento:
+                                    complemento || null,
+
+                            p_ponto_referencia:
+                                    pontoReferencia || null
+                        }
+                );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        if (!data) {
+            throw new Error(
+                    'O banco não retornou o cliente salvo.'
+                    );
+        }
+
+
+        const clienteId =
+                Array.isArray(data)
+                ? data[0]?.id
+                : data.id;
+
+
+        if (!clienteId) {
+            throw new Error(
+                    'O banco não retornou o ID do cliente.'
+                    );
+        }
+
+
+        fecharModalCliente();
+
+        const busca =
+                document
+                .getElementById(
+                        'clientes-busca'
+                        )
+                ?.value
+                .trim() || '';
+
+        await carregarCadastroClientesUI(
+                busca
+                );
+
+
+        alert(
+                clienteEditandoId === null
+                ? '✅ Cliente cadastrado com sucesso!'
+                : '✅ Cliente atualizado com sucesso!'
+                );
+
+
+    } catch (erro) {
+
+        console.error(
+                'Erro ao salvar cliente:',
+                erro
+                );
+
+        const mensagem =
+                erro?.message || '';
+
+        if (
+                mensagem.includes(
+                        'TELEFONE_CLIENTE_JA_CADASTRADO'
+                        )
+                ) {
+
+            alert(
+                    '⚠️ Este telefone já está cadastrado para outro cliente.'
+                    );
+
+        } else if (
+                mensagem.includes(
+                        'DOCUMENTO_CLIENTE_JA_CADASTRADO'
+                        )
+                ) {
+
+            alert(
+                    '⚠️ Este CPF já está cadastrado para outro cliente.'
+                    );
+
+        } else if (
+                mensagem.includes(
+                        'DOCUMENTO_CLIENTE_INVALIDO'
+                        )
+                ) {
+
+            alert(
+                    '⚠️ Informe um CPF válido com 11 dígitos ou documento com 14 dígitos.'
+                    );
+
+        } else if (
+                mensagem.includes(
+                        'ACESSO_RESTRITO_GERENCIA'
+                        )
+                ) {
+
+            alert(
+                    '🔒 Apenas GERENTE ou ADMIN podem cadastrar clientes.'
+                    );
+
+        } else {
+
+            alert(
+                    '❌ Não foi possível salvar o cliente:\n\n' +
+                    mensagem
+                    );
+        }
+
+    } finally {
+
+        if (botao) {
+            botao.disabled = false;
+            botao.textContent =
+                    textoOriginal;
+        }
+
+    }
+}
+
+// ============================================================
+// VENDA DE BALCÃO — CLIENTE FIADO
+// ============================================================
+let clienteFiadoSelecionadoId = null;
+let timerBuscaClienteFiado = null;
+
+// ============================================================
+// ALTERA A FORMA DE PAGAMENTO DO BALCÃO
+// ============================================================
+function alterarFormaPagamentoBalcaoUI(formaPagamento) {
+
+    const forma =
+            String(formaPagamento || '')
+            .trim()
+            .toUpperCase();
+
+    const campoCliente =
+            document.getElementById('balcao-cliente');
+
+    const labelCliente =
+            document.getElementById(
+                    'label-cliente-balcao'
+                    );
+
+    const boxClienteFiado =
+            document.getElementById(
+                    'box-cliente-fiado'
+                    );
+
+    const boxVencimento =
+            document.getElementById(
+                    'box-vencimento-fiado'
+                    );
+
+    const boxAutorizacao =
+            document.getElementById(
+                    'box-autorizacao-fiado'
+                    );
+
+    const seletorCliente =
+            document.getElementById(
+                    'balcao-cliente-id'
+                    );
+
+    // --------------------------------------------------------
+    // FIADO
+    // --------------------------------------------------------
+    if (forma === 'FIADO') {
+
+        clienteFiadoSelecionadoId = null;
+
+        if (labelCliente) {
+            labelCliente.textContent =
+                    'Buscar Cliente *';
+        }
+
+        if (campoCliente) {
+
+            campoCliente.value = '';
+
+            campoCliente.placeholder =
+                    '🔎 Nome, CPF ou telefone...';
+
+            campoCliente.removeAttribute(
+                    'required'
+                    );
+
+            campoCliente.oninput =
+                    function () {
+                        buscarClienteFiadoUI(
+                                this.value
+                                );
+                    };
+        }
+
+        if (boxClienteFiado) {
+            boxClienteFiado.style.display =
+                    'block';
+        }
+
+        if (boxVencimento) {
+            boxVencimento.style.display =
+                    'block';
+        }
+
+        if (boxAutorizacao) {
+            boxAutorizacao.style.display =
+                    'block';
+        }
+
+        if (seletorCliente) {
+
+            seletorCliente.innerHTML = `
+                <option value="">
+                    🔎 Digite nome, CPF ou telefone para buscar...
+                </option>
+            `;
+
+            seletorCliente.value = '';
+        }
+
+        // Data padrão: hoje + 30 dias
+        definirVencimentoFiadoPadraoUI();
+
+        return;
+    }
+
+    // --------------------------------------------------------
+    // PAGAMENTO NORMAL
+    // --------------------------------------------------------
+    clienteFiadoSelecionadoId = null;
+
+    if (labelCliente) {
+        labelCliente.textContent =
+                'Nome do Cliente (Opcional)';
+    }
+
+    if (campoCliente) {
+
+        campoCliente.value = '';
+
+        campoCliente.placeholder =
+                'Ex: Cliente Balcão';
+
+        campoCliente.removeAttribute(
+                'oninput'
+                );
+
+        campoCliente.oninput = null;
+    }
+
+    if (boxClienteFiado) {
+        boxClienteFiado.style.display =
+                'none';
+    }
+
+    if (boxVencimento) {
+        boxVencimento.style.display =
+                'none';
+    }
+
+    if (boxAutorizacao) {
+        boxAutorizacao.style.display =
+                'none';
+    }
+
+    if (seletorCliente) {
+
+        seletorCliente.innerHTML = `
+            <option value="">
+                Selecione o cliente...
+            </option>
+        `;
+
+        seletorCliente.value = '';
+    }
+
+    limparVencimentoFiadoUI();
+}
+
+// ============================================================
+// BUSCA DE CLIENTE FIADO
+// ============================================================
+function buscarClienteFiadoUI(valor) {
+
+    clearTimeout(
+            timerBuscaClienteFiado
+            );
+
+    clienteFiadoSelecionadoId = null;
+
+    const select =
+            document.getElementById(
+                    'balcao-cliente-id'
+                    );
+
+    if (!select) {
+        return;
+    }
+
+    const busca =
+            String(valor || '')
+            .trim();
+
+    if (!busca) {
+
+        select.innerHTML = `
+            <option value="">
+                🔎 Digite nome, CPF ou telefone para buscar...
+            </option>
+        `;
+
+        return;
+    }
+
+    select.innerHTML = `
+        <option value="">
+            ⏳ Buscando clientes...
+        </option>
+    `;
+
+    timerBuscaClienteFiado =
+            setTimeout(async () => {
+
+                try {
+
+                    const {data, error} =
+                            await _supabase.rpc(
+                                    'buscar_clientes_fiado',
+                                    {
+                                        p_busca: busca
+                                    }
+                            );
+
+
+                    if (error) {
+                        throw error;
+                    }
+
+
+                    const clientes =
+                            Array.isArray(data)
+                            ? data
+                            : [];
+
+
+                    if (
+                            clientes.length === 0
+                            ) {
+
+                        select.innerHTML = `
+                        <option value="">
+                            ❌ Nenhum cliente encontrado
+                        </option>
+                    `;
+
+                        return;
+                    }
+
+
+                    select.innerHTML = `
+                    <option value="">
+                        Selecione o cliente encontrado...
+                    </option>
+                `;
+
+
+                    clientes.forEach(
+                            cliente => {
+
+                                const option =
+                                        document.createElement(
+                                                'option'
+                                                );
+
+                                option.value =
+                                        String(
+                                                cliente.id
+                                                );
+
+                                const cpf =
+                                        cliente.documento
+                                        ? formatarDocumentoClienteUI(
+                                                cliente.documento
+                                                )
+                                        : '';
+
+                                const telefone =
+                                        cliente.telefone
+                                        ? formatarTelefoneClienteUI(
+                                                cliente.telefone
+                                                )
+                                        : '';
+
+                                const detalhes = [];
+
+                                if (cpf) {
+                                    detalhes.push(
+                                            `CPF: ${cpf}`
+                                            );
+                                }
+
+                                if (telefone) {
+                                    detalhes.push(
+                                            `Tel: ${telefone}`
+                                            );
+                                }
+
+                                option.textContent =
+                                        detalhes.length
+                                        ? `${cliente.nome} — ${detalhes.join(' · ')}`
+                                        : cliente.nome;
+
+
+                                select.appendChild(
+                                        option
+                                        );
+                            }
+                    );
+
+
+                } catch (erro) {
+
+                    console.error(
+                            'Erro ao buscar cliente FIADO:',
+                            erro
+                            );
+
+                    select.innerHTML = `
+                    <option value="">
+                        ❌ Erro ao buscar clientes
+                    </option>
+                `;
+
+                }
+
+            }, 250);
+}
+
+// ============================================================
+// SELECIONA CLIENTE FIADO
+// ============================================================
+function selecionarClienteFiadoUI() {
+
+    const select =
+            document.getElementById(
+                    'balcao-cliente-id'
+                    );
+
+    if (!select) {
+        clienteFiadoSelecionadoId =
+                null;
+
+        return;
+    }
+
+    const valor =
+            select.value;
+
+    clienteFiadoSelecionadoId =
+            valor
+            ? Number(valor)
+            : null;
+
+
+    // Se selecionou cliente, mantém o filtro
+    // visual no campo de busca.
+    if (
+            clienteFiadoSelecionadoId
+            ) {
+
+        const option =
+                select.options[
+                        select.selectedIndex
+                ];
+
+        if (
+                option &&
+                option.value
+                ) {
+
+            // O nome antes do "—" fica visível
+            // como referência do cliente escolhido.
+            const nome =
+                    option.textContent
+                    .split(' — ')[0]
+                    .trim();
+
+            const campo =
+                    document.getElementById(
+                            'balcao-cliente'
+                            );
+
+            if (campo) {
+                campo.value = nome;
+            }
+        }
+    }
+}
+
+// ============================================================
+// VENCIMENTO PADRÃO
+// ============================================================
+function definirVencimentoFiadoPadraoUI() {
+
+    const campo =
+            document.getElementById(
+                    'balcao-data-vencimento'
+                    );
+
+    if (!campo) {
+        return;
+    }
+
+
+    const data =
+            new Date();
+
+    data.setHours(
+            0,
+            0,
+            0,
+            0
+            );
+
+    data.setDate(
+            data.getDate() + 30
+            );
+
+
+    const ano =
+            data.getFullYear();
+
+    const mes =
+            String(
+                    data.getMonth() + 1
+                    ).padStart(2, '0');
+
+    const dia =
+            String(
+                    data.getDate()
+                    ).padStart(2, '0');
+
+
+    campo.value =
+            `${ano}-${mes}-${dia}`;
+}
+
+// ============================================================
+// LIMPA VENCIMENTO
+// ============================================================
+function limparVencimentoFiadoUI() {
+
+    const campo =
+            document.getElementById(
+                    'balcao-data-vencimento'
+                    );
+
+    if (campo) {
+        campo.value = '';
+    }
+}
+
+/* ============================================================
+ FORMATAÇÃO USADA NA LISTA / EDIÇÃO
+ ============================================================ */
+
+function formatarTelefoneClienteUI(valor) {
+
+    const numeros =
+            String(valor || '')
+            .replace(/\D/g, '')
+            .slice(0, 11);
+
+    if (numeros.length === 11) {
+
+        return numeros.replace(
+                /^(\d{2})(\d{5})(\d{4})$/,
+                '($1) $2-$3'
+                );
+    }
+
+    if (numeros.length === 10) {
+
+        return numeros.replace(
+                /^(\d{2})(\d{4})(\d{4})$/,
+                '($1) $2-$3'
+                );
+    }
+
+    return numeros;
+}
+
+function formatarDocumentoClienteUI(valor) {
+
+    const numeros =
+            String(valor || '')
+            .replace(/\D/g, '')
+            .slice(0, 11);
+
+    if (numeros.length === 11) {
+
+        return numeros.replace(
+                /^(\d{3})(\d{3})(\d{3})(\d{2})$/,
+                '$1.$2.$3-$4'
+                );
+    }
+
+    return numeros;
+}
+
+// ============================================================
+// ENDEREÇO
+// ============================================================
+function montarEnderecoClienteUI(cliente) {
+
+    const partes = [];
+
+    if (cliente.rua) {
+        partes.push(
+                escaparHTMLClienteUI(
+                        cliente.rua
+                        )
+                );
+    }
+
+    if (cliente.numero) {
+        partes.push(
+                'Nº ' +
+                escaparHTMLClienteUI(
+                        cliente.numero
+                        )
+                );
+    }
+
+    if (cliente.bairro) {
+        partes.push(
+                escaparHTMLClienteUI(
+                        cliente.bairro
+                        )
+                );
+    }
+
+    if (cliente.complemento) {
+        partes.push(
+                escaparHTMLClienteUI(
+                        cliente.complemento
+                        )
+                );
+    }
+
+    if (cliente.ponto_referencia) {
+        partes.push(
+                'Ref.: ' +
+                escaparHTMLClienteUI(
+                        cliente.ponto_referencia
+                        )
+                );
+    }
+
+    return partes.length
+            ? partes.join(' · ')
+            : '—';
+}
+
+// ============================================================
+// PROTEÇÃO DE HTML
+// ============================================================
+function escaparHTMLClienteUI(valor) {
+
+    return String(valor ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+}
+
+/* ---------- CPF COM MÁSCARA ---------- */
+function formatarDocumentoClienteInput(input) {
+
+    let numeros = String(input.value || '')
+            .replace(/\D/g, '')
+            .slice(0, 11);
+
+    let formatado = numeros;
+
+    if (numeros.length > 9) {
+
+        formatado =
+                numeros.replace(
+                        /^(\d{3})(\d{3})(\d{3})(\d{0,2}).*$/,
+                        '$1.$2.$3-$4'
+                        );
+
+    } else if (numeros.length > 6) {
+
+        formatado =
+                numeros.replace(
+                        /^(\d{3})(\d{3})(\d{0,3}).*$/,
+                        '$1.$2.$3'
+                        );
+
+    } else if (numeros.length > 3) {
+
+        formatado =
+                numeros.replace(
+                        /^(\d{3})(\d{0,3}).*$/,
+                        '$1.$2'
+                        );
+    }
+
+    input.value = formatado;
+}
+
+/* ---------- TELEFONE COM MÁSCARA ---------- */
+function formatarTelefoneClienteInput(input) {
+
+    let numeros = String(input.value || '')
+            .replace(/\D/g, '')
+            .slice(0, 11);
+
+    let formatado = numeros;
+
+    if (numeros.length >= 11) {
+
+        formatado =
+                numeros.replace(
+                        /^(\d{2})(\d{5})(\d{0,4}).*$/,
+                        '($1) $2-$3'
+                        );
+
+    } else if (numeros.length >= 7) {
+
+        formatado =
+                numeros.replace(
+                        /^(\d{2})(\d{4,5})(\d{0,4}).*$/,
+                        '($1) $2-$3'
+                        );
+
+    } else if (numeros.length >= 3) {
+
+        formatado =
+                numeros.replace(
+                        /^(\d{2})(\d*).*$/,
+                        '($1) $2'
+                        );
+    }
+
+    input.value = formatado;
+}
+
+/* ---------- SOMENTE NÚMEROS ---------- */
+function somenteNumerosClienteInput(input) {
+
+    input.value =
+            String(input.value || '')
+            .replace(/\D/g, '')
+            .slice(0, 10);
+}
+
+window.insumoEditandoId = null;
+
+async function editarInsumoUI(id) {
+
+    const insumoId = Number(id);
+
+    if (!Number.isInteger(insumoId) || insumoId <= 0) {
+        alert('⚠️ Insumo inválido.');
+        return;
+    }
+
+    try {
+
+        // ----------------------------------------------------
+        // 1. BUSCA O INSUMO
+        // ----------------------------------------------------
+
+        const {
+            data: insumo,
+            error
+        } = await _supabase
+                .from('insumos')
+                .select(`
+                    id,
+                    nome,
+                    produto_id,
+                    unidade_base_id,
+                    unidade_compra_id,
+                    fator_compra_base,
+                    estoque_minimo_base,
+                    ativo,
+                    observacao
+                `)
+                .eq('id', insumoId)
+                .single();
+
+        if (error) {
+            throw error;
+        }
+
+        if (!insumo) {
+            alert('⚠️ Insumo não encontrado.');
+            return;
+        }
+
+        // ----------------------------------------------------
+        // 2. ABRE O MESMO MODAL DE CADASTRO
+        // ----------------------------------------------------
+
+        await abrirModalNovoInsumo();
+
+        // ----------------------------------------------------
+        // 3. MARCA COMO EDIÇÃO
+        // ----------------------------------------------------
+
+        window.insumoEditandoId =
+                Number(insumo.id);
+
+        // ----------------------------------------------------
+        // 4. CAMPOS
+        // ----------------------------------------------------
+
+        const campoNome =
+                document.getElementById(
+                        'insumo-nome'
+                        );
+
+        const selectProduto =
+                document.getElementById(
+                        'insumo-produto'
+                        );
+
+        const selectUnidadeCompra =
+                document.getElementById(
+                        'insumo-unidade-compra'
+                        );
+
+        const selectUnidadeBase =
+                document.getElementById(
+                        'insumo-unidade-base'
+                        );
+
+        const campoFator =
+                document.getElementById(
+                        'insumo-fator'
+                        );
+
+        const campoEstoqueMinimo =
+                document.getElementById(
+                        'insumo-estoque-minimo'
+                        );
+
+        const campoObservacao =
+                document.getElementById(
+                        'insumo-observacao'
+                        );
+
+        // ----------------------------------------------------
+        // 5. PREENCHE OS DADOS
+        // ----------------------------------------------------
+
+        if (campoNome) {
+            campoNome.value =
+                    insumo.nome || '';
+        }
+
+        if (selectProduto) {
+            selectProduto.value =
+                    insumo.produto_id != null
+                    ? String(insumo.produto_id)
+                    : '';
+        }
+
+        if (selectUnidadeCompra) {
+
+            selectUnidadeCompra.value =
+                    insumo.unidade_compra_id != null
+                    ? String(insumo.unidade_compra_id)
+                    : '';
+
+            // Recalcula o filtro da unidade-base.
+            selectUnidadeCompra.dispatchEvent(
+                    new Event('change')
+                    );
+        }
+
+        if (selectUnidadeBase) {
+
+            selectUnidadeBase.value =
+                    insumo.unidade_base_id != null
+                    ? String(insumo.unidade_base_id)
+                    : '';
+        }
+
+        if (campoFator) {
+            campoFator.value =
+                    Number(
+                            insumo.fator_compra_base || 0
+                            );
+        }
+
+        if (campoEstoqueMinimo) {
+            campoEstoqueMinimo.value =
+                    Number(
+                            insumo.estoque_minimo_base || 0
+                            );
+        }
+
+        if (campoObservacao) {
+            campoObservacao.value =
+                    insumo.observacao || '';
+        }
+
+        // ----------------------------------------------------
+        // 6. ALTERA O BOTÃO PARA EDIÇÃO
+        // ----------------------------------------------------
+
+        const btnSalvar =
+                document.getElementById(
+                        'btn-salvar-insumo'
+                        );
+
+        if (btnSalvar) {
+            btnSalvar.innerHTML =
+                    '💾 Salvar Alterações';
+        }
+
+        // ----------------------------------------------------
+        // 7. FOCO
+        // ----------------------------------------------------
+
+        if (campoNome) {
+            setTimeout(() => {
+                campoNome.focus();
+                campoNome.select();
+            }, 50);
+        }
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao abrir edição do insumo:',
+                erro
+                );
+
+        window.insumoEditandoId = null;
+
+        alert(
+                '❌ Não foi possível abrir o insumo para edição:\n\n' +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+    }
+}
+
+window.editarInsumoUI = editarInsumoUI;
+
+window.alterarStatusInsumoUI = async function (id, ativoAtual) {
+
+    const insumoId = Number(id);
+
+    if (!Number.isInteger(insumoId) || insumoId <= 0) {
+        alert('⚠️ Insumo inválido.');
+        return;
+    }
+
+    const novoStatus = !Boolean(ativoAtual);
+
+    const acao = novoStatus
+            ? 'ativar'
+            : 'desativar';
+
+    const confirmacao = confirm(
+            novoStatus
+            ? 'Deseja ativar este insumo?'
+            : 'Deseja desativar este insumo?'
+            );
+
+    if (!confirmacao) {
+        return;
+    }
+
+    try {
+
+        const {
+            data,
+            error
+        } = await _supabase
+                .from('insumos')
+                .update({
+                    ativo: novoStatus,
+                    atualizado_em: new Date().toISOString()
+                })
+                .eq('id', insumoId)
+                .select(`
+                id,
+                nome,
+                ativo
+            `)
+                .single();
+
+        if (error) {
+            throw error;
+        }
+
+        if (!data) {
+            throw new Error(
+                    'O banco não retornou o insumo atualizado.'
+                    );
+        }
+
+        console.log(
+                `✅ Insumo ${acao}do:`,
+                data
+                );
+
+        alert(
+                novoStatus
+                ? `✅ Insumo "${data.nome}" ativado com sucesso!`
+                : `✅ Insumo "${data.nome}" desativado com sucesso!`
+                );
+
+        await carregarCadastroInsumosUI();
+
+    } catch (erro) {
+
+        console.error(
+                `⛔ Erro ao ${acao} o insumo:`,
+                erro
+                );
+
+        alert(
+                `❌ Não foi possível ${acao} o insumo:\n\n` +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+    }
+};
+
+// ========================================================
+// MÁSCARA DE TELEFONE - FORNECEDOR
+// ========================================================
+
+function formatarTelefoneFornecedorInput(input) {
+
+    if (!input) {
+        return;
+    }
+
+    // Reaproveita a mesma regra usada nos clientes.
+    formatarTelefoneClienteInput(input);
+}
+
+
+// ========================================================
+// MÁSCARA DE CPF / CNPJ
+// ========================================================
+
+function formatarDocumentoFornecedorInput(input) {
+
+    if (!input) {
+        return;
+    }
+
+    const numeros =
+            String(input.value || '')
+            .replace(/\D/g, '')
+            .slice(0, 14);
+
+    let formatado = numeros;
+
+    // CNPJ
+    if (numeros.length > 11) {
+
+        formatado =
+                numeros.replace(
+                        /^(\d{2})(\d{3})(\d{3})(\d{0,4})(\d{0,2}).*$/,
+                        '$1.$2.$3/$4-$5'
+                        );
+
+        // CPF
+    } else if (numeros.length > 0) {
+
+        formatado =
+                numeros
+                .replace(
+                        /^(\d{3})(\d{0,3})(\d{0,3})(\d{0,2}).*$/,
+                        '$1.$2.$3-$4'
+                        );
+    }
+
+    input.value = formatado;
 }

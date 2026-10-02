@@ -24,6 +24,13 @@
                 visibility: visible;
                 pointer-events: auto;
             }
+            .nav-tabs {
+                gap: 6px;
+            }
+            .nav-tabs .tab-btn {
+                padding: 8px 11px;
+                font-size: 0.88rem;
+            }
         </style>
 
         <script>
@@ -46,6 +53,7 @@
                     <button class="tab-btn" id="btn-tab-balcao" onclick="alternarAba('balcao')">🛒 Venda de Balcão</button>
                     <button class="tab-btn" id="btn-tab-produtos" onclick="alternarAba('produtos')">📦 Produtos & Estoque</button>
                     <button class="tab-btn" id="btn-tab-ficha-tecnica" onclick="alternarAba('ficha-tecnica')" style="display: none;">📋 Ficha Técnica</button>
+                    <button class="tab-btn" id="btn-tab-cadastros" onclick="alternarAba('cadastros')" style="display: none;">📚 Cadastros</button>
                     <button class="tab-btn" id="btn-tab-compras" onclick="alternarAba('compras')">🛒 Compras</button>
                     <button class="tab-btn" id="btn-tab-mov-estoque" onclick="alternarAba('mov-estoque')">📦 Mov. Estoque</button>
                     <button class="tab-btn" id="btn-tab-historico" onclick="alternarAba('historico')">📜 Histórico & Relatórios</button>
@@ -344,6 +352,56 @@
                         >
                     </div>
 
+                    <div
+                        style="
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 10px;
+                        "
+                        >
+
+                        <!-- DATA DE FABRICAÇÃO -->
+                        <div class="form-group">
+                            <label>Data de fabricação *</label>
+
+                            <input
+                                type="date"
+                                id="producao-data-fabricacao"
+                                class="input-table"
+                                style="width: 100%;"
+                                >
+                        </div>
+
+                        <!-- DATA DE VALIDADE -->
+                        <div class="form-group">
+                            <label>Data de validade *</label>
+
+                            <input
+                                type="date"
+                                id="producao-data-validade"
+                                class="input-table"
+                                style="width: 100%;"
+                                >
+                        </div>
+
+                    </div>
+
+                    <!-- ALERTA DE VALIDADE -->
+                    <div
+                        id="producao-alerta-validade"
+                        style="
+                        display: none;
+                        margin-top: 10px;
+                        padding: 10px;
+                        border-radius: 6px;
+                        background: #fff3cd;
+                        color: #856404;
+                        font-weight: 600;
+                        "
+                        >
+                    </div>
+
+                    <!-- OBSERVAÇÃO -->
                     <div class="form-group">
                         <label>Observação</label>
 
@@ -398,8 +456,18 @@
                                 <input type="text" id="np-nome" class="input-table" required style="width: 100%;">
                             </div>
                             <div class="form-group">
-                                <label>Código de Barras *</label>
-                                <input type="text" id="np-codigo" class="input-table" required style="width: 100%;">
+                                <label>Código de Barras *
+                                </label>
+                                <input id="np-codigo"
+                                       type="text"
+                                       maxlength="14"
+                                       inputmode="numeric"
+                                       autocomplete="off"
+                                       required
+                                       placeholder="Digite números"
+                                       class="input-table"
+                                       style="width: 100%;"
+                                       oninput="somenteNumerosCodigoBarras(this)">
                             </div>
                         </div>
 
@@ -458,8 +526,1358 @@
         </main>
 
         <!-- =========================================================
-     ABA: FICHA TÉCNICA
+                      ABA: CADASTROS
+         ========================================================= -->
+
+        <main
+            class="products-manager"
+            id="aba-cadastros"
+            style="display: none;">
+
+            <div class="manager-container">
+
+                <div style="
+                     display:flex;
+                     justify-content:space-between;
+                     align-items:center;
+                     gap:15px;
+                     flex-wrap:wrap;
+                     margin-bottom:20px;
+                     ">
+
+                    <div>
+                        <h2 style="margin:0;">
+                            📚 Cadastros
+                        </h2>
+
+                        <div style="
+                             color:#aaa;
+                             margin-top:6px;
+                             font-size:0.9rem;
+                             ">
+                            Gerenciamento dos cadastros administrativos do PDV.
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- SUB-NAVEGAÇÃO DOS CADASTROS -->
+                <div
+                    class="sub-tabs-nav"
+                    style="
+                    display:flex;
+                    gap:10px;
+                    border-bottom:2px solid #3d3d4e;
+                    padding-bottom:10px;
+                    margin-bottom:20px;
+                    flex-wrap:wrap;
+                    ">
+
+                    <button
+                        class="btn-sub-tab active"
+                        type="button"
+                        onclick="abrirCadastroInsumosUI()"
+                        style="
+                        padding:10px 18px;
+                        background:#2a2a35;
+                        color:#fff;
+                        border:1px solid #3d3d4e;
+                        border-radius:6px;
+                        cursor:pointer;
+                        font-weight:bold;
+                        ">
+                        🧪 Insumos
+                    </button>
+
+                    <button
+                        class="btn-sub-tab"
+                        type="button"
+                        onclick="abrirCadastroFornecedoresUI()"
+                        style="
+                        padding:10px 18px;
+                        background:#2a2a35;
+                        color:#fff;
+                        border:1px solid #3d3d4e;
+                        border-radius:6px;
+                        cursor:pointer;
+                        font-weight:bold;
+                        ">
+                        🏭 Fornecedores
+                    </button>
+
+                    <button
+                        class="btn-sub-tab"
+                        type="button"
+                        onclick="abrirCadastroClientesUI()"
+                        style="
+                        padding:10px 18px;
+                        background:#2a2a35;
+                        color:#fff;
+                        border:1px solid #3d3d4e;
+                        border-radius:6px;
+                        cursor:pointer;
+                        font-weight:bold;
+                        ">
+                        👤 Clientes
+                    </button>
+                </div>
+
+                <!-- CONTEÚDO: INSUMOS -->
+                <div id="cadastro-insumos">
+
+                    <div style="
+                         display:flex;
+                         justify-content:space-between;
+                         align-items:center;
+                         gap:10px;
+                         flex-wrap:wrap;
+                         margin-bottom:15px;
+                         ">
+
+                        <div>
+                            <h3 style="margin:0;">
+                                🧪 Cadastro de Insumos
+                            </h3>
+
+                            <div style="
+                                 color:#aaa;
+                                 margin-top:5px;
+                                 font-size:0.85rem;
+                                 ">
+                                Matérias-primas e itens utilizados nas Fichas Técnicas e Produções.
+                            </div>
+                        </div>
+
+                        <div style="
+                             display:flex;
+                             gap:10px;
+                             flex-wrap:wrap;
+                             ">
+
+                            <button
+                                type="button"
+                                class="btn-refresh"
+                                style="background:#2e7d32;"
+                                onclick="abrirModalNovoInsumo()">
+                                ➕ Novo Insumo
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn-refresh"
+                                onclick="carregarCadastroInsumosUI()">
+                                🔄 Atualizar Lista
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+
+                        <table class="products-table">
+
+                            <thead>
+                                <tr>
+
+                                    <th>
+                                        Insumo
+                                    </th>
+
+                                    <th>
+                                        Unidade Compra
+                                    </th>
+
+                                    <th>
+                                        Unidade Base
+                                    </th>
+
+                                    <th style="text-align:center;">
+                                        Fator
+                                    </th>
+
+                                    <th style="text-align:right;">
+                                        Estoque Mínimo
+                                    </th>
+
+                                    <th style="text-align:center;">
+                                        Status
+                                    </th>
+
+                                    <th style="text-align:center;">
+                                        Ações
+                                    </th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="insumos-table-body">
+
+                                <tr>
+                                    <td
+                                        colspan="7"
+                                        style="
+                                        text-align:center;
+                                        color:#aaa;
+                                        padding:25px;
+                                        ">
+                                        Nenhum insumo carregado.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- =========================================================
+     CONTEÚDO: CLIENTES
      ========================================================= -->
+                <div
+                    id="cadastro-clientes"
+                    style="display:none;">
+
+                    <!-- CABEÇALHO -->
+                    <div style="
+                         display:flex;
+                         justify-content:space-between;
+                         align-items:center;
+                         gap:10px;
+                         flex-wrap:wrap;
+                         margin-bottom:15px;
+                         ">
+
+                        <div>
+                            <h3 style="margin:0;">
+                                👤 Cadastro de Clientes
+                            </h3>
+
+                            <div style="
+                                 color:#aaa;
+                                 margin-top:5px;
+                                 font-size:0.85rem;
+                                 ">
+                                Clientes utilizados nos pedidos, vendas FIADO e Conta a Receber.
+                            </div>
+                        </div>
+
+                        <div style="
+                             display:flex;
+                             gap:10px;
+                             flex-wrap:wrap;
+                             ">
+
+                            <button
+                                type="button"
+                                class="btn-refresh"
+                                style="background:#2e7d32;"
+                                onclick="abrirModalNovoCliente()">
+                                ➕ Novo Cliente
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn-refresh"
+                                onclick="carregarCadastroClientesUI()">
+                                🔄 Atualizar Lista
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <!-- BUSCA -->
+                    <div style="
+                         background:#2a2a35;
+                         border:1px solid #3d3d4e;
+                         border-radius:8px;
+                         padding:15px;
+                         margin-bottom:15px;
+                         ">
+
+                        <label style="
+                               display:block;
+                               color:#aaa;
+                               font-size:0.85rem;
+                               margin-bottom:6px;
+                               ">
+                            🔎 Buscar cliente por nome, CPF ou telefone
+                        </label>
+
+                        <input
+                            type="text"
+                            id="clientes-busca"
+                            class="input-table"
+                            placeholder="Digite nome, CPF ou telefone..."
+                            style="width:100%;box-sizing:border-box;"
+                            oninput="filtrarCadastroClientesUI(this.value)"
+                            >
+
+                    </div>
+
+                    <!-- LISTA -->
+                    <div class="table-responsive">
+
+                        <table class="products-table">
+
+                            <thead>
+                                <tr>
+
+                                    <th>
+                                        Cliente
+                                    </th>
+
+                                    <th>
+                                        CPF
+                                    </th>
+
+                                    <th>
+                                        Telefone
+                                    </th>
+
+                                    <th>
+                                        Endereço
+                                    </th>
+
+                                    <th style="text-align:center;">
+                                        Ações
+                                    </th>
+
+                                </tr>
+                            </thead>
+
+                            <tbody id="clientes-table-body">
+
+                                <tr>
+                                    <td
+                                        colspan="5"
+                                        style="
+                                        text-align:center;
+                                        color:#aaa;
+                                        padding:25px;
+                                        ">
+                                        Nenhum cliente carregado.
+                                    </td>
+                                </tr>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+                <!-- =========================================================
+                     MODAL: CLIENTE
+                     ========================================================= -->
+                <div
+                    id="modal-cliente"
+                    class="login-overlay"
+                    style="
+                    display:none;
+                    position:fixed;
+                    inset:0;
+                    background:rgba(0,0,0,0.75);
+                    z-index:9999;
+                    justify-content:center;
+                    align-items:center;
+                    padding:20px;
+                    ">
+
+                    <div
+                        style="
+                        width:100%;
+                        max-width:700px;
+                        max-height:90vh;
+                        overflow-y:auto;
+                        background:#1e1e24;
+                        border:1px solid #3d3d4e;
+                        border-radius:10px;
+                        padding:25px;
+                        box-shadow:0 20px 50px rgba(0,0,0,0.5);
+                        ">
+
+                        <!-- CABEÇALHO -->
+                        <div style="
+                             display:flex;
+                             justify-content:space-between;
+                             align-items:center;
+                             gap:10px;
+                             margin-bottom:20px;
+                             ">
+
+                            <div>
+
+                                <h2
+                                    id="modal-cliente-titulo"
+                                    style="margin:0;">
+                                    👤 Novo Cliente
+                                </h2>
+
+                                <div style="
+                                     color:#aaa;
+                                     margin-top:5px;
+                                     font-size:0.85rem;
+                                     ">
+                                    Cadastro completo para pedidos e vendas FIADO.
+                                </div>
+
+                            </div>
+
+                            <button
+                                type="button"
+                                onclick="fecharModalCliente()"
+                                style="
+                                background:#444;
+                                color:#fff;
+                                border:1px solid #555;
+                                border-radius:6px;
+                                width:36px;
+                                height:36px;
+                                cursor:pointer;
+                                font-size:1rem;
+                                ">
+                                ✕
+                            </button>
+                        </div>
+
+                        <!-- FORMULÁRIO -->
+                        <form id="form-cliente">
+
+                            <div style="
+                                 display:grid;
+                                 grid-template-columns:1fr 1fr;
+                                 gap:15px;
+                                 ">
+
+                                <!-- NOME -->
+                                <div style="grid-column:1 / -1;">
+
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        Nome completo *
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="cliente-nome"
+                                        maxlength="150"
+                                        required
+                                        placeholder="Ex.: João da Silva"
+                                        class="input-table"
+                                        style="width:100%;box-sizing:border-box;"
+                                        >
+                                </div>
+
+                                <!-- CPF -->
+                                <div>
+
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        CPF
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="cliente-documento"
+                                        maxlength="14"
+                                        inputmode="numeric"
+                                        autocomplete="off"
+                                        placeholder="Ex.: 123.456.789-00"
+                                        class="input-table"
+                                        style="width:100%;box-sizing:border-box;"
+                                        oninput="formatarDocumentoClienteInput(this)"
+                                        >
+                                </div>
+
+                                <!-- TELEFONE -->
+                                <div>
+
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        Telefone *
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="cliente-telefone"
+                                        maxlength="15"
+                                        inputmode="numeric"
+                                        autocomplete="tel"
+                                        required
+                                        placeholder="Ex.: (14) 99999-9999"
+                                        class="input-table"
+                                        style="width:100%;box-sizing:border-box;"
+                                        oninput="formatarTelefoneClienteInput(this)"
+                                        >
+                                </div>
+
+                                <!-- RUA -->
+                                <div style="grid-column:1 / -1;">
+
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        Rua / Avenida *
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="cliente-rua"
+                                        maxlength="150"
+                                        required
+                                        placeholder="Ex.: Rua das Flores"
+                                        class="input-table"
+                                        style="width:100%;box-sizing:border-box;"
+                                        >
+                                </div>
+
+                                <!-- NÚMERO DO ENDEREÇO -->
+                                <div>
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        Número *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="cliente-numero"
+                                        maxlength="10"
+                                        inputmode="numeric"
+                                        autocomplete="off"
+                                        required
+                                        placeholder="Ex.: 123"
+                                        class="input-table"
+                                        style="width:100%;box-sizing:border-box;"
+                                        oninput="somenteNumerosClienteInput(this)"
+                                        >
+                                </div>
+
+                                <!-- BAIRRO -->
+                                <div>
+
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        Bairro *
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="cliente-bairro"
+                                        maxlength="100"
+                                        required
+                                        placeholder="Ex.: Centro"
+                                        class="input-table"
+                                        style="width:100%;box-sizing:border-box;"
+                                        >
+                                </div>
+
+                                <!-- COMPLEMENTO -->
+                                <div>
+
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        Complemento
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="cliente-complemento"
+                                        maxlength="100"
+                                        placeholder="Ex.: Apto 12"
+                                        class="input-table"
+                                        style="width:100%;box-sizing:border-box;"
+                                        >
+                                </div>
+
+
+                                <!-- PONTO DE REFERÊNCIA -->
+                                <div>
+
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        Ponto de Referência
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="cliente-ponto-referencia"
+                                        maxlength="150"
+                                        placeholder="Ex.: Próximo à praça"
+                                        class="input-table"
+                                        style="width:100%;box-sizing:border-box;"
+                                        >
+                                </div>
+                            </div>
+
+                            <!-- BOTÕES -->
+                            <div style="
+                                 display:flex;
+                                 justify-content:flex-end;
+                                 gap:10px;
+                                 margin-top:20px;
+                                 ">
+
+                                <button
+                                    type="button"
+                                    class="btn-qty"
+                                    style="
+                                    min-width:120px;
+                                    height:42px;
+                                    "
+                                    onclick="fecharModalCliente()">
+                                    ❌ Cancelar
+                                </button>
+
+                                <button
+                                    type="button"
+                                    id="btn-salvar-cliente"
+                                    class="btn-save-prod"
+                                    style="
+                                    min-width:180px;
+                                    height:42px;
+                                    "
+                                    onclick="salvarClienteUI()">
+                                    💾 Salvar Cliente
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- =========================================================
+     MODAL: NOVO FORNECEDOR
+     ========================================================= -->
+                <div
+                    id="modal-fornecedor"
+                    class="login-overlay"
+                    style="
+                    display:none;
+                    position:fixed;
+                    inset:0;
+                    background:rgba(0,0,0,0.75);
+                    z-index:9999;
+                    justify-content:center;
+                    align-items:center;
+                    padding:20px;
+                    ">
+
+                    <div
+                        style="
+                        width:100%;
+                        max-width:650px;
+                        max-height:90vh;
+                        overflow-y:auto;
+                        background:#1e1e24;
+                        border:1px solid #3d3d4e;
+                        border-radius:10px;
+                        padding:25px;
+                        box-shadow:0 20px 50px rgba(0,0,0,0.5);
+                        ">
+
+                        <div style="
+                             display:flex;
+                             justify-content:space-between;
+                             align-items:center;
+                             gap:10px;
+                             margin-bottom:20px;
+                             ">
+
+                            <div>
+                                <h2 style="margin:0;">
+                                    🏭 Novo Fornecedor
+                                </h2>
+
+                                <div style="
+                                     color:#aaa;
+                                     margin-top:5px;
+                                     font-size:0.85rem;
+                                     ">
+                                    Cadastre uma empresa ou pessoa que fornece produtos ou insumos.
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onclick="fecharModalNovoFornecedor()"
+                                style="
+                                background:#444;
+                                color:#fff;
+                                border:1px solid #555;
+                                border-radius:6px;
+                                width:36px;
+                                height:36px;
+                                cursor:pointer;
+                                font-size:1rem;
+                                ">
+                                ✕
+                            </button>
+
+                        </div>
+
+                        <form id="form-novo-fornecedor">
+
+                            <div style="
+                                 display:grid;
+                                 grid-template-columns:1fr;
+                                 gap:15px;
+                                 ">
+
+                                <!-- NOME -->
+                                <div>
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        Nome do Fornecedor *
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="fornecedor-nome"
+                                        maxlength="150"
+                                        placeholder="Ex.: Distribuidora São Paulo"
+                                        style="
+                                        width:100%;
+                                        box-sizing:border-box;
+                                        padding:10px;
+                                        background:#2a2a35;
+                                        color:#fff;
+                                        border:1px solid #3d3d4e;
+                                        border-radius:6px;
+                                        ">
+                                </div>
+
+                                <!-- DOCUMENTO -->
+                                <div>
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        CPF / CNPJ
+                                    </label>
+
+                                    <input
+                                        id="fornecedor-documento"
+                                        type="text"
+                                        inputmode="numeric"
+                                        maxlength="18"
+                                        placeholder="Ex.: 12.345.678/0001-90"
+                                        style="
+                                        width:100%;
+                                        box-sizing:border-box;
+                                        padding:10px;
+                                        background:#2a2a35;
+                                        color:#fff;
+                                        border:1px solid #3d3d4e;
+                                        border-radius:6px;
+                                        ">
+                                </div>
+
+                                <!-- TELEFONE + EMAIL -->
+                                <div style="
+                                     display:grid;
+                                     grid-template-columns:1fr 1fr;
+                                     gap:15px;
+                                     ">
+
+                                    <div>
+                                        <label style="
+                                               display:block;
+                                               margin-bottom:6px;
+                                               font-weight:bold;
+                                               ">
+                                            Telefone
+                                        </label>
+
+                                        <input
+                                            id="fornecedor-telefone"
+                                            type="text"
+                                            inputmode="numeric"
+                                            maxlength="15"
+                                            placeholder="Ex.: (14) 99999-9999"
+                                            style="
+                                            width:100%;
+                                            box-sizing:border-box;
+                                            padding:10px;
+                                            background:#2a2a35;
+                                            color:#fff;
+                                            border:1px solid #3d3d4e;
+                                            border-radius:6px;
+                                            ">
+                                    </div>
+
+                                    <div>
+                                        <label style="
+                                               display:block;
+                                               margin-bottom:6px;
+                                               font-weight:bold;
+                                               ">
+                                            E-mail
+                                        </label>
+
+                                        <input
+                                            type="email"
+                                            id="fornecedor-email"
+                                            maxlength="150"
+                                            placeholder="Ex.: contato@empresa.com"
+                                            style="
+                                            width:100%;
+                                            box-sizing:border-box;
+                                            padding:10px;
+                                            background:#2a2a35;
+                                            color:#fff;
+                                            border:1px solid #3d3d4e;
+                                            border-radius:6px;
+                                            ">
+                                    </div>
+
+                                </div>
+
+                                <!-- OBSERVAÇÃO -->
+                                <div>
+                                    <label style="
+                                           display:block;
+                                           margin-bottom:6px;
+                                           font-weight:bold;
+                                           ">
+                                        Observação
+                                    </label>
+
+                                    <textarea
+                                        id="fornecedor-observacao"
+                                        maxlength="500"
+                                        rows="4"
+                                        placeholder="Informações adicionais sobre o fornecedor..."
+                                        style="
+                                        width:100%;
+                                        box-sizing:border-box;
+                                        padding:10px;
+                                        background:#2a2a35;
+                                        color:#fff;
+                                        border:1px solid #3d3d4e;
+                                        border-radius:6px;
+                                        resize:vertical;
+                                        "></textarea>
+                                </div>
+
+                            </div>
+
+                            <div style="
+                                 display:flex;
+                                 justify-content:flex-end;
+                                 gap:10px;
+                                 margin-top:20px;
+                                 ">
+
+                                <button
+                                    type="button"
+                                    class="btn-qty"
+                                    style="
+                                    min-width:120px;
+                                    height:42px;
+                                    "
+                                    onclick="fecharModalNovoFornecedor()">
+                                    ❌ Cancelar
+                                </button>
+
+                                <button
+                                    type="button"
+                                    id="btn-salvar-fornecedor"
+                                    class="btn-save-prod"
+                                    style="
+                                    min-width:180px;
+                                    height:42px;
+                                    "
+                                    onclick="salvarNovoFornecedor()">
+                                    💾 Cadastrar Fornecedor
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- CONTEÚDO: FORNECEDORES -->
+                <div
+                    id="cadastro-fornecedores"
+                    style="display:none;">
+
+                    <div style="
+                         display:flex;
+                         justify-content:space-between;
+                         align-items:center;
+                         gap:10px;
+                         flex-wrap:wrap;
+                         margin-bottom:15px;
+                         ">
+
+                        <div>
+                            <h3 style="margin:0;">
+                                🏭 Cadastro de Fornecedores
+                            </h3>
+
+                            <div style="
+                                 color:#aaa;
+                                 margin-top:5px;
+                                 font-size:0.85rem;
+                                 ">
+                                Empresas e pessoas que fornecem produtos ou insumos para o PDV.
+                            </div>
+                        </div>
+
+                        <div style="
+                             display:flex;
+                             gap:10px;
+                             flex-wrap:wrap;
+                             ">
+
+                            <button
+                                type="button"
+                                class="btn-refresh"
+                                style="background:#2e7d32;"
+                                onclick="abrirModalNovoFornecedor()">
+                                ➕ Novo Fornecedor
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn-refresh"
+                                onclick="carregarCadastroFornecedoresUI()">
+                                🔄 Atualizar Lista
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <div class="table-responsive">
+
+                        <table class="products-table">
+
+                            <thead>
+                                <tr>
+
+                                    <th>
+                                        Fornecedor
+                                    </th>
+
+                                    <th>
+                                        Documento
+                                    </th>
+
+                                    <th>
+                                        Telefone
+                                    </th>
+
+                                    <th>
+                                        E-mail
+                                    </th>
+
+                                    <th style="text-align:center;">
+                                        Status
+                                    </th>
+
+                                    <th style="text-align:center;">
+                                        Ações
+                                    </th>
+
+                                </tr>
+                            </thead>
+
+                            <tbody id="fornecedores-table-body">
+
+                                <tr>
+                                    <td
+                                        colspan="6"
+                                        style="
+                                        text-align:center;
+                                        color:#aaa;
+                                        padding:25px;
+                                        ">
+                                        Nenhum fornecedor carregado.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- =========================================================
+                        MODAL: NOVO INSUMO
+        ========================================================= -->
+
+        <div
+            id="modal-insumo"
+            class="login-overlay"
+            style="
+            display:none;
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,0.75);
+            z-index:9999;
+            justify-content:center;
+            align-items:center;
+            padding:20px;
+            ">
+
+            <div
+                style="
+                width:100%;
+                max-width:650px;
+                max-height:90vh;
+                overflow-y:auto;
+                background:#1e1e24;
+                border:1px solid #3d3d4e;
+                border-radius:10px;
+                padding:25px;
+                box-shadow:0 20px 50px rgba(0,0,0,0.5);
+                ">
+
+                <div style="
+                     display:flex;
+                     justify-content:space-between;
+                     align-items:center;
+                     gap:10px;
+                     margin-bottom:20px;
+                     ">
+
+                    <div>
+                        <h2 style="margin:0;">
+                            🧪 Novo Insumo
+                        </h2>
+
+                        <div style="
+                             color:#aaa;
+                             margin-top:5px;
+                             font-size:0.85rem;
+                             ">
+                            Cadastre uma matéria-prima ou item utilizado na produção.
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onclick="fecharModalNovoInsumo()"
+                        style="
+                        background:#444;
+                        color:#fff;
+                        border:1px solid #555;
+                        border-radius:6px;
+                        width:36px;
+                        height:36px;
+                        cursor:pointer;
+                        font-size:1rem;
+                        ">
+                        ✕
+                    </button>
+
+                </div>
+
+                <form id="form-novo-insumo">
+
+                    <div style="
+                         display:grid;
+                         grid-template-columns:1fr;
+                         gap:15px;
+                         ">
+
+                        <div>
+
+                            <label style="
+                                   display:block;
+                                   margin-bottom:6px;
+                                   font-weight:bold;
+                                   ">
+                                Nome do Insumo
+                            </label>
+
+                            <input
+                                type="text"
+                                id="insumo-nome"
+                                maxlength="150"
+                                placeholder="Ex.: Morango"
+                                style="
+                                width:100%;
+                                box-sizing:border-box;
+                                padding:10px;
+                                background:#2a2a35;
+                                color:#fff;
+                                border:1px solid #3d3d4e;
+                                border-radius:6px;
+                                ">
+
+                        </div>
+
+                        <div>
+
+                            <label style="
+                                   display:block;
+                                   margin-bottom:6px;
+                                   font-weight:bold;
+                                   ">
+                                Produto Relacionado
+                                <span style="color:#888;font-weight:normal;">
+                                    (opcional)
+                                </span>
+                            </label>
+
+                            <select
+                                id="insumo-produto"
+                                style="
+                                width:100%;
+                                box-sizing:border-box;
+                                padding:10px;
+                                background:#2a2a35;
+                                color:#fff;
+                                border:1px solid #3d3d4e;
+                                border-radius:6px;
+                                ">
+
+                                <option value="">
+                                    Nenhum produto relacionado
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                        <div style="
+                             display:grid;
+                             grid-template-columns:1fr 1fr;
+                             gap:15px;
+                             ">
+
+                            <div>
+
+                                <label style="
+                                       display:block;
+                                       margin-bottom:6px;
+                                       font-weight:bold;
+                                       ">
+                                    Unidade de Compra
+                                </label>
+
+                                <select
+                                    id="insumo-unidade-compra"
+                                    onchange="atualizarFatorInsumoUI()"
+                                    style="
+                                    width:100%;
+                                    box-sizing:border-box;
+                                    padding:10px;
+                                    background:#2a2a35;
+                                    color:#fff;
+                                    border:1px solid #3d3d4e;
+                                    border-radius:6px;
+                                    ">
+                                    <option value="">
+                                        Selecione...
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style="
+                                       display:block;
+                                       margin-bottom:6px;
+                                       font-weight:bold;
+                                       ">
+                                    Unidade-base
+                                </label>
+
+                                <select
+                                    id="insumo-unidade-base"
+                                    onchange="atualizarFatorInsumoUI()"
+                                    style="
+                                    width:100%;
+                                    box-sizing:border-box;
+                                    padding:10px;
+                                    background:#2a2a35;
+                                    color:#fff;
+                                    border:1px solid #3d3d4e;
+                                    border-radius:6px;
+                                    ">
+
+                                    <option value="">
+                                        Selecione...
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+                        <div style="
+                             display:grid;
+                             grid-template-columns:1fr 1fr;
+                             gap:15px;
+                             ">
+
+                            <div>
+
+                                <label style="
+                                       display:block;
+                                       margin-bottom:6px;
+                                       font-weight:bold;
+                                       ">
+                                    Fator Compra → Base
+                                </label>
+
+                                <input
+                                    type="number"
+                                    id="insumo-fator"
+                                    min="0.000001"
+                                    step="0.000001"
+                                    value="1"
+                                    style="
+                                    width:100%;
+                                    box-sizing:border-box;
+                                    padding:10px;
+                                    background:#2a2a35;
+                                    color:#fff;
+                                    border:1px solid #3d3d4e;
+                                    border-radius:6px;
+                                    ">
+
+                                <small style="
+                                       display:block;
+                                       color:#888;
+                                       margin-top:5px;
+                                       ">
+                                    Ex.: 1 KG = 1000 G → fator 1000.
+                                </small>
+
+                            </div>
+
+                            <div>
+
+                                <label style="
+                                       display:block;
+                                       margin-bottom:6px;
+                                       font-weight:bold;
+                                       ">
+                                    Estoque Mínimo
+                                </label>
+
+                                <input
+                                    type="number"
+                                    id="insumo-estoque-minimo"
+                                    min="0"
+                                    step="0.001"
+                                    value="0"
+                                    style="
+                                    width:100%;
+                                    box-sizing:border-box;
+                                    padding:10px;
+                                    background:#2a2a35;
+                                    color:#fff;
+                                    border:1px solid #3d3d4e;
+                                    border-radius:6px;
+                                    ">
+
+                                <small
+                                    id="insumo-estoque-minimo-unidade"
+                                    style="
+                                    display:block;
+                                    color:#888;
+                                    margin-top:5px;
+                                    ">
+                                    Unidade-base
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                            <label style="
+                                   display:block;
+                                   margin-bottom:6px;
+                                   font-weight:bold;
+                                   ">
+                                Observação
+                            </label>
+
+                            <textarea
+                                id="insumo-observacao"
+                                rows="4"
+                                placeholder="Observações opcionais..."
+                                style="
+                                width:100%;
+                                box-sizing:border-box;
+                                padding:10px;
+                                background:#2a2a35;
+                                color:#fff;
+                                border:1px solid #3d3d4e;
+                                border-radius:6px;
+                                resize:vertical;
+                                "></textarea>
+
+                        </div>
+
+                    </div>
+
+                    <div style="
+                         display:flex;
+                         justify-content:flex-end;
+                         gap:10px;
+                         margin-top:20px;
+                         ">
+
+                        <button
+                            type="button"
+                            class="btn-qty"
+                            style="
+                            min-width:120px;
+                            height:42px;
+                            "
+                            onclick="fecharModalNovoInsumo()">
+                            ❌ Cancelar
+                        </button>
+
+                        <button
+                            type="button"
+                            id="btn-salvar-insumo"
+                            class="btn-save-prod"
+                            style="
+                            min-width:170px;
+                            height:42px;
+                            "
+                            onclick="salvarNovoInsumo()">
+                            💾 Cadastrar Insumo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- =========================================================
+                     ABA: FICHA TÉCNICA
+           ========================================================= -->
 
         <main
             class="products-manager"
@@ -656,10 +2074,9 @@
                                     <th>Qtd. Bruta</th>
                                     <th>Perda (%)</th>
                                     <th>Qtd. Líquida</th>
-                                    <th>Custo</th>
+                                    <th>Custo Médio</th>
                                     <th>Ação</th>
                                 </tr>
-
                             </thead>
 
                             <tbody id="ficha-itens-body">
@@ -896,7 +2313,8 @@
                     </div>
                 </div>
 
-                <!-- ADIÇÃO DE PRODUTOS -->
+
+                <!-- ADIÇÃO DE ITENS DA COMPRA -->
                 <div style="
                      background: #2a2a35;
                      border: 1px solid #3d3d4e;
@@ -905,27 +2323,72 @@
                      margin-bottom: 20px;
                      ">
 
-                    <h3 style="margin-top: 0;">📦 Produtos da Compra</h3>
+                    <h3 style="margin-top: 0;">📦 Itens da Compra</h3>
 
                     <div style="
                          display: grid;
-                         grid-template-columns: 2fr 100px 130px 110px;
+                         grid-template-columns: 150px 2fr 100px 130px 110px;
                          gap: 10px;
                          align-items: end;
                          ">
 
+                        <!-- TIPO -->
                         <div class="form-group">
+                            <label>Tipo</label>
+                            <select
+                                id="compra-tipo-item"
+                                class="input-table"
+                                style="width: 100%;">
+
+                                <option value="produto">Produto</option>
+                                <option value="insumo">Insumo</option>
+
+                            </select>
+                        </div>
+
+                        <!-- PRODUTO -->
+                        <div
+                            id="compra-container-produto"
+                            class="form-group">
+
                             <label>Produto</label>
+
                             <select
                                 id="compra-produto"
                                 class="input-table"
                                 style="width: 100%;">
-                                <option value="">Selecione o produto</option>
+
+                                <option value="">
+                                    Selecione o produto
+                                </option>
+
                             </select>
                         </div>
 
+                        <!-- INSUMO -->
+                        <div
+                            id="compra-container-insumo"
+                            class="form-group"
+                            style="display: none;">
+
+                            <label>Insumo</label>
+
+                            <select
+                                id="compra-insumo"
+                                class="input-table"
+                                style="width: 100%;">
+
+                                <option value="">
+                                    Selecione o insumo
+                                </option>
+
+                            </select>
+                        </div>
+
+                        <!-- QUANTIDADE -->
                         <div class="form-group">
                             <label>Qtd.</label>
+
                             <input
                                 type="number"
                                 id="compra-quantidade"
@@ -936,18 +2399,21 @@
                                 style="width: 100%;">
                         </div>
 
+                        <!-- CUSTO -->
                         <div class="form-group">
                             <label>Custo Unit. (R$)</label>
+
                             <input
                                 type="number"
                                 id="compra-custo"
                                 class="input-table"
                                 value="0.00"
                                 min="0"
-                                step="0.01"
+                                step="0.000001"
                                 style="width: 100%;">
                         </div>
 
+                        <!-- BOTÃO -->
                         <button
                             type="button"
                             class="btn-save-prod"
@@ -963,7 +2429,6 @@
                             ">
                             ➕ Adicionar
                         </button>
-
                     </div>
                 </div>
 
@@ -1224,7 +2689,9 @@
                     <select
                         id="filtro-compras-status"
                         class="input-table"
-                        onchange="carregarHistoricoComprasUI()">
+                        onchange="carregarHistoricoComprasUI()"
+                        style="width: 100%;"
+                        >
 
                         <option value="TODOS">
                             Todos os status
@@ -1247,7 +2714,9 @@
                     <select
                         id="filtro-compras-periodo"
                         class="input-table"
-                        onchange="carregarHistoricoComprasUI()">
+                        onchange="carregarHistoricoComprasUI()"
+                        style="width: 100%;"
+                        >
 
                         <option value="TODOS">
                             Todo período
@@ -1271,8 +2740,10 @@
                         type="text"
                         id="filtro-compras-texto"
                         class="input-table"
-                        placeholder="🔎F, NF, NC"
-                        oninput="filtrarHistoricoComprasUI()">
+                        placeholder="🔎Fornecedor, Nota Fiscal, Numero de Cadastro"
+                        oninput="filtrarHistoricoComprasUI()"
+                        style="width: 100%;"
+                        >
                 </div>
 
                 <!-- TABELA -->
@@ -1419,12 +2890,17 @@
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">
-                                    <input type="checkbox" id="select-all-pedidos" onchange="toggleSelecionarTodos(this)" style="cursor: pointer; transform: scale(1.2);" title="Selecionar Todos">
+                                    <input type="checkbox"
+                                           id="select-all-pedidos"
+                                           onchange="toggleSelecionarTodos(this)"
+                                           style="cursor: pointer; transform: scale(1.2);"
+                                           title="Selecionar Todos">
                                 </th>
                                 <th>ID</th>
                                 <th>Data / Hora</th>
                                 <th>Tipo / Pagamento</th>
                                 <th>Endereço / Cliente</th>
+                                <th>Lotes / Validades</th>
                                 <th>Total (R$)</th>
                                 <th>Status</th>
                             </tr>
@@ -1461,8 +2937,7 @@
                     grid-template-columns: 2fr 1fr 1fr;
                     gap: 10px;
                     margin-bottom: 20px;
-                    "
-                    >
+                    ">
 
                     <input
                         type="text"
@@ -1470,12 +2945,14 @@
                         class="input-table"
                         placeholder="🔎 Filtrar por produto..."
                         oninput="carregarHistoricoEstoque()"
+                        style="width: 100%; min-width: 520px; box-sizing: border-box;"
                         >
 
                     <select
                         id="filtro-estoque-tipo"
                         class="input-table"
                         onchange="carregarHistoricoEstoque()"
+                        style="width: 100%;"
                         >
                         <option value="TODOS">Todos os tipos</option>
                         <option value="VENDA">Venda</option>
@@ -1488,6 +2965,7 @@
                         id="filtro-estoque-periodo"
                         class="input-table"
                         onchange="carregarHistoricoEstoque()"
+                        style="width: 100%;"
                         >
                         <option value="hoje">Hoje</option>
                         <option value="7dias">Últimos 7 dias</option>
@@ -1692,6 +3170,9 @@
         <!-- Área oculta reservada para geração do Cupom Térmico de Impressão -->
         <div id="print-area"></div>
 
+        <!-- ============================================================
+                 VENDA DE BALCÃO
+             ============================================================ -->
         <!-- ABA: Venda de Balcão (Presencial) -->
         <main class="config-manager" id="aba-balcao" style="display: none;">
             <!-- PAINEL DE CONTROLE DE CAIXA -->
@@ -1873,19 +3354,130 @@
                             <span id="balcao-total-val" style="color: #2ed573;">R$ 0,00</span>
                         </div>
 
+                        <!-- ============================================================
+                                         FORMA DE PAGAMENTO
+                             ============================================================ -->
                         <div class="form-group" style="margin-bottom: 12px;">
                             <label>Forma de Pagamento</label>
-                            <select id="balcao-pagamento" class="input-table" style="width: 100%; font-weight: bold;">
+
+                            <select
+                                id="balcao-pagamento"
+                                class="input-table"
+                                style="width: 100%; font-weight: bold;"
+                                onchange="alterarFormaPagamentoBalcaoUI(this.value)"
+                                >
                                 <option value="PIX">⚡ PIX</option>
-                                <!--    <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
-                                        <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>   -->
                                 <option value="DINHEIRO">💵 Dinheiro</option>
+
+                                <!-- Cartões permanecem disponíveis para futura reativação -->
+                                <!--
+                                <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
+                                <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>
+                                -->
+
+                                <option value="FIADO">📒 Fiado</option>
                             </select>
                         </div>
 
-                        <div class="form-group">
-                            <label>Nome do Cliente (Opcional)</label>
-                            <input type="text" id="balcao-cliente" placeholder="Ex: Cliente Balcão" class="input-table" style="width: 100%;">
+
+                        <!-- ============================================================
+                             CLIENTE
+                        ============================================================ -->
+                        <div class="form-group" id="box-cliente-balcao" style="margin-bottom: 12px;">
+
+                            <label id="label-cliente-balcao">
+                                Nome do Cliente (Opcional)
+                            </label>
+
+                            <!--
+                                Campo usado atualmente para vendas normais.
+                                Será mantido para não quebrar o fluxo existente.
+                            -->
+                            <input
+                                id="balcao-cliente"
+                                class="input-table"
+                                style="width: 100%;"
+                                onchange="selecionarClienteFiadoUI()"
+                                >
+
+                            <!--
+                                Cliente cadastrado usado pelo FIADO.
+                                Inicialmente oculto.
+                            -->
+                            <div id="box-cliente-fiado" style="display: none; margin-top: 10px;">
+
+                                <label style="display: block; margin-bottom: 5px;">
+                                    Cliente cadastrado
+                                </label>
+
+                                <select
+                                    id="balcao-cliente-id"
+                                    class="input-table"
+                                    style="width: 100%;"
+                                    >
+                                    <option value="">
+                                        Selecione o cliente...
+                                    </option>
+                                </select>
+
+                            </div>
+                        </div>
+
+
+                        <!-- ============================================================
+                             VENCIMENTO DO FIADO
+                        ============================================================ -->
+                        <div
+                            class="form-group"
+                            id="box-vencimento-fiado"
+                            style="display: none; margin-bottom: 12px;"
+                            >
+
+                            <label>
+                                Data de Vencimento
+                            </label>
+
+                            <input
+                                type="date"
+                                id="balcao-data-vencimento"
+                                class="input-table"
+                                style="width: 100%;"
+                                >
+
+                            <small style="display: block; margin-top: 5px; color: #aaa;">
+                                📒 O valor ficará registrado na Conta a Receber até o pagamento.
+                            </small>
+
+                        </div>
+
+
+                        <!-- ============================================================
+                             AUTORIZAÇÃO DO FIADO
+                        ============================================================ -->
+                        <div
+                            id="box-autorizacao-fiado"
+                            style="
+                            display: none;
+                            margin-bottom: 12px;
+                            padding: 12px;
+                            background: #2a2a35;
+                            border: 1px solid #4b4b5c;
+                            border-radius: 8px;
+                            "
+                            >
+
+                            <div style="font-weight: bold; margin-bottom: 6px;">
+                                🔐 Autorização do Gerente
+                            </div>
+
+                            <small style="display: block; color: #aaa; margin-bottom: 10px;">
+                                A venda FIADO precisa ser autorizada por um GERENTE ou ADMIN.
+                            </small>
+
+                            <div style="color: #ffa502; font-size: 0.9rem;">
+                                🔒 O PIN será solicitado ao finalizar a venda.
+                            </div>
+
                         </div>
 
                         <button class="btn-save-prod" id="btn-finalizar-balcao" onclick="finalizarVendaBalcao()" style="width: 100%; padding: 14px; font-size: 1.1rem; background: #2ed573; color: #000; margin-top: 10px;">
@@ -1922,12 +3514,17 @@
             </div>
 
             <div style="max-width: 1200px; margin: 0 auto;">
-                <!-- CARDS DE RESUMO FINANCEIRO  -->
+
+                <!-- CARDS DE RESUMO FINANCEIRO -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
+
                     <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
                         <span style="color: #aaa; font-size: 0.85rem; display: block;">Faturamento Total</span>
-                        <strong id="fin-faturamento" style="font-size: 1.4rem; color: #2ed573; display: block; margin-top: 5px;">R$ 0,00</strong>
+                        <strong id="fin-faturamento" style="font-size: 1.4rem; color: #2ed573; display: block; margin-top: 5px;">
+                            R$ 0,00
+                        </strong>
                     </div>
+
                     <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
 
                         <span style="color: #aaa; font-size: 0.85rem; display: block;">
@@ -1958,21 +3555,248 @@
                         </div>
 
                     </div>
+
                     <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
                         <span style="color: #aaa; font-size: 0.85rem; display: block;">Lucro Bruto</span>
-                        <strong id="fin-lucro-bruto" style="font-size: 1.4rem; color: #1e90ff; display: block; margin-top: 5px;">R$ 0,00</strong>
+
+                        <strong id="fin-lucro-bruto"
+                                style="font-size: 1.4rem; color: #1e90ff; display: block; margin-top: 5px;">
+                            R$ 0,00
+                        </strong>
+
+                        <div style="margin-top: 10px; font-size: 0.75rem; line-height: 1.6; color: #aaa;">
+                            Margem bruta:
+                            <strong id="fin-lucro-bruto-percentual" style="color: #ccc;">
+                                0,00%
+                            </strong>
+                        </div>
                     </div>
+
                     <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
                         <span style="color: #aaa; font-size: 0.85rem; display: block;">Despesas</span>
-                        <strong id="fin-despesas" style="font-size: 1.4rem; color: #ff4757; display: block; margin-top: 5px;">R$ 0,00</strong>
+                        <strong id="fin-despesas"
+                                style="font-size: 1.4rem; color: #ff4757; display: block; margin-top: 5px;">
+                            R$ 0,00
+                        </strong>
                     </div>
+
                     <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
                         <span style="color: #aaa; font-size: 0.85rem; display: block;">Pagamento Dominante</span>
-                        <strong id="fin-pagamento-dominante" style="font-size: 1.2rem; color: #a29bfe; display: block; margin-top: 5px;">-</strong>
+                        <strong id="fin-pagamento-dominante"
+                                style="font-size: 1.2rem; color: #a29bfe; display: block; margin-top: 5px;">
+                            -
+                        </strong>
                     </div>
+
                     <div style="background: #1e1e24; padding: 18px; border-radius: 8px; border: 2px solid #2ed573;">
                         <span style="color: #aaa; font-size: 0.85rem; display: block;">Lucro Líquido Real</span>
-                        <strong id="fin-lucro" style="font-size: 1.4rem; color: #2ed573; display: block; margin-top: 5px;">R$ 0,00</strong>
+
+                        <strong id="fin-lucro"
+                                style="font-size: 1.4rem; color: #2ed573; display: block; margin-top: 5px;">
+                            R$ 0,00
+                        </strong>
+
+                        <div style="margin-top: 10px; font-size: 0.75rem; line-height: 1.6; color: #aaa;">
+                            Margem líquida:
+                            <strong id="fin-lucro-percentual" style="color: #ccc;">
+                                0,00%
+                            </strong>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- CONTAS A RECEBER -->
+                <div style="
+                     background: #2a2a35;
+                     padding: 20px;
+                     border-radius: 8px;
+                     border: 1px solid #3d3d4e;
+                     margin-bottom: 20px;
+                     ">
+
+                    <div style="
+                         display: flex;
+                         justify-content: space-between;
+                         align-items: center;
+                         gap: 12px;
+                         flex-wrap: wrap;
+                         margin-bottom: 15px;
+                         ">
+
+                        <h3 style="
+                            margin: 0;
+                            color: #fff;
+                            border-bottom: 1px solid #3d3d4e;
+                            padding-bottom: 10px;
+                            flex: 1;
+                            ">
+                            📒 Contas a Receber
+                        </h3>
+
+                        <button
+                            onclick="carregarContasReceberUI()"
+                            class="btn-save-prod"
+                            style="
+                            padding: 8px 15px;
+                            background: #1e90ff;
+                            color: #fff;
+                            ">
+                            🔄 Atualizar
+                        </button>
+
+                    </div>
+
+                    <!-- FILTROS -->
+                    <div style="
+                         display: grid;
+                         grid-template-columns: minmax(520px, 2.4fr) 180px auto;
+                         gap: 10px;
+                         margin-bottom: 18px;
+                         ">
+
+                        <input
+                            type="text"
+                            id="fin-ar-busca"
+                            class="input-table"
+                            placeholder="🔎 Cliente, CPF, telefone..."
+                            oninput="carregarContasReceberUI()"
+                            style="width: 100%; min-width: 520px; box-sizing: border-box;"
+                            >
+
+                        <select
+                            id="fin-ar-status"
+                            class="input-table"
+                            onchange="carregarContasReceberUI()"
+                            style="width: 100%;"
+                            >
+                            <option value="TODOS">Todos os status</option>
+                            <option value="PENDENTE">Pendentes</option>
+                            <option value="VENCIDA">Vencidas</option>
+                            <option value="PAGA">Pagas</option>
+                            <option value="CANCELADA">Canceladas</option>
+                        </select>
+
+                        <button
+                            onclick="limparFiltrosContasReceberUI()"
+                            class="btn-save-prod"
+                            style="
+                            padding: 8px 15px;
+                            background: #555;
+                            color: #fff;
+                            ">
+                            ✖ Limpar
+                        </button>
+                    </div>
+
+                    <!-- INDICADORES -->
+                    <div style="
+                         display: grid;
+                         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                         gap: 12px;
+                         margin-bottom: 18px;
+                         ">
+
+                        <div style="
+                             background: #1e1e24;
+                             padding: 14px;
+                             border-radius: 8px;
+                             border: 1px solid #3d3d4e;
+                             ">
+                            <span style="color:#aaa;font-size:0.8rem;">
+                                Total em Aberto
+                            </span>
+
+                            <strong
+                                id="fin-ar-total-aberto"
+                                style="
+                                display:block;
+                                margin-top:5px;
+                                font-size:1.2rem;
+                                color:#ffa502;
+                                ">
+                                R$ 0,00
+                            </strong>
+                        </div>
+
+                        <div style="
+                             background: #1e1e24;
+                             padding: 14px;
+                             border-radius: 8px;
+                             border: 1px solid #3d3d4e;
+                             ">
+                            <span style="color:#aaa;font-size:0.8rem;">
+                                Total Vencido
+                            </span>
+
+                            <strong
+                                id="fin-ar-total-vencido"
+                                style="
+                                display:block;
+                                margin-top:5px;
+                                font-size:1.2rem;
+                                color:#ff4757;
+                                ">
+                                R$ 0,00
+                            </strong>
+                        </div>
+
+                        <div style="
+                             background: #1e1e24;
+                             padding: 14px;
+                             border-radius: 8px;
+                             border: 1px solid #3d3d4e;
+                             ">
+                            <span style="color:#aaa;font-size:0.8rem;">
+                                Total Recebido
+                            </span>
+
+                            <strong
+                                id="fin-ar-total-recebido"
+                                style="
+                                display:block;
+                                margin-top:5px;
+                                font-size:1.2rem;
+                                color:#2ed573;
+                                ">
+                                R$ 0,00
+                            </strong>
+                        </div>
+
+                    </div>
+
+                    <!-- TABELA -->
+                    <div style="overflow-x:auto;">
+
+                        <table
+                            class="products-table"
+                            style="width:100%;font-size:0.88rem;"
+                            >
+
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Pedido</th>
+                                    <th>Valor</th>
+                                    <th>Pago</th>
+                                    <th>Saldo</th>
+                                    <th>Vencimento</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="contas-receber-table-body">
+                                <tr>
+                                    <td
+                                        colspan="8"
+                                        style="text-align:center;color:#aaa;"
+                                        >
+                                        Carregando...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -2220,8 +4044,33 @@
                         <h3 style="margin: 0 0 15px 0; color: #32bcad; text-align: center;">⚡ Gerar QR Code PIX</h3>
 
                         <div class="form-group" style="margin-bottom: 12px;">
+                            <label style="color: #aaa; font-size: 0.85rem;">Chaves PIX salvas</label>
+                            <select
+                                id="select-pix-chave-salva"
+                                class="input-table"
+                                style="width: 100%;"
+                                onchange="selecionarChavePixSalva()">
+                                <option value="">Selecione uma chave salva...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 12px;">
                             <label style="color: #aaa; font-size: 0.85rem;">Chave PIX *</label>
-                            <input type="text" id="input-pix-chave" class="input-table" placeholder="CPF, CNPJ, E-mail ou Telefone" style="width: 100%;" value="suachavepix@email.com">
+                            <div style="display: flex; gap: 8px; align-items: stretch;">
+                                <input type="text"
+                                       id="input-pix-chave"
+                                       class="input-table"
+                                       placeholder="CPF, CNPJ, E-mail ou Telefone"
+                                       style="width: 100%; flex: 1;"
+                                       value="">
+                                <button
+                                    type="button"
+                                    onclick="salvarChavePix()"
+                                    class="btn-save-prod"
+                                    style="white-space: nowrap; background: #2ed573; color: #000; font-weight: bold;">
+                                    💾 Salvar chave
+                                </button>
+                            </div>
                         </div>
 
                         <div class="form-group" style="margin-bottom: 12px;">
