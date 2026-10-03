@@ -6711,7 +6711,6 @@ async function salvarCompraUI() {
 }
 
 // --- CARREGA PRODUTOS COM CUSTO E MARGEM ---
-// --- CARREGA PRODUTOS COM CUSTO E MARGEM ---
 async function carregarProdutosGerenciador() {
 
     const tbody =
@@ -6777,13 +6776,11 @@ async function carregarProdutosGerenciador() {
                 ? ((precoVenda - custo) / custo) * 100
                 : 0;
 
-
         // ====================================================
         // IMAGEM DO PRODUTO
         // GERENTE/ADMIN = CLICÁVEL
         // OPERADOR = SOMENTE VISUALIZAÇÃO
         // ====================================================
-
         let imagemProdutoHTML;
 
         if (ehGerente) {
@@ -6834,7 +6831,6 @@ async function carregarProdutosGerenciador() {
                     >
                         ✏️
                     </span>
-
                 </div>
             `;
 
