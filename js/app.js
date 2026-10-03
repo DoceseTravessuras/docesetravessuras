@@ -1481,3 +1481,12 @@ function atualizarOpcaoWhatsApp() {
         checkbox.checked = false;
     }
 }
+
+/* ---------- SOMENTE NÚMEROS ---------- */
+function somenteNumerosClienteInput(input) {
+
+    input.value =
+            String(input.value || '')
+            .replace(/\D/g, '')
+            .slice(0, 10);
+}

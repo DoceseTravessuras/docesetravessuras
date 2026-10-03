@@ -105,8 +105,19 @@
                                 </div>
                                 <div class="form-row">
                                     <input type="text" id="cli_rua" placeholder="Rua / Avenida" required>
-                                    <input type="text" id="cli_numero" placeholder="Nº" style="width: 80px;" required>
+                                    <input type="text"
+                                           id="cli_numero"
+                                           inputmode="numeric"
+                                           maxlength="10"
+                                           autocomplete="off"
+                                           placeholder="Nº"
+                                           class="input-table"
+                                           style="width: 155px;"
+                                           required
+                                           oninput="somenteNumerosClienteInput(this)"
+                                           >
                                 </div>
+                                
                                 <div class="form-row">
                                     <input type="text" id="cli_bairro" placeholder="Bairro" required>
                                     <input type="text" id="cli_complemento" placeholder="Apto / Bloco (Opcional)">

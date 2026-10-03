@@ -320,8 +320,7 @@
                         border-radius: 6px;
                         background: #f5f5f5;
                         color: #222;
-                        "
-                        >
+                        ">
                     </div>
 
                     <div class="form-group">
@@ -453,7 +452,11 @@
                         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
                             <div class="form-group">
                                 <label>Nome do Produto *</label>
-                                <input type="text" id="np-nome" class="input-table" required style="width: 100%;">
+                                <input type="text"
+                                       id="np-nome"
+                                       class="input-table"
+                                       required style="width: 100%;"
+                                       >
                             </div>
                             <div class="form-group">
                                 <label>Código de Barras *
@@ -484,7 +487,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Estoque Inicial *</label>
-                                <input type="number" id="np-estoque" class="input-table" value="10" min="0" required style="width: 100%;">
+                                <input type="number" id="np-estoque" class="input-table" value="0" min="0" required style="width: 100%;">
                             </div>
                         </div>
 
@@ -495,7 +498,16 @@
                             </div>
                             <div class="form-group">
                                 <label>Margem (%)</label>
-                                <input type="number" id="np-margem" step="1" min="0" value="50" class="input-table" style="width: 100%;" oninput="calcularPrecoModal()">
+                                <input
+                                    type="number"
+                                    id="np-margem" 
+                                    step="1" 
+                                    min="0" 
+                                    value="0"
+                                    class="input-table" 
+                                    style="width: 100%;"
+                                    oninput="calcularPrecoModal()"
+                                    >
                             </div>
                             <div class="form-group">
                                 <label>Venda (R$) *</label>
@@ -523,19 +535,306 @@
                     </form>
                 </div>
             </div>
+
+            <!-- =========================================================
+     MODAL: EDITAR PRODUTO
+========================================================= -->
+            <div
+                id="modal-edicao-produto"
+                class="login-overlay"
+                style="
+                display:none;
+                position:fixed;
+                inset:0;
+                background:rgba(0,0,0,0.78);
+                z-index:10000;
+                justify-content:center;
+                align-items:center;
+                padding:20px;
+                "
+                >
+                <div
+                    class="login-card"
+                    style="
+                    width:100%;
+                    max-width:600px;
+                    max-height:90vh;
+                    overflow-y:auto;
+                    padding:25px;
+                    box-sizing:border-box;
+                    "
+                    >
+
+                    <!-- CABEÇALHO -->
+                    <div
+                        style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:10px;
+                        margin-bottom:20px;
+                        "
+                        >
+                        <div>
+                            <h2 style="margin:0;">
+                                ✏️ Editar Produto
+                            </h2>
+
+                            <p
+                                style="
+                                margin:6px 0 0 0;
+                                color:#aaa;
+                                "
+                                >
+                                Altere as informações básicas do produto.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn-qty"
+                            onclick="fecharEdicaoProduto()"
+                            style="
+                            width:40px;
+                            height:40px;
+                            padding:0;
+                            font-size:1.1rem;
+                            "
+                            >
+                            ✕
+                        </button>
+                    </div>
+
+
+                    <!-- IMAGEM -->
+                    <div
+                        style="
+                        background:#2a2a35;
+                        border:1px solid #3d3d4e;
+                        border-radius:10px;
+                        padding:18px;
+                        margin-bottom:18px;
+                        "
+                        >
+
+                        <label
+                            style="
+                            display:block;
+                            font-weight:bold;
+                            margin-bottom:10px;
+                            "
+                            >
+                            Imagem do produto
+                        </label>
+
+                        <div
+                            style="
+                            display:flex;
+                            align-items:center;
+                            gap:15px;
+                            flex-wrap:wrap;
+                            "
+                            >
+
+                            <div
+                                style="
+                                width:130px;
+                                height:130px;
+                                border-radius:10px;
+                                overflow:hidden;
+                                border:1px solid #555;
+                                background:#1e1e24;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                "
+                                >
+                                <img
+                                    id="edit-produto-imagem-preview"
+                                    src="https://via.placeholder.com/130"
+                                    alt="Imagem do produto"
+                                    style="
+                                    width:100%;
+                                    height:100%;
+                                    object-fit:cover;
+                                    "
+                                    >
+                            </div>
+
+                            <div style="flex:1; min-width:200px;">
+
+                                <input
+                                    type="file"
+                                    id="edit-produto-file"
+                                    accept="image/*"
+                                    style="display:none;"
+                                    onchange="selecionarFotoEdicaoProduto(event)"
+                                    >
+
+                                <button
+                                    type="button"
+                                    class="btn-refresh"
+                                    onclick="document.getElementById('edit-produto-file').click()"
+                                    style="
+                                    width:100%;
+                                    margin-bottom:8px;
+                                    "
+                                    >
+                                    📷 Trocar imagem
+                                </button>
+
+                                <div
+                                    id="edit-produto-status-imagem"
+                                    style="
+                                    color:#aaa;
+                                    font-size:0.82rem;
+                                    word-break:break-word;
+                                    "
+                                    >
+                                    Nenhuma imagem nova selecionada.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- NOME + CÓDIGO -->
+                    <div
+                        style="
+                        display:grid;
+                        grid-template-columns:2fr 1fr;
+                        gap:10px;
+                        "
+                        >
+
+                        <div class="form-group">
+
+                            <label>
+                                Nome do Produto *
+                            </label>
+
+                            <input
+                                type="text"
+                                id="edit-produto-nome"
+                                class="input-table"
+                                required
+                                style="width:100%;"
+                                >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                Código de Barras *
+                            </label>
+
+                            <input
+                                type="text"
+                                id="edit-produto-codigo"
+                                class="input-table"
+                                inputmode="numeric"
+                                maxlength="14"
+                                autocomplete="off"
+                                required
+                                style="width:100%;"
+                                oninput="somenteNumerosCodigoBarras(this)"
+                                >
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- DESCRIÇÃO -->
+                    <div class="form-group">
+
+                        <label>
+                            Descrição
+                        </label>
+
+                        <textarea
+                            id="edit-produto-descricao"
+                            class="input-table"
+                            rows="3"
+                            maxlength="500"
+                            placeholder="Descrição do produto..."
+                            style="
+                            width:100%;
+                            box-sizing:border-box;
+                            resize:vertical;
+                            "
+                            ></textarea>
+                    </div>
+
+                    <!-- CATEGORIA -->
+                    <div class="form-group">
+
+                        <label>
+                            Categoria
+                        </label>
+
+                        <select
+                            id="edit-produto-categoria"
+                            class="input-table"
+                            style="width:100%;"
+                            >
+                            <option value="">
+                                Selecione
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- BOTÕES -->
+                    <div
+                        style="
+                        display:flex;
+                        justify-content:flex-end;
+                        gap:10px;
+                        margin-top:20px;
+                        "
+                        >
+
+                        <button
+                            type="button"
+                            class="btn-qty"
+                            onclick="fecharEdicaoProduto()"
+                            style="
+                            min-width:120px;
+                            height:42px;
+                            "
+                            >
+                            ❌ Cancelar
+                        </button>
+
+                        <button
+                            type="button"
+                            id="btn-salvar-edicao-produto"
+                            class="btn-save-prod"
+                            onclick="salvarEdicaoProduto()"
+                            style="
+                            min-width:200px;
+                            height:42px;
+                            background:#2e7d32"
+                            >
+                            💾 Salvar alterações
+                        </button>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <!-- =========================================================
                       ABA: CADASTROS
          ========================================================= -->
-
-        <main
-            class="products-manager"
-            id="aba-cadastros"
-            style="display: none;">
-
+        <main class="products-manager"
+              id="aba-cadastros"
+              style="display: none;">
             <div class="manager-container">
-
                 <div style="
                      display:flex;
                      justify-content:space-between;
@@ -619,6 +918,22 @@
                         font-weight:bold;
                         ">
                         👤 Clientes
+                    </button>
+
+                    <button
+                        class="btn-sub-tab"
+                        type="button"
+                        onclick="abrirCadastroCidadesUI()"
+                        style="
+                        padding:10px 18px;
+                        background:#2a2a35;
+                        color:#fff;
+                        border:1px solid #3d3d4e;
+                        border-radius:6px;
+                        cursor:pointer;
+                        font-weight:bold;
+                        ">
+                        🏙️ Cidades
                     </button>
                 </div>
 
@@ -727,6 +1042,371 @@
                 </div>
 
                 <!-- =========================================================
+     CONTEÚDO: CIDADES DE ENTREGA
+     ========================================================= -->
+                <div
+                    id="cadastro-cidades"
+                    style="display:none;"
+                    >
+
+                    <!-- CABEÇALHO -->
+                    <div
+                        style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:10px;
+                        flex-wrap:wrap;
+                        margin-bottom:15px;
+                        "
+                        >
+
+                        <div>
+
+                            <h3 style="margin:0;">
+                                🏙️ Cadastro de Cidades de Entrega
+                            </h3>
+
+                            <div
+                                style="
+                                color:#aaa;
+                                margin-top:5px;
+                                font-size:0.85rem;
+                                "
+                                >
+                                Cadastre as cidades atendidas e suas respectivas taxas de entrega.
+                            </div>
+                        </div>
+
+                        <div
+                            style="
+                            display:flex;
+                            gap:10px;
+                            flex-wrap:wrap;
+                            "
+                            >
+
+                            <button
+                                type="button"
+                                class="btn-refresh"
+                                style="background:#2e7d32;"
+                                onclick="abrirModalNovaCidade()"
+                                >
+                                ➕ Nova Cidade
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn-refresh"
+                                onclick="carregarCadastroCidadesUI()"
+                                >
+                                🔄 Atualizar Lista
+                            </button>
+                        </div>
+                    </div>
+
+
+                    <!-- LISTA -->
+                    <div class="table-responsive">
+
+                        <table class="products-table">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Cidade
+                                    </th>
+
+                                    <th style="text-align:center;">
+                                        UF
+                                    </th>
+
+                                    <th style="text-align:right;">
+                                        Taxa de Entrega
+                                    </th>
+
+                                    <th style="text-align:center;">
+                                        Status
+                                    </th>
+
+                                    <th style="text-align:center;">
+                                        Ações
+                                    </th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="cidades-table-body">
+
+                                <tr>
+
+                                    <td
+                                        colspan="5"
+                                        style="
+                                        text-align:center;
+                                        color:#aaa;
+                                        padding:25px;
+                                        "
+                                        >
+                                        Nenhuma cidade carregada.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- =========================================================
+                     MODAL: CIDADE DE ENTREGA
+                     ========================================================= -->
+                <div
+                    id="modal-cidade-entrega"
+                    class="login-overlay"
+                    style="
+                    display:none;
+                    position:fixed;
+                    inset:0;
+                    background:rgba(0,0,0,0.75);
+                    z-index:10000;
+                    justify-content:center;
+                    align-items:center;
+                    padding:20px;
+                    "
+                    >
+
+                    <div
+                        style="
+                        width:100%;
+                        max-width:520px;
+                        max-height:90vh;
+                        overflow-y:auto;
+                        background:#1e1e24;
+                        border:1px solid #3d3d4e;
+                        border-radius:10px;
+                        padding:25px;
+                        box-shadow:0 20px 50px rgba(0,0,0,0.5);
+                        "
+                        >
+
+                        <!-- CABEÇALHO -->
+                        <div
+                            style="
+                            display:flex;
+                            justify-content:space-between;
+                            align-items:center;
+                            gap:10px;
+                            margin-bottom:20px;
+                            "
+                            >
+
+                            <div>
+
+                                <h2
+                                    id="modal-cidade-entrega-titulo"
+                                    style="margin:0;"
+                                    >
+                                    🏙️ Nova Cidade
+                                </h2>
+
+                                <div
+                                    style="
+                                    color:#aaa;
+                                    margin-top:5px;
+                                    font-size:0.85rem;
+                                    "
+                                    >
+                                    Cadastre uma cidade atendida pelo serviço de entrega.
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onclick="fecharModalCidadeEntrega()"
+                                style="
+                                background:#444;
+                                color:#fff;
+                                border:1px solid #555;
+                                border-radius:6px;
+                                width:36px;
+                                height:36px;
+                                cursor:pointer;
+                                font-size:1rem;
+                                "
+                                >
+                                ✕
+                            </button>
+                        </div>
+
+                        <!-- NOME + UF -->
+                        <div
+                            style="
+                            display:grid;
+                            grid-template-columns:2fr 1fr;
+                            gap:10px;
+                            "
+                            >
+
+                            <div class="form-group">
+
+                                <label>
+                                    Nome da Cidade *
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="cidade-entrega-nome"
+                                    class="input-table"
+                                    maxlength="100"
+                                    placeholder="Ex.: Marília"
+                                    required
+                                    style="width:100%;"
+                                    >
+                            </div>
+
+                            <div class="form-group">
+
+                                <label>
+                                    UF *
+                                </label>
+
+                                <select
+                                    id="cidade-entrega-uf"
+                                    class="input-table"
+                                    required
+                                    style="width:100%;"
+                                    >
+
+                                    <option value="">
+                                        Selecione
+                                    </option>
+
+                                    <option value="AC">AC</option>
+                                    <option value="AL">AL</option>
+                                    <option value="AP">AP</option>
+                                    <option value="AM">AM</option>
+                                    <option value="BA">BA</option>
+                                    <option value="CE">CE</option>
+                                    <option value="DF">DF</option>
+                                    <option value="ES">ES</option>
+                                    <option value="GO">GO</option>
+                                    <option value="MA">MA</option>
+                                    <option value="MT">MT</option>
+                                    <option value="MS">MS</option>
+                                    <option value="MG">MG</option>
+                                    <option value="PA">PA</option>
+                                    <option value="PB">PB</option>
+                                    <option value="PR">PR</option>
+                                    <option value="PE">PE</option>
+                                    <option value="PI">PI</option>
+                                    <option value="RJ">RJ</option>
+                                    <option value="RN">RN</option>
+                                    <option value="RS">RS</option>
+                                    <option value="RO">RO</option>
+                                    <option value="RR">RR</option>
+                                    <option value="SC">SC</option>
+                                    <option value="SP">SP</option>
+                                    <option value="SE">SE</option>
+                                    <option value="TO">TO</option>
+
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- TAXA -->
+                        <div class="form-group">
+
+                            <label>
+                                Taxa de Entrega (R$) *
+                            </label>
+
+                            <input
+                                type="number"
+                                id="cidade-entrega-taxa"
+                                class="input-table"
+                                min="0"
+                                step="0.01"
+                                value="0.00"
+                                required
+                                style="width:100%;"
+                                >
+                        </div>
+
+                        <!-- ATIVA -->
+                        <div
+                            style="
+                            margin-top:10px;
+                            padding:12px;
+                            background:#2a2a35;
+                            border:1px solid #3d3d4e;
+                            border-radius:7px;
+                            "
+                            >
+
+                            <label
+                                style="
+                                display:flex;
+                                align-items:center;
+                                gap:10px;
+                                cursor:pointer;
+                                "
+                                >
+
+                                <input
+                                    type="checkbox"
+                                    id="cidade-entrega-ativa"
+                                    checked
+                                    style="
+                                    width:18px;
+                                    height:18px;
+                                    "
+                                    >
+                                <span>
+                                    Cidade disponível para entrega
+                                </span>
+                            </label>
+                        </div>
+
+                        <!-- BOTÕES -->
+                        <div
+                            style="
+                            display:flex;
+                            justify-content:flex-end;
+                            gap:10px;
+                            margin-top:20px;
+                            "
+                            >
+
+                            <button
+                                type="button"
+                                class="btn-qty"
+                                onclick="fecharModalCidadeEntrega()"
+                                style="
+                                min-width:120px;
+                                height:42px;
+                                "
+                                >
+                                ❌ Cancelar
+                            </button>
+
+                            <button
+                                type="button"
+                                id="btn-salvar-cidade-entrega"
+                                class="btn-save-prod"
+                                onclick="salvarCidadeEntregaUI()"
+                                style="
+                                min-width:180px;
+                                height:42px;
+                                background:#2e7d32;
+                                "
+                                >
+                                💾 Cadastrar Cidade
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =========================================================
      CONTEÚDO: CLIENTES
      ========================================================= -->
                 <div
@@ -777,9 +1457,7 @@
                                 onclick="carregarCadastroClientesUI()">
                                 🔄 Atualizar Lista
                             </button>
-
                         </div>
-
                     </div>
 
                     <!-- BUSCA -->
@@ -808,7 +1486,6 @@
                             style="width:100%;box-sizing:border-box;"
                             oninput="filtrarCadastroClientesUI(this.value)"
                             >
-
                     </div>
 
                     <!-- LISTA -->
@@ -838,7 +1515,6 @@
                                     <th style="text-align:center;">
                                         Ações
                                     </th>
-
                                 </tr>
                             </thead>
 
@@ -855,13 +1531,9 @@
                                         Nenhum cliente carregado.
                                     </td>
                                 </tr>
-
                             </tbody>
-
                         </table>
-
                     </div>
-
                 </div>
 
                 <!-- =========================================================
@@ -1879,10 +2551,9 @@
                      ABA: FICHA TÉCNICA
            ========================================================= -->
 
-        <main
-            class="products-manager"
-            id="aba-ficha-tecnica"
-            style="display: none;">
+        <main class="products-manager"
+              id="aba-ficha-tecnica"
+              style="display: none;">
 
             <div class="manager-container">
 

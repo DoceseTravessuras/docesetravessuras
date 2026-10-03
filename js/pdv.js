@@ -6,8 +6,13 @@ const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let listaPedidosGlobal = [];
 let somAtivado = false;
+
 let arquivoImagemSelecionado = null;
+let arquivoImagemProdutoEdicao = null;
+let produtoEdicaoAtual = null;
+
 let caixaAtual = null;
+
 window.usuarioAtual = null;
 let itensCompraRascunho = [];
 let historicoComprasUI = [];
@@ -6706,71 +6711,314 @@ async function salvarCompraUI() {
 }
 
 // --- CARREGA PRODUTOS COM CUSTO E MARGEM ---
+// --- CARREGA PRODUTOS COM CUSTO E MARGEM ---
 async function carregarProdutosGerenciador() {
-    const tbody = document.getElementById('produtos-table-body');
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando produtos...</td></tr>';
 
-    const {data: produtos, error} = await _supabase
+    const tbody =
+            document.getElementById(
+                    'produtos-table-body'
+                    );
+
+    tbody.innerHTML =
+            '<tr><td colspan="8" style="text-align:center;">Carregando produtos...</td></tr>';
+
+    const {
+        data: produtos,
+        error
+    } = await _supabase
             .from('produtos')
             .select('*')
             .order('nome');
 
     if (error) {
-        alert('Erro ao carregar produtos: ' + error.message);
+
+        alert(
+                'Erro ao carregar produtos: ' +
+                error.message
+                );
+
         return;
     }
 
     tbody.innerHTML = '';
 
+    const cargoAtual =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    )
+            .toUpperCase();
+
+    const ehGerente =
+            cargoAtual === 'GERENTE' ||
+            cargoAtual === 'ADMIN';
+
+
     produtos.forEach(p => {
-        const tr = document.createElement('tr');
-        const img = p.imagem_url || 'https://via.placeholder.com/40';
-        const custo = Number(p.preco_custo || 0);
-        const precoVenda = Number(p.preco || 0);
-        const margem = custo > 0 ? ((precoVenda - custo) / custo) * 100 : 0;
+
+        const tr =
+                document.createElement('tr');
+
+        const img =
+                p.imagem_url ||
+                'https://via.placeholder.com/40';
+
+        const custo =
+                Number(
+                        p.preco_custo || 0
+                        );
+
+        const precoVenda =
+                Number(
+                        p.preco || 0
+                        );
+
+        const margem =
+                custo > 0
+                ? ((precoVenda - custo) / custo) * 100
+                : 0;
+
+
+        // ====================================================
+        // IMAGEM DO PRODUTO
+        // GERENTE/ADMIN = CLICÁVEL
+        // OPERADOR = SOMENTE VISUALIZAÇÃO
+        // ====================================================
+
+        let imagemProdutoHTML;
+
+        if (ehGerente) {
+
+            imagemProdutoHTML = `
+                <div
+                    onclick="abrirEdicaoProduto(${p.id})"
+                    title="Clique para editar o produto"
+                    style="
+                        position:relative;
+                        width:48px;
+                        height:48px;
+                        display:inline-flex;
+                        cursor:pointer;
+                        margin-right:8px;
+                        vertical-align:middle;
+                    "
+                >
+
+                    <img
+                        src="${img}"
+                        class="product-row-img"
+                        alt="${p.nome}"
+                        style="
+                            width:48px;
+                            height:48px;
+                            object-fit:cover;
+                            border-radius:6px;
+                        "
+                    >
+
+                    <span
+                        style="
+                            position:absolute;
+                            right:-3px;
+                            bottom:-3px;
+                            background:#1565c0;
+                            color:#fff;
+                            border-radius:50%;
+                            width:20px;
+                            height:20px;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            font-size:11px;
+                            border:2px solid #1e1e24;
+                        "
+                    >
+                        ✏️
+                    </span>
+
+                </div>
+            `;
+
+        } else {
+
+            imagemProdutoHTML = `
+                <img
+                    src="${img}"
+                    class="product-row-img"
+                    alt="${p.nome}"
+                    style="
+                        width:48px;
+                        height:48px;
+                        object-fit:cover;
+                        border-radius:6px;
+                        margin-right:8px;
+                        vertical-align:middle;
+                    "
+                >
+            `;
+        }
+
 
         tr.innerHTML = `
+
             <td>
-                <img src="${img}" class="product-row-img" alt="${p.nome}">
-                <strong>${p.nome}</strong>
+
+                ${imagemProdutoHTML}
+
+                <strong>
+                    ${p.nome}
+                </strong>
+
             </td>
+
+
             <td>
-                <input type="number" step="0.10" min="0" value="${custo}" id="custo-${p.id}" class="input-table" style="width: 80px;" oninput="calcularPrecoPeloCusto(${p.id})">
+
+                <input
+                    type="number"
+                    step="0.10"
+                    min="0"
+                    value="${custo}"
+                    id="custo-${p.id}"
+                    class="input-table"
+                    style="width:80px;"
+                    oninput="calcularPrecoPeloCusto(${p.id})"
+                >
+
             </td>
+
+
             <td>
-                <input type="number" step="1" min="0" value="${margem}" id="margem-${p.id}" class="input-table" style="width: 70px;" oninput="calcularPrecoPeloCusto(${p.id})">
+
+                <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value="${margem}"
+                    id="margem-${p.id}"
+                    class="input-table"
+                    style="width:70px;"
+                    oninput="calcularPrecoPeloCusto(${p.id})"
+                >
+
             </td>
+
+
             <td>
-                <input type="number" step="0.50" min="0" value="${precoVenda}" id="preco-${p.id}" class="input-table" style="width: 80px;" oninput="calcularMargemPeloPreco(${p.id})">
+
+                <input
+                    type="number"
+                    step="0.50"
+                    min="0"
+                    value="${precoVenda}"
+                    id="preco-${p.id}"
+                    class="input-table"
+                    style="width:80px;"
+                    oninput="calcularMargemPeloPreco(${p.id})"
+                >
+
             </td>
+
+
             <td>
-                <input type="number" min="0" value="${p.estoque || 0}" id="estoque-${p.id}" class="input-table" style="width: 70px;" readonly title="Use os botões para movimentar o estoque.">
+
+                <input
+                    type="number"
+                    min="0"
+                    value="${p.estoque || 0}"
+                    id="estoque-${p.id}"
+                    class="input-table"
+                    style="width:70px;"
+                    readonly
+                    title="Use os botões para movimentar o estoque."
+                >
+
             </td>
+
+
             <td>
+
                 <div class="qty-controls">
-                    <button class="btn-qty" onclick="ajustarEstoqueInput(${p.id}, -5)">-5</button>
-                    <button class="btn-qty" onclick="ajustarEstoqueInput(${p.id}, -1)">-1</button>
-                    <button class="btn-qty" onclick="ajustarEstoqueInput(${p.id}, 1)">+1</button>
-                    <button class="btn-qty" onclick="ajustarEstoqueInput(${p.id}, 5)">+5</button>
+
+                    <button
+                        class="btn-qty"
+                        onclick="ajustarEstoqueInput(${p.id}, -5)"
+                    >
+                        -5
+                    </button>
+
+                    <button
+                        class="btn-qty"
+                        onclick="ajustarEstoqueInput(${p.id}, -1)"
+                    >
+                        -1
+                    </button>
+
+                    <button
+                        class="btn-qty"
+                        onclick="ajustarEstoqueInput(${p.id}, 1)"
+                    >
+                        +1
+                    </button>
+
+                    <button
+                        class="btn-qty"
+                        onclick="ajustarEstoqueInput(${p.id}, 5)"
+                    >
+                        +5
+                    </button>
+
                 </div>
+
             </td>
+
+
             <td>
-                <select id="ativo-${p.id}" class="input-table" style="width: 100px;">
-                    <option value="true" ${p.ativo ? 'selected' : ''}>Ativo</option>
-                    <option value="false" ${!p.ativo ? 'selected' : ''}>Pausado</option>
+
+                <select
+                    id="ativo-${p.id}"
+                    class="input-table"
+                    style="width:90px;"
+                >
+
+                    <option
+                        value="true"
+                        ${p.ativo ? 'selected' : ''}
+                    >
+                        Ativo
+                    </option>
+
+                    <option
+                        value="false"
+                        ${!p.ativo ? 'selected' : ''}
+                    >
+                        Pausado
+                    </option>
+
                 </select>
+
             </td>
+
+
             <td>
-                <button class="btn-save-prod" id="btn-save-${p.id}" onclick="salvarProduto(${p.id})">💾 Salvar</button>
+
+                <button
+                    class="btn-save-prod"
+                    id="btn-save-${p.id}"
+                    onclick="salvarProduto(${p.id})"
+                >
+                    💾 Salvar
+                </button>
+
             </td>
+
         `;
 
         tbody.appendChild(tr);
+
     });
 
     aplicarPermissoes();
 }
-
 //
 // ============================================================
 // HISTÓRICO DE PRODUÇÕES
@@ -9835,6 +10083,772 @@ function fecharModalNovoProduto() {
     const modal = document.getElementById('modal-produto');
     if (modal)
         modal.style.display = 'none';
+}
+
+// ============================================================
+// EDIÇÃO RÁPIDA DE PRODUTO - GERENTE / ADMIN
+// ============================================================
+
+async function abrirEdicaoProduto(produtoId) {
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    )
+            .toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+
+    if (!ehGerente) {
+
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem editar as informações do produto.'
+                );
+
+        return;
+    }
+
+
+    if (!produtoId) {
+
+        alert(
+                '⚠️ Produto inválido.'
+                );
+
+        return;
+    }
+
+
+    try {
+
+        // ----------------------------------------------------
+        // 1. BUSCA O PRODUTO ATUAL NO BANCO
+        // ----------------------------------------------------
+
+        const {
+            data: produto,
+            error
+        } = await _supabase
+                .from('produtos')
+                .select(`
+                    id,
+                    nome,
+                    descricao,
+                    categoria_id,
+                    codigo_barras,
+                    imagem_url
+                `)
+                .eq(
+                        'id',
+                        produtoId
+                        )
+                .single();
+
+
+        if (error) {
+
+            throw new Error(
+                    'Erro ao carregar produto: ' +
+                    error.message
+                    );
+        }
+
+
+        if (!produto) {
+
+            throw new Error(
+                    'Produto não encontrado.'
+                    );
+        }
+
+
+        // ----------------------------------------------------
+        // 2. GUARDA O PRODUTO EM EDIÇÃO
+        // ----------------------------------------------------
+
+        produtoEdicaoAtual =
+                produto;
+
+        arquivoImagemProdutoEdicao =
+                null;
+
+
+        // ----------------------------------------------------
+        // 3. CARREGA CATEGORIAS
+        // ----------------------------------------------------
+
+        await carregarCategoriasEdicaoProduto();
+
+
+        // ----------------------------------------------------
+        // 4. PREENCHE OS CAMPOS
+        // ----------------------------------------------------
+
+        const campoNome =
+                document.getElementById(
+                        'edit-produto-nome'
+                        );
+
+        const campoDescricao =
+                document.getElementById(
+                        'edit-produto-descricao'
+                        );
+
+        const campoCodigo =
+                document.getElementById(
+                        'edit-produto-codigo'
+                        );
+
+        const campoCategoria =
+                document.getElementById(
+                        'edit-produto-categoria'
+                        );
+
+        const preview =
+                document.getElementById(
+                        'edit-produto-imagem-preview'
+                        );
+
+        const arquivo =
+                document.getElementById(
+                        'edit-produto-file'
+                        );
+
+        const statusImagem =
+                document.getElementById(
+                        'edit-produto-status-imagem'
+                        );
+
+
+        if (campoNome) {
+
+            campoNome.value =
+                    produto.nome || '';
+
+        }
+
+
+        if (campoDescricao) {
+
+            campoDescricao.value =
+                    produto.descricao || '';
+
+        }
+
+
+        if (campoCodigo) {
+
+            campoCodigo.value =
+                    produto.codigo_barras || '';
+
+        }
+
+
+        if (campoCategoria) {
+
+            campoCategoria.value =
+                    produto.categoria_id != null
+                    ? String(produto.categoria_id)
+                    : '';
+
+        }
+
+
+        if (preview) {
+
+            preview.src =
+                    produto.imagem_url ||
+                    'https://via.placeholder.com/130';
+
+        }
+
+
+        if (arquivo) {
+
+            arquivo.value = '';
+
+        }
+
+
+        if (statusImagem) {
+
+            statusImagem.innerText =
+                    'Nenhuma imagem nova selecionada.';
+
+            statusImagem.style.color =
+                    '#aaa';
+
+        }
+
+
+        // ----------------------------------------------------
+        // 5. ABRE O MODAL
+        // ----------------------------------------------------
+
+        const modal =
+                document.getElementById(
+                        'modal-edicao-produto'
+                        );
+
+        if (modal) {
+
+            modal.style.display =
+                    'flex';
+
+        }
+
+    } catch (err) {
+
+        console.error(
+                'Erro ao abrir edição do produto:',
+                err
+                );
+
+        alert(
+                '❌ Não foi possível abrir a edição:\n\n' +
+                (err.message || err)
+                );
+    }
+}
+
+
+// ============================================================
+// CARREGA CATEGORIAS NO MODAL DE EDIÇÃO
+// ============================================================
+
+async function carregarCategoriasEdicaoProduto() {
+
+    const select =
+            document.getElementById(
+                    'edit-produto-categoria'
+                    );
+
+    if (!select) {
+
+        return;
+    }
+
+
+    select.innerHTML =
+            '<option value="">Selecione</option>';
+
+
+    const {
+        data: categorias,
+        error
+    } = await _supabase
+            .from('categorias')
+            .select('id,nome')
+            .order('nome');
+
+
+    if (error) {
+
+        console.error(
+                'Erro ao carregar categorias:',
+                error
+                );
+
+        select.innerHTML =
+                '<option value="">Erro ao carregar categorias</option>';
+
+        return;
+    }
+
+
+    if (!categorias) {
+
+        return;
+    }
+
+
+    categorias.forEach(categoria => {
+
+        const option =
+                document.createElement(
+                        'option'
+                        );
+
+        option.value =
+                String(
+                        categoria.id
+                        );
+
+        option.textContent =
+                categoria.nome;
+
+        select.appendChild(
+                option
+                );
+
+    });
+}
+
+
+// ============================================================
+// SELECIONA UMA NOVA IMAGEM
+// ============================================================
+
+function selecionarFotoEdicaoProduto(event) {
+
+    const file =
+            event?.target?.files?.[0];
+
+
+    if (!file) {
+
+        return;
+    }
+
+
+    if (!file.type.startsWith('image/')) {
+
+        alert(
+                '⚠️ Selecione um arquivo de imagem válido.'
+                );
+
+        event.target.value = '';
+
+        return;
+    }
+
+
+    // Limite de 5 MB
+    if (file.size > 5 * 1024 * 1024) {
+
+        alert(
+                '⚠️ A imagem não pode ter mais de 5 MB.'
+                );
+
+        event.target.value = '';
+
+        return;
+    }
+
+
+    arquivoImagemProdutoEdicao =
+            file;
+
+
+    // --------------------------------------------------------
+    // PRÉ-VISUALIZAÇÃO
+    // --------------------------------------------------------
+
+    const preview =
+            document.getElementById(
+                    'edit-produto-imagem-preview'
+                    );
+
+
+    if (preview) {
+
+        const reader =
+                new FileReader();
+
+
+        reader.onload =
+                function (e) {
+
+                    preview.src =
+                            e.target.result;
+
+                };
+
+
+        reader.readAsDataURL(
+                file
+                );
+    }
+
+
+    const status =
+            document.getElementById(
+                    'edit-produto-status-imagem'
+                    );
+
+
+    if (status) {
+
+        status.style.color =
+                '#2ed573';
+
+        status.innerText =
+                '📷 Nova imagem selecionada: ' +
+                file.name;
+    }
+}
+
+
+// ============================================================
+// FECHA MODAL DE EDIÇÃO
+// ============================================================
+
+function fecharEdicaoProduto() {
+
+    produtoEdicaoAtual =
+            null;
+
+    arquivoImagemProdutoEdicao =
+            null;
+
+
+    const modal =
+            document.getElementById(
+                    'modal-edicao-produto'
+                    );
+
+
+    if (modal) {
+
+        modal.style.display =
+                'none';
+
+    }
+
+
+    const arquivo =
+            document.getElementById(
+                    'edit-produto-file'
+                    );
+
+
+    if (arquivo) {
+
+        arquivo.value =
+                '';
+
+    }
+
+
+    const status =
+            document.getElementById(
+                    'edit-produto-status-imagem'
+                    );
+
+
+    if (status) {
+
+        status.innerText =
+                'Nenhuma imagem nova selecionada.';
+
+        status.style.color =
+                '#aaa';
+
+    }
+}
+
+
+// ============================================================
+// SALVA NOME, DESCRIÇÃO, CATEGORIA, CÓDIGO E IMAGEM
+// ============================================================
+
+async function salvarEdicaoProduto() {
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    )
+            .toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+
+    if (!ehGerente) {
+
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem editar produtos.'
+                );
+
+        return;
+    }
+
+
+    if (!produtoEdicaoAtual?.id) {
+
+        alert(
+                '⚠️ Nenhum produto selecionado para edição.'
+                );
+
+        return;
+    }
+
+
+    const btn =
+            document.getElementById(
+                    'btn-salvar-edicao-produto'
+                    );
+
+
+    if (!btn) {
+
+        return;
+    }
+
+
+    const textoOriginal =
+            btn.innerHTML;
+
+
+    try {
+
+        btn.disabled =
+                true;
+
+        btn.innerHTML =
+                '⏳ Salvando...';
+
+
+        // ----------------------------------------------------
+        // 1. COLETA DOS CAMPOS
+        // ----------------------------------------------------
+
+        const campoNome =
+                document.getElementById(
+                        'edit-produto-nome'
+                        );
+
+        const campoDescricao =
+                document.getElementById(
+                        'edit-produto-descricao'
+                        );
+
+        const campoCodigo =
+                document.getElementById(
+                        'edit-produto-codigo'
+                        );
+
+        const campoCategoria =
+                document.getElementById(
+                        'edit-produto-categoria'
+                        );
+
+
+        const nome =
+                campoNome?.value.trim() || '';
+
+        const descricao =
+                campoDescricao?.value.trim() || '';
+
+        const codigoBarras =
+                campoCodigo?.value.trim() || '';
+
+        const categoriaId =
+                campoCategoria?.value || null;
+
+
+        // ----------------------------------------------------
+        // 2. VALIDAÇÕES
+        // ----------------------------------------------------
+
+        if (!nome) {
+
+            throw new Error(
+                    'Informe o nome do produto.'
+                    );
+        }
+
+
+        if (!codigoBarras) {
+
+            throw new Error(
+                    'Informe o código de barras.'
+                    );
+        }
+
+
+        if (!/^\d+$/.test(codigoBarras)) {
+
+            throw new Error(
+                    'O código de barras deve conter somente números.'
+                    );
+        }
+
+
+        if (codigoBarras.length > 14) {
+
+            throw new Error(
+                    'O código de barras pode ter no máximo 14 dígitos.'
+                    );
+        }
+
+
+        // ----------------------------------------------------
+        // 3. MANTÉM A IMAGEM ATUAL
+        // ----------------------------------------------------
+
+        let urlFinalImagem =
+                produtoEdicaoAtual.imagem_url || '';
+
+
+        // ----------------------------------------------------
+        // 4. SE ESCOLHEU NOVA IMAGEM, ENVIA PARA STORAGE
+        // ----------------------------------------------------
+
+        if (arquivoImagemProdutoEdicao) {
+
+            btn.innerHTML =
+                    '⏳ Enviando imagem...';
+
+
+            const nomeOriginal =
+                    arquivoImagemProdutoEdicao.name
+                    || 'imagem.jpg';
+
+
+            const extensao =
+                    nomeOriginal.includes('.')
+                    ? nomeOriginal
+                    .split('.')
+                    .pop()
+                    .toLowerCase()
+                    : 'jpg';
+
+
+            const nomeArquivo =
+                    `prod_edit_${produtoEdicaoAtual.id}_${Date.now()}.${extensao}`;
+
+
+            const {
+                data: uploadData,
+                error: uploadError
+            } = await _supabase.storage
+                    .from('produtos')
+                    .upload(
+                            nomeArquivo,
+                            arquivoImagemProdutoEdicao
+                            );
+
+
+            if (uploadError) {
+
+                throw new Error(
+                        'Erro ao enviar a nova imagem: ' +
+                        uploadError.message
+                        );
+            }
+
+
+            const {
+                data: publicData
+            } = _supabase.storage
+                    .from('produtos')
+                    .getPublicUrl(
+                            nomeArquivo
+                            );
+
+
+            urlFinalImagem =
+                    publicData?.publicUrl ||
+                    urlFinalImagem;
+        }
+
+
+        // ----------------------------------------------------
+        // 5. ATUALIZA PRODUTO NO BANCO
+        // ----------------------------------------------------
+
+        btn.innerHTML =
+                '⏳ Atualizando produto...';
+
+
+        const {
+            data: produtoAtualizado,
+            error
+        } = await _supabase
+                .from('produtos')
+                .update({
+                    nome: nome,
+                    descricao:
+                            descricao || null,
+                    codigo_barras:
+                            codigoBarras,
+                    categoria_id:
+                            categoriaId
+                            ? Number(categoriaId)
+                            : null,
+                    imagem_url:
+                            urlFinalImagem
+                            || null
+                })
+                .eq(
+                        'id',
+                        produtoEdicaoAtual.id
+                        )
+                .select(`
+                    id,
+                    nome,
+                    descricao,
+                    categoria_id,
+                    codigo_barras,
+                    imagem_url
+                `)
+                .single();
+
+
+        if (error) {
+
+            if (error.code === '23505') {
+
+                throw new Error(
+                        'Este código de barras já está cadastrado em outro produto.'
+                        );
+            }
+
+
+            throw new Error(
+                    'Erro ao atualizar produto: ' +
+                    error.message
+                    );
+        }
+
+
+        if (!produtoAtualizado) {
+
+            throw new Error(
+                    'O banco não retornou o produto atualizado.'
+                    );
+        }
+
+
+        // ----------------------------------------------------
+        // 6. FECHA E ATUALIZA A TABELA
+        // ----------------------------------------------------
+
+        fecharEdicaoProduto();
+
+        await carregarProdutosGerenciador();
+
+
+        alert(
+                '✅ Produto atualizado com sucesso!'
+                );
+
+
+    } catch (err) {
+
+        console.error(
+                'Erro ao salvar edição do produto:',
+                err
+                );
+
+        alert(
+                '❌ Não foi possível salvar:\n\n' +
+                (err.message || err)
+                );
+
+    } finally {
+
+        btn.disabled =
+                false;
+
+        btn.innerHTML =
+                textoOriginal;
+    }
 }
 
 // Carrega a lista de categorias dinamicamente da tabela 'categorias'
@@ -14638,6 +15652,10 @@ async function salvarNovoInsumo() {
 // CADASTROS — ALTERNÂNCIA ENTRE INSUMOS E FORNECEDORES
 // ============================================================
 
+// ============================================================
+// CADASTROS — ALTERNÂNCIA ENTRE ABAS
+// ============================================================
+
 function atualizarBotoesCadastrosUI(abaAtiva) {
 
     const botoes =
@@ -14652,6 +15670,7 @@ function atualizarBotoesCadastrosUI(abaAtiva) {
                 .trim()
                 .toLowerCase();
 
+
         const ativo =
                 (
                         abaAtiva === 'insumos' &&
@@ -14664,22 +15683,24 @@ function atualizarBotoesCadastrosUI(abaAtiva) {
                 (
                         abaAtiva === 'clientes' &&
                         texto.includes('clientes')
+                        ) ||
+                (
+                        abaAtiva === 'cidades' &&
+                        texto.includes('cidades')
                         );
 
-        botao.classList.toggle(
-                'active',
-                ativo
-                );
 
         botao.style.background =
                 ativo
                 ? '#2a2a35'
                 : '#1e1e24';
 
+
         botao.style.color =
                 ativo
                 ? '#fff'
                 : '#aaa';
+
     });
 }
 
@@ -15563,6 +16584,1092 @@ function fecharModalNovoFornecedor() {
 }
 
 // ============================================================
+// CADASTRO DE CIDADES DE ENTREGA
+// ============================================================
+let cidadeEntregaEditandoId = null;
+let cidadesEntregaCadastroCache = [];
+
+// ============================================================
+// CADASTRO DE CIDADES DE ENTREGA
+// ============================================================
+// ============================================================
+// ABRIR ABA CIDADES
+// ============================================================
+async function abrirCadastroCidadesUI() {
+
+    const cadastroInsumos =
+            document.getElementById(
+                    'cadastro-insumos'
+                    );
+
+    const cadastroFornecedores =
+            document.getElementById(
+                    'cadastro-fornecedores'
+                    );
+
+    const cadastroClientes =
+            document.getElementById(
+                    'cadastro-clientes'
+                    );
+
+    const cadastroCidades =
+            document.getElementById(
+                    'cadastro-cidades'
+                    );
+
+    if (!cadastroCidades) {
+
+        console.error(
+                '⛔ Conteúdo de Cidades não encontrado.'
+                );
+
+        return;
+    }
+
+    // --------------------------------------------------------
+    // ESCONDE AS OUTRAS ABAS
+    // --------------------------------------------------------
+    if (cadastroInsumos) {
+
+        cadastroInsumos.style.display =
+                'none';
+    }
+
+    if (cadastroFornecedores) {
+
+        cadastroFornecedores.style.display =
+                'none';
+    }
+
+    if (cadastroClientes) {
+
+        cadastroClientes.style.display =
+                'none';
+
+    }
+
+    cadastroCidades.style.display =
+            'block';
+
+    atualizarBotoesCadastrosUI(
+            'cidades'
+            );
+
+    await carregarCadastroCidadesUI();
+}
+
+// ============================================================
+// CARREGAR CIDADES
+// ============================================================
+async function carregarCadastroCidadesUI() {
+
+    const tbody =
+            document.getElementById(
+                    'cidades-table-body'
+                    );
+
+    if (!tbody) {
+
+        console.error(
+                '⛔ Tabela de cidades não encontrada.'
+                );
+
+        return;
+    }
+
+    tbody.innerHTML = `
+        <tr>
+
+            <td
+                colspan="5"
+                style="
+                text-align:center;
+                color:#aaa;
+                padding:25px;
+                "
+            >
+                ⏳ Carregando cidades...
+            </td>
+
+        </tr>
+    `;
+
+    try {
+
+        const {
+            data: cidades,
+            error
+        } = await _supabase
+                .from('cidades_entrega')
+                .select(`
+                    id,
+                    nome,
+                    uf,
+                    taxa_entrega,
+                    ativa,
+                    criado_em
+                `)
+                .order(
+                        'nome',
+                        {
+                            ascending: true
+                        }
+                );
+
+        if (error) {
+
+            throw error;
+
+        }
+
+        cidadesEntregaCadastroCache =
+                Array.isArray(cidades)
+                ? cidades
+                : [];
+
+        renderizarTabelaCidadesUI(
+                cidadesEntregaCadastroCache
+                );
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao carregar cidades:',
+                erro
+                );
+
+        tbody.innerHTML = `
+            <tr>
+
+                <td
+                    colspan="5"
+                    style="
+                    text-align:center;
+                    color:#ff6b6b;
+                    padding:25px;
+                    "
+                >
+                    ❌ Não foi possível carregar as cidades.
+                </td>
+
+            </tr>
+        `;
+
+    }
+}
+
+// ============================================================
+// ESCAPAR HTML
+// ============================================================
+function escaparHTMLCidadeUI(valor) {
+
+    return String(
+            valor ?? ''
+            )
+            .replace(
+                    /&/g,
+                    '&amp;'
+                    )
+            .replace(
+                    /</g,
+                    '&lt;'
+                    )
+            .replace(
+                    />/g,
+                    '&gt;'
+                    )
+            .replace(
+                    /"/g,
+                    '&quot;'
+                    )
+            .replace(
+                    /'/g,
+                    '&#039;'
+                    );
+}
+
+// ============================================================
+// RENDERIZAR CIDADES
+// ============================================================
+function renderizarTabelaCidadesUI(cidades) {
+
+    const tbody =
+            document.getElementById(
+                    'cidades-table-body'
+                    );
+
+    if (!tbody) {
+
+        return;
+    }
+
+    if (
+            !Array.isArray(cidades) ||
+            cidades.length === 0
+            ) {
+
+        tbody.innerHTML = `
+            <tr>
+
+                <td
+                    colspan="5"
+                    style="
+                    text-align:center;
+                    color:#aaa;
+                    padding:25px;
+                    "
+                >
+                    Nenhuma cidade cadastrada.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    tbody.innerHTML =
+            cidades.map(cidade => {
+
+                const id =
+                        Number(
+                                cidade.id
+                                );
+
+                const nome =
+                        escaparHTMLCidadeUI(
+                                cidade.nome
+                                );
+
+                const uf =
+                        escaparHTMLCidadeUI(
+                                cidade.uf
+                                );
+
+                const taxa =
+                        Number(
+                                cidade.taxa_entrega || 0
+                                );
+
+                const ativa =
+                        cidade.ativa === true ||
+                        cidade.ativa === 'true';
+
+                const statusHTML =
+                        ativa
+                        ? `
+                            <span
+                                style="
+                                display:inline-block;
+                                padding:5px 10px;
+                                border-radius:15px;
+                                background:#1b5e20;
+                                color:#fff;
+                                font-size:0.8rem;
+                                "
+                            >
+                                Ativa
+                            </span>
+                        `
+                        : `
+                            <span
+                                style="
+                                display:inline-block;
+                                padding:5px 10px;
+                                border-radius:15px;
+                                background:#555;
+                                color:#ddd;
+                                font-size:0.8rem;
+                                "
+                            >
+                                Inativa
+                            </span>
+                        `;
+
+                return `
+                    <tr>
+
+                        <td>
+                            <strong>
+                                ${nome}
+                            </strong>
+                        </td>
+
+                        <td style="text-align:center;">
+                            ${uf}
+                        </td>
+
+                        <td style="text-align:right;">
+                            <strong>
+                                R$ ${
+                        taxa
+                        .toFixed(2)
+                        .replace('.', ',')
+                        }
+                            </strong>
+                        </td>
+
+                        <td style="text-align:center;">
+                            ${statusHTML}
+                        </td>
+
+                        <td style="text-align:center;">
+
+                            <button
+                                type="button"
+                                class="btn-qty"
+                                onclick="editarCidadeUI(${id})"
+                                style="margin-right:5px;"
+                            >
+                                ✏️
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn-qty"
+                                onclick="alternarStatusCidadeUI(${id}, ${ativa})"
+                                style="margin-right:5px;"
+                            >
+                                ${
+                        ativa
+                        ? '⏸️'
+                        : '▶️'
+                        }
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn-qty"
+                                onclick="excluirCidadeUI(${id})"
+                                style="
+                                background:#7f1d1d;
+                                color:#fff;
+                                "
+                            >
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+}
+
+// ============================================================
+// NOVA CIDADE
+// ============================================================
+function abrirModalNovaCidade() {
+
+    cidadeEntregaEditandoId =
+            null;
+
+    const campoNome =
+            document.getElementById(
+                    'cidade-entrega-nome'
+                    );
+
+    const campoUF =
+            document.getElementById(
+                    'cidade-entrega-uf'
+                    );
+
+    const campoTaxa =
+            document.getElementById(
+                    'cidade-entrega-taxa'
+                    );
+
+    const campoAtiva =
+            document.getElementById(
+                    'cidade-entrega-ativa'
+                    );
+
+    const titulo =
+            document.getElementById(
+                    'modal-cidade-entrega-titulo'
+                    );
+
+    const btn =
+            document.getElementById(
+                    'btn-salvar-cidade-entrega'
+                    );
+
+    if (campoNome) {
+
+        campoNome.value =
+                '';
+
+    }
+
+    if (campoUF) {
+
+        campoUF.value =
+                '';
+
+    }
+
+    if (campoTaxa) {
+
+        campoTaxa.value =
+                '0.00';
+
+    }
+
+    if (campoAtiva) {
+
+        campoAtiva.checked =
+                true;
+
+    }
+
+    if (titulo) {
+
+        titulo.textContent =
+                '🏙️ Nova Cidade';
+
+    }
+
+    if (btn) {
+
+        btn.innerHTML =
+                '💾 Cadastrar Cidade';
+
+    }
+
+    const modal =
+            document.getElementById(
+                    'modal-cidade-entrega'
+                    );
+
+    if (modal) {
+
+        modal.style.display =
+                'flex';
+
+    }
+
+    setTimeout(() => {
+
+        campoNome?.focus();
+
+    }, 50);
+}
+
+// ============================================================
+// EDITAR CIDADE
+// ============================================================
+async function editarCidadeUI(cidadeId) {
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    )
+            .toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+    if (!ehGerente) {
+
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem editar cidades.'
+                );
+
+        return;
+    }
+
+    try {
+
+        const {
+            data,
+            error
+        } = await _supabase
+                .from('cidades_entrega')
+                .select(`
+                    id,
+                    nome,
+                    uf,
+                    taxa_entrega,
+                    ativa
+                `)
+                .eq(
+                        'id',
+                        Number(cidadeId)
+                        )
+                .single();
+
+        if (error) {
+
+            throw error;
+
+        }
+
+        if (!data) {
+
+            throw new Error(
+                    'Cidade não encontrada.'
+                    );
+        }
+
+        cidadeEntregaEditandoId =
+                Number(
+                        data.id
+                        );
+
+        document.getElementById(
+                'cidade-entrega-nome'
+                ).value =
+                data.nome || '';
+
+        document.getElementById(
+                'cidade-entrega-uf'
+                ).value =
+                data.uf || '';
+
+        document.getElementById(
+                'cidade-entrega-taxa'
+                ).value =
+                Number(
+                        data.taxa_entrega || 0
+                        )
+                .toFixed(2);
+
+        document.getElementById(
+                'cidade-entrega-ativa'
+                ).checked =
+                data.ativa === true ||
+                data.ativa === 'true';
+
+        document.getElementById(
+                'modal-cidade-entrega-titulo'
+                ).textContent =
+                '✏️ Editar Cidade';
+
+        document.getElementById(
+                'btn-salvar-cidade-entrega'
+                ).innerHTML =
+                '💾 Salvar Alterações';
+
+        document.getElementById(
+                'modal-cidade-entrega'
+                ).style.display =
+                'flex';
+
+        setTimeout(() => {
+
+            document.getElementById(
+                    'cidade-entrega-nome'
+                    )?.focus();
+
+        }, 50);
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao editar cidade:',
+                erro
+                );
+
+        alert(
+                '❌ Não foi possível carregar a cidade:\n\n' +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+    }
+}
+
+// ============================================================
+// SALVAR NOVA / EDITAR CIDADE
+// ============================================================
+async function salvarCidadeEntregaUI() {
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    )
+            .toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+    if (!ehGerente) {
+
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem cadastrar ou editar cidades.'
+                );
+
+        return;
+    }
+
+    const btn =
+            document.getElementById(
+                    'btn-salvar-cidade-entrega'
+                    );
+
+    const nome =
+            document.getElementById(
+                    'cidade-entrega-nome'
+                    )
+            ?.value
+            .trim() || '';
+
+    const uf =
+            document.getElementById(
+                    'cidade-entrega-uf'
+                    )
+            ?.value
+            .trim()
+            .toUpperCase() || '';
+
+    const taxa =
+            parseFloat(
+                    document.getElementById(
+                            'cidade-entrega-taxa'
+                            )?.value
+                    );
+
+    const ativa =
+            document.getElementById(
+                    'cidade-entrega-ativa'
+                    )?.checked !== false;
+
+    if (!nome) {
+
+        alert(
+                '⚠️ Informe o nome da cidade.'
+                );
+
+        return;
+    }
+
+    if (!uf || uf.length !== 2) {
+
+        alert(
+                '⚠️ Selecione uma UF válida.'
+                );
+
+        return;
+    }
+
+    if (
+            isNaN(taxa) ||
+            taxa < 0
+            ) {
+
+        alert(
+                '⚠️ Informe uma taxa de entrega válida.'
+                );
+
+        return;
+    }
+
+    const textoOriginal =
+            btn?.innerHTML || '';
+
+    if (btn) {
+
+        btn.disabled =
+                true;
+
+        btn.innerHTML =
+                cidadeEntregaEditandoId
+                ? '⏳ Salvando...'
+                : '⏳ Cadastrando...';
+    }
+
+    try {
+
+        // ----------------------------------------------------
+        // VERIFICA DUPLICIDADE
+        // ----------------------------------------------------
+        let consulta =
+                _supabase
+                .from('cidades_entrega')
+                .select(`
+                    id,
+                    nome,
+                    uf
+                `)
+                .ilike(
+                        'nome',
+                        nome
+                        )
+                .eq(
+                        'uf',
+                        uf
+                        );
+
+        const {
+            data: existentes,
+            error: erroConsulta
+        } = await consulta;
+
+        if (erroConsulta) {
+
+            throw erroConsulta;
+
+        }
+
+        const existeOutra =
+                (existentes || [])
+                .some(item =>
+                    Number(item.id) !==
+                            Number(cidadeEntregaEditandoId)
+                );
+
+        if (existeOutra) {
+
+            throw new Error(
+                    'Esta cidade já está cadastrada para esta UF.'
+                    );
+        }
+
+        // ----------------------------------------------------
+        // NOVO
+        // ----------------------------------------------------
+        if (!cidadeEntregaEditandoId) {
+
+            const {
+                data,
+                error
+            } = await _supabase
+                    .from('cidades_entrega')
+                    .insert({
+                        nome,
+                        uf,
+                        taxa_entrega:
+                                Number(
+                                        taxa.toFixed(2)
+                                        ),
+                        ativa
+                    })
+                    .select(`
+                        id,
+                        nome,
+                        uf,
+                        taxa_entrega,
+                        ativa,
+                        criado_em
+                    `)
+                    .single();
+
+            if (error) {
+
+                throw error;
+
+            }
+
+            alert(
+                    `✅ Cidade "${data.nome}" cadastrada com sucesso!`
+                    );
+
+        } else {
+
+            // ------------------------------------------------
+            // EDITAR
+            // ------------------------------------------------
+            const {
+                data,
+                error
+            } = await _supabase
+                    .from('cidades_entrega')
+                    .update({
+                        nome,
+                        uf,
+                        taxa_entrega:
+                                Number(
+                                        taxa.toFixed(2)
+                                        ),
+                        ativa
+                    })
+                    .eq(
+                            'id',
+                            cidadeEntregaEditandoId
+                            )
+                    .select(`
+                        id,
+                        nome,
+                        uf,
+                        taxa_entrega,
+                        ativa,
+                        criado_em
+                    `)
+                    .single();
+
+            if (error) {
+
+                throw error;
+
+            }
+
+            alert(
+                    `✅ Cidade "${data.nome}" atualizada com sucesso!`
+                    );
+        }
+
+        cidadeEntregaEditandoId =
+                null;
+
+        fecharModalCidadeEntrega();
+
+        await carregarCadastroCidadesUI();
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao salvar cidade:',
+                erro
+                );
+
+        alert(
+                '❌ Não foi possível salvar a cidade:\n\n' +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+
+    } finally {
+
+        if (btn) {
+
+            btn.disabled =
+                    false;
+
+            btn.innerHTML =
+                    textoOriginal ||
+                    '💾 Cadastrar Cidade';
+
+        }
+    }
+}
+
+// ============================================================
+// ATIVAR / INATIVAR
+// ============================================================
+async function alternarStatusCidadeUI(
+        cidadeId,
+        statusAtual
+        ) {
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    )
+            .toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+    if (!ehGerente) {
+
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem alterar o status das cidades.'
+                );
+
+        return;
+    }
+
+    const estaAtiva =
+            statusAtual === true ||
+            statusAtual === 'true';
+
+    const novoStatus =
+            !estaAtiva;
+
+    const mensagem =
+            novoStatus
+            ? 'Deseja ativar esta cidade?'
+            : 'Deseja inativar esta cidade?';
+
+    if (!confirm(mensagem)) {
+
+        return;
+
+    }
+
+    try {
+
+        const {
+            data,
+            error
+        } = await _supabase
+                .from('cidades_entrega')
+                .update({
+                    ativa:
+                            novoStatus
+                })
+                .eq(
+                        'id',
+                        Number(cidadeId)
+                        )
+                .select(`
+                    id,
+                    nome,
+                    ativa
+                `)
+                .single();
+
+        if (error) {
+
+            throw error;
+
+        }
+
+        alert(
+                novoStatus
+                ? `✅ Cidade "${data.nome}" ativada.`
+                : `✅ Cidade "${data.nome}" inativada.`
+                );
+
+        await carregarCadastroCidadesUI();
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao alterar status da cidade:',
+                erro
+                );
+
+        alert(
+                '❌ Não foi possível alterar o status da cidade:\n\n' +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+    }
+}
+
+// ============================================================
+// EXCLUIR CIDADE
+// ============================================================
+async function excluirCidadeUI(cidadeId) {
+
+    const cargo =
+            String(
+                    window.usuarioAtual?.cargo || ''
+                    )
+            .toUpperCase();
+
+    const ehGerente =
+            cargo === 'GERENTE' ||
+            cargo === 'ADMIN';
+
+    if (!ehGerente) {
+
+        alert(
+                '⛔ Apenas GERENTE ou ADMIN podem excluir cidades.'
+                );
+
+        return;
+    }
+
+    const cidade =
+            cidadesEntregaCadastroCache.find(
+                    item =>
+                Number(item.id) ===
+                        Number(cidadeId)
+            );
+
+    const nome =
+            cidade?.nome ||
+            'esta cidade';
+
+    const confirmar =
+            confirm(
+                    `⚠️ Deseja realmente excluir "${nome}"?\n\n` +
+                    'Use "Inativar" quando quiser manter o cadastro para histórico.'
+                    );
+
+    if (!confirmar) {
+
+        return;
+
+    }
+
+    try {
+
+        const {
+            error
+        } = await _supabase
+                .from('cidades_entrega')
+                .delete()
+                .eq(
+                        'id',
+                        Number(cidadeId)
+                        );
+
+        if (error) {
+
+            // Normalmente ocorre quando a cidade está sendo
+            // usada por outro registro através de chave estrangeira.
+
+            if (
+                    String(error.message || '')
+                    .toLowerCase()
+                    .includes('foreign key')
+                    ) {
+
+                throw new Error(
+                        'Esta cidade está sendo utilizada por outro cadastro ou pedido e não pode ser excluída. Inative a cidade em vez de excluir.'
+                        );
+            }
+
+            throw error;
+        }
+
+        alert(
+                `✅ Cidade "${nome}" excluída com sucesso.`
+                );
+
+        await carregarCadastroCidadesUI();
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao excluir cidade:',
+                erro
+                );
+
+
+        alert(
+                '❌ Não foi possível excluir a cidade:\n\n' +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+    }
+}
+
+// ============================================================
+// FECHAR MODAL
+// ============================================================
+
+function fecharModalCidadeEntrega() {
+
+    cidadeEntregaEditandoId =
+            null;
+
+
+    const modal =
+            document.getElementById(
+                    'modal-cidade-entrega'
+                    );
+
+
+    if (modal) {
+
+        modal.style.display =
+                'none';
+
+    }
+}
+
+// ============================================================
 // CADASTRO DE CLIENTES
 // ============================================================
 let clienteEditandoId = null;
@@ -15589,26 +17696,42 @@ async function abrirCadastroClientesUI() {
                     'cadastro-clientes'
                     );
 
-    if (!cadastroClientes) {
-        console.error(
-                '⛔ Conteúdo de Clientes não encontrado.'
-                );
-        return;
-    }
+    const cadastroCidades =
+            document.getElementById(
+                    'cadastro-cidades'
+                    );
 
-    // Esconde os demais
     if (cadastroInsumos) {
-        cadastroInsumos.style.display = 'none';
+
+        cadastroInsumos.style.display =
+                'none';
+
     }
 
     if (cadastroFornecedores) {
-        cadastroFornecedores.style.display = 'none';
+
+        cadastroFornecedores.style.display =
+                'none';
+
     }
 
-    // Mostra somente CLIENTES
-    cadastroClientes.style.display = 'block';
+    if (cadastroCidades) {
 
-    atualizarBotoesCadastrosUI('clientes');
+        cadastroCidades.style.display =
+                'none';
+
+    }
+
+    if (cadastroClientes) {
+
+        cadastroClientes.style.display =
+                'block';
+
+    }
+
+    atualizarBotoesCadastrosUI(
+            'clientes'
+            );
 
     await carregarCadastroClientesUI();
 }
@@ -15791,9 +17914,7 @@ function renderizarTabelaClientesUI(clientes) {
                         >
                             ✏️ Editar
                         </button>
-
                     </td>
-
                 </tr>
             `;
 
