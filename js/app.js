@@ -1344,13 +1344,13 @@ function atualizarBannerStatus() {
 
     if (!configLoja.loja_aberta) {
         banner.className = 'status-banner fechada';
-        banner.innerHTML = '🔴 <strong>LOJA FECHADA NO MOMENTO</strong><br>Estamos fora do horário de atendimento. Não estamos aceitando novos pedidos.';
+        banner.innerHTML = '🔴 <strong>LOJA FECHADA NO MOMENTO</strong><br> Não estamos aceitando novos pedidos.';
     } else {
         banner.className = 'status-banner aberta';
         let texto = '🟢 <strong>LOJA ABERTA</strong>';
-        // if (configLoja.valor_minimo_pedido > 0) {
-        //     texto += ` | Pedido mínimo: R$ ${configLoja.valor_minimo_pedido.toFixed(2).replace('.', ',')}`;
-        // }
+//         if (configLoja.valor_minimo_pedido > 0) {
+//             texto += ` | Pedido mínimo: R$ ${configLoja.valor_minimo_pedido.toFixed(2).replace('.', ',')}`;
+//         }
         banner.innerHTML = texto;
     }
 }

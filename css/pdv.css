@@ -716,3 +716,319 @@ body {
 #btn-fechar-historico-producoes:hover {
     background: #bb2d3b;
 }
+
+/* ============================================================
+   AUDITORIA
+============================================================ */
+.audit-manager {
+    padding: 20px;
+}
+
+.audit-manager .manager-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.audit-header,
+.audit-toolbar,
+.audit-filter-panel {
+    background: #2a2a35;
+    border: 1px solid #3d3d4e;
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+
+.audit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+}
+
+.audit-status {
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: #1e1e24;
+    border: 1px solid #3d3d4e;
+    color: #aaa;
+    white-space: nowrap;
+    font-size: .82rem;
+}
+
+.audit-filter-panel {
+    display: grid;
+    grid-template-columns: 1.15fr .85fr .85fr 1fr 1fr 1.05fr auto;
+    gap: 10px;
+    align-items: end;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.audit-filter-field {
+    min-width: 0;
+}
+
+.audit-filter-field label {
+    display: block;
+    color: #aaa;
+    font-size: .78rem;
+    margin-bottom: 5px;
+}
+
+.audit-filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.audit-data-custom {
+    min-width: 150px;
+}
+
+.audit-btn {
+    min-height: 38px;
+    padding: 8px 13px;
+    border-radius: 7px;
+    border: 1px solid #45465a;
+    background: #1e1e24;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.audit-btn:hover {
+    filter: brightness(1.12);
+}
+
+.audit-btn.primary {
+    background: #1e90ff;
+    border-color: #1e90ff;
+}
+
+.audit-btn.secondary {
+    background: #3a3a46;
+}
+
+.audit-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.audit-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.audit-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.audit-card {
+    background: #2a2a35;
+    border: 1px solid #3d3d4e;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.audit-card span {
+    display: block;
+    color: #aaa;
+    font-size: .78rem;
+    margin-bottom: 7px;
+}
+
+.audit-card strong {
+    color: #fff;
+    font-size: 1.12rem;
+}
+
+.audit-content {
+    min-width: 0;
+}
+
+.audit-section,
+.audit-highlight-section {
+    background: #2a2a35;
+    border: 1px solid #3d3d4e;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+.audit-section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.audit-section-title h3 {
+    margin: 0;
+    color: #fff;
+}
+
+.audit-section-title span {
+    color: #888;
+    font-size: .8rem;
+}
+
+.audit-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #3d3d4e;
+    border-radius: 8px;
+}
+
+.audit-table {
+    width: 100%;
+    min-width: 900px;
+}
+
+.audit-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.audit-finance-line {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.audit-finance-line > div {
+    background: #1e1e24;
+    border: 1px solid #3d3d4e;
+    border-radius: 8px;
+    padding: 13px;
+}
+
+.audit-finance-line span {
+    display: block;
+    color: #aaa;
+    font-size: .78rem;
+}
+
+.audit-finance-line strong {
+    display: block;
+    margin-top: 5px;
+    color: #fff;
+    font-size: 1.05rem;
+}
+
+.audit-empty {
+    padding: 28px !important;
+    text-align: center !important;
+    color: #888 !important;
+}
+
+.audit-warning {
+    background: #3a2d16;
+    border: 1px solid #6f5424;
+    color: #ffd98a;
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    line-height: 1.45;
+}
+
+@media (max-width: 1200px) {
+    .audit-filter-panel {
+        grid-template-columns: repeat(3, minmax(160px, 1fr));
+    }
+    .audit-summary-grid {
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 800px) {
+    .audit-header,
+    .audit-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .audit-filter-panel {
+        grid-template-columns: 1fr;
+    }
+    .audit-filter-actions,
+    .audit-toolbar-actions {
+        flex-wrap: wrap;
+    }
+    .audit-summary-grid {
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+    }
+    .audit-finance-line {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media print {
+    body.auditoria-impressao * {
+        visibility: hidden !important;
+    }
+
+    body.auditoria-impressao #aba-auditoria,
+    body.auditoria-impressao #aba-auditoria * {
+        visibility: visible !important;
+    }
+
+    body.auditoria-impressao #aba-auditoria {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 8px;
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    body.auditoria-impressao #aba-auditoria .audit-filter-panel,
+    body.auditoria-impressao #aba-auditoria .audit-toolbar,
+    body.auditoria-impressao #aba-auditoria .audit-header .audit-status {
+        display: none !important;
+    }
+
+    body.auditoria-impressao #aba-auditoria .audit-header,
+    body.auditoria-impressao #aba-auditoria .audit-section,
+    body.auditoria-impressao #aba-auditoria .audit-card {
+        background: #fff !important;
+        color: #000 !important;
+        border-color: #bbb !important;
+    }
+
+    body.auditoria-impressao #aba-auditoria .audit-header h2,
+    body.auditoria-impressao #aba-auditoria .audit-section-title h3,
+    body.auditoria-impressao #aba-auditoria .audit-card strong,
+    body.auditoria-impressao #aba-auditoria .audit-finance-line strong {
+        color: #000 !important;
+    }
+
+    body.auditoria-impressao #aba-auditoria .audit-card span,
+    body.auditoria-impressao #aba-auditoria .audit-finance-line span {
+        color: #444 !important;
+    }
+
+    body.auditoria-impressao #aba-auditoria .audit-table-wrap {
+        border-color: #aaa !important;
+    }
+
+    body.auditoria-impressao #aba-auditoria .products-table,
+    body.auditoria-impressao #aba-auditoria .products-table th,
+    body.auditoria-impressao #aba-auditoria .products-table td {
+        color: #000 !important;
+        background: #fff !important;
+        border-color: #bbb !important;
+    }
+}

@@ -214,10 +214,67 @@ async function carregarContasReceberUI() {
                         resumoLinha.total_vencido || 0
                         );
 
-        const valorRecebido =
-                Number(
-                        resumoLinha.total_recebido || 0
+        // ----------------------------------------------------
+// TOTAL RECEBIDO
+// Considera também contas parcialmente pagas.
+// ----------------------------------------------------
+
+        let valorRecebido = 0;
+
+        try {
+
+            const {
+                data: contasRecebidas,
+                error: erroContasRecebidas
+            } = await _supabase.rpc(
+                    'listar_contas_receber_admin',
+                    {
+                        p_busca: null,
+                        p_status: 'TODOS'
+                    }
+            );
+
+            if (erroContasRecebidas) {
+
+                console.error(
+                        'Erro ao calcular total recebido:',
+                        erroContasRecebidas
                         );
+
+                // Mantém o valor antigo como fallback.
+                valorRecebido =
+                        Number(
+                                resumoLinha.total_recebido || 0
+                                );
+
+            } else {
+
+                valorRecebido =
+                        (contasRecebidas || []).reduce(
+                        (
+                                total,
+                                conta
+                                ) =>
+                    total +
+                            Number(
+                                    conta.valor_pago || 0
+                                    ),
+                        0
+                        );
+            }
+
+        } catch (erroTotalRecebido) {
+
+            console.error(
+                    'Exceção ao calcular total recebido:',
+                    erroTotalRecebido
+                    );
+
+            valorRecebido =
+                    Number(
+                            resumoLinha.total_recebido || 0
+                            );
+        }
 
         const elemAberto =
                 document.getElementById(
@@ -352,31 +409,59 @@ async function carregarContasReceberUI() {
                 statusCor = '#777';
             }
 
-            let acao = '-';
+            let acao = `
+    <div
+        style="
+            display:flex;
+            flex-wrap:wrap;
+            gap:6px;
+            align-items:center;
+        "
+    >
 
+        <button
+            type="button"
+            onclick="abrirDetalhesPedidoContaUI(${Number(conta.pedido_id || 0)})"
+            style="
+                border:1px solid #1e90ff;
+                background:#1e90ff22;
+                color:#1e90ff;
+                border-radius:5px;
+                padding:6px 10px;
+                cursor:pointer;
+                font-weight:bold;
+            "
+        >
+            👁️ Detalhes
+        </button>
 
-            if (
-                    statusAtual === 'PENDENTE' ||
-                    statusAtual === 'VENCIDA'
-                    ) {
+        ${
+                    (
+                            statusAtual === 'PENDENTE' ||
+                            statusAtual === 'VENCIDA'
+                            )
+                    ? `
+            <button
+                type="button"
+                onclick="abrirRecebimentoContaUI(${Number(conta.id)})"
+                style="
+                    border:1px solid #2ed573;
+                    background:#2ed57322;
+                    color:#2ed573;
+                    border-radius:5px;
+                    padding:6px 10px;
+                    cursor:pointer;
+                    font-weight:bold;
+                "
+            >
+                💰 Receber
+            </button>
+        `
+                    : ''
+                    }
 
-                acao = `
-                    <button
-                        onclick="abrirRecebimentoContaUI(${Number(conta.id)})"
-                        style="
-                            border:1px solid #2ed573;
-                            background:#2ed57322;
-                            color:#2ed573;
-                            border-radius:5px;
-                            padding:6px 10px;
-                            cursor:pointer;
-                            font-weight:bold;
-                        "
-                    >
-                        💰 Receber
-                    </button>
-                `;
-            }
+    </div>
+`;
 
             return `
                 <tr>
@@ -498,6 +583,455 @@ function escaparTextoSeguro(valor) {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+}
+
+// ============================================================
+// DETALHES DO PEDIDO DA CONTA A RECEBER
+// ============================================================
+async function abrirDetalhesPedidoContaUI(pedidoId) {
+
+    const id = Number(pedidoId);
+
+    if (!Number.isInteger(id) || id <= 0) {
+        alert('❌ Pedido inválido.');
+        return;
+    }
+
+    try {
+
+        const {
+            data,
+            error
+        } = await _supabase.rpc(
+                'obter_detalhes_pedido_admin',
+                {
+                    p_pedido_id: id
+                }
+        );
+
+        if (error) {
+            throw error;
+        }
+
+        const detalhes =
+                data && typeof data === 'object'
+                ? data
+                : null;
+
+        if (!detalhes || !detalhes.pedido) {
+            alert(
+                    '⚠️ Não foi possível encontrar os detalhes deste pedido.'
+                    );
+            return;
+        }
+
+        const pedido = detalhes.pedido || {};
+        const cliente = detalhes.cliente || {};
+
+        const itens =
+                Array.isArray(detalhes.itens)
+                ? detalhes.itens
+                : [];
+
+        const dinheiro = valor =>
+                `R$ ${Number(valor || 0)
+                    .toFixed(2)
+                    .replace('.', ',')}`;
+
+        const escapar =
+                valor =>
+            escaparTextoSeguro(valor ?? '-');
+
+        const dataHora =
+                pedido.criado_em
+                ? new Date(
+                        pedido.criado_em
+                        ).toLocaleString('pt-BR')
+                : '-';
+
+        const modalAntigo =
+                document.getElementById(
+                        'modal-detalhes-pedido-conta'
+                        );
+
+        if (modalAntigo) {
+            modalAntigo.remove();
+        }
+
+        const modal =
+                document.createElement('div');
+
+        modal.id =
+                'modal-detalhes-pedido-conta';
+
+        modal.className =
+                'login-overlay';
+
+        modal.style.display =
+                'flex';
+
+        modal.innerHTML = `
+
+            <div
+                class="login-card"
+                style="
+                    width:100%;
+                    max-width:720px;
+                    max-height:90vh;
+                    overflow-y:auto;
+                "
+            >
+
+                <div
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:15px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <h2
+                        style="
+                            margin:0;
+                            color:#fff;
+                        "
+                    >
+                        📄 Detalhes do Pedido #${id}
+                    </h2>
+
+                    <button
+                        type="button"
+                        onclick="fecharDetalhesPedidoContaUI()"
+                        style="
+                            background:none;
+                            border:none;
+                            color:#aaa;
+                            font-size:1.4rem;
+                            cursor:pointer;
+                        "
+                    >
+                        ✖
+                    </button>
+
+                </div>
+
+                <!-- CLIENTE -->
+
+                <div
+                    style="
+                        display:grid;
+                        grid-template-columns:
+                            repeat(2,minmax(0,1fr));
+                        gap:10px;
+                        margin-bottom:15px;
+                    "
+                >
+
+                    <div style="
+                        background:#1e1e24;
+                        border:1px solid #3d3d4e;
+                        border-radius:8px;
+                        padding:12px;
+                    ">
+                        <span style="
+                            display:block;
+                            color:#aaa;
+                            font-size:.8rem;
+                        ">
+                            Cliente
+                        </span>
+
+                        <strong style="
+                            display:block;
+                            margin-top:4px;
+                            color:#fff;
+                        ">
+                            ${escapar(
+                cliente.nome ||
+                'Sem nome'
+                )}
+                        </strong>
+                    </div>
+
+                    <div style="
+                        background:#1e1e24;
+                        border:1px solid #3d3d4e;
+                        border-radius:8px;
+                        padding:12px;
+                    ">
+                        <span style="
+                            display:block;
+                            color:#aaa;
+                            font-size:.8rem;
+                        ">
+                            Data / Hora
+                        </span>
+
+                        <strong style="
+                            display:block;
+                            margin-top:4px;
+                            color:#fff;
+                        ">
+                            ${escapar(dataHora)}
+                        </strong>
+                    </div>
+
+                    <div style="
+                        background:#1e1e24;
+                        border:1px solid #3d3d4e;
+                        border-radius:8px;
+                        padding:12px;
+                    ">
+                        <span style="
+                            display:block;
+                            color:#aaa;
+                            font-size:.8rem;
+                        ">
+                            Telefone
+                        </span>
+
+                        <strong style="
+                            display:block;
+                            margin-top:4px;
+                            color:#fff;
+                        ">
+                            ${escapar(
+                cliente.telefone ||
+                pedido.telefone_cliente ||
+                '-'
+                )}
+                        </strong>
+                    </div>
+
+                    <div style="
+                        background:#1e1e24;
+                        border:1px solid #3d3d4e;
+                        border-radius:8px;
+                        padding:12px;
+                    ">
+                        <span style="
+                            display:block;
+                            color:#aaa;
+                            font-size:.8rem;
+                        ">
+                            Forma de pagamento
+                        </span>
+
+                        <strong style="
+                            display:block;
+                            margin-top:4px;
+                            color:#fff;
+                        ">
+                            ${escapar(
+                pedido.forma_pagamento ||
+                '-'
+                )}
+                        </strong>
+                    </div>
+
+                </div>
+
+                <!-- ITENS -->
+
+                <div
+                    style="
+                        background:#2a2a35;
+                        border:1px solid #3d3d4e;
+                        border-radius:8px;
+                        padding:15px;
+                        margin-bottom:18px;
+                    "
+                >
+
+                    <strong style="color:#fff;">
+                        Itens do pedido
+                    </strong>
+
+                    <div
+                        style="
+                            overflow-x:auto;
+                            margin-top:10px;
+                        "
+                    >
+
+                        <table
+                            class="products-table"
+                            style="
+                                width:100%;
+                                font-size:.88rem;
+                            "
+                        >
+
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Qtd.</th>
+                                    <th>Unitário</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                ${
+                itens.length
+                ? itens.map(item => `
+                                        <tr>
+
+                                            <td>
+                                                <strong>
+                                                    ${escapar(
+                            item.produto_nome ||
+                            'Produto'
+                            )}
+                                                </strong>
+                                            </td>
+
+                                            <td>
+                                                ${Number(
+                            item.quantidade || 0
+                            )}
+                                            </td>
+
+                                            <td>
+                                                ${dinheiro(
+                            item.preco_unitario
+                            )}
+                                            </td>
+
+                                            <td>
+                                                ${dinheiro(
+                            item.subtotal
+                            )}
+                                            </td>
+
+                                        </tr>
+                                    `).join('')
+                : `
+                                        <tr>
+                                            <td
+                                                colspan="4"
+                                                style="
+                                                    text-align:center;
+                                                    color:#aaa;
+                                                    padding:18px;
+                                                "
+                                            >
+                                                Nenhum item encontrado.
+                                            </td>
+                                        </tr>
+                                    `
+                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+                <!-- TOTAL -->
+
+                <div
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        background:#1e1e24;
+                        border:1px solid #3d3d4e;
+                        border-radius:8px;
+                        padding:14px;
+                        margin-bottom:18px;
+                    "
+                >
+
+                    <strong style="
+                        color:#fff;
+                        font-size:1.05rem;
+                    ">
+                        Total do pedido
+                    </strong>
+
+                    <strong style="
+                        color:#2ed573;
+                        font-size:1.25rem;
+                    ">
+                        ${dinheiro(pedido.valor_total)}
+                    </strong>
+
+                </div>
+
+                <div
+                    style="
+                        display:flex;
+                        justify-content:flex-end;
+                    "
+                >
+
+                    <button
+                        type="button"
+                        onclick="fecharDetalhesPedidoContaUI()"
+                        style="
+                            padding:11px 18px;
+                            background:#555;
+                            color:#fff;
+                            border:none;
+                            border-radius:6px;
+                            cursor:pointer;
+                        "
+                    >
+                        Fechar
+                    </button>
+
+                </div>
+
+            </div>
+
+        `;
+
+        document.body.appendChild(modal);
+
+        modal.addEventListener(
+                'click',
+                event => {
+
+                    if (event.target === modal) {
+                        fecharDetalhesPedidoContaUI();
+                    }
+
+                }
+        );
+
+    } catch (err) {
+
+        console.error(
+                'Erro ao abrir detalhes do pedido:',
+                err
+                );
+
+        alert(
+                '❌ Não foi possível abrir os detalhes do pedido:\n\n' +
+                (err?.message || err)
+                );
+    }
+}
+
+// ============================================================
+// FECHA DETALHES
+// ============================================================
+function fecharDetalhesPedidoContaUI() {
+
+    const modal =
+            document.getElementById(
+                    'modal-detalhes-pedido-conta'
+                    );
+
+    if (modal) {
+        modal.remove();
+    }
 }
 
 // ============================================================
@@ -881,7 +1415,6 @@ async function abrirRecebimentoContaUI(contaId) {
                         type="text"
                         id="fin-ar-valor-recebimento"
                         value="R$ ${dinheiro}"
-                        readonly
                         style="
                             width:100%;
                             box-sizing:border-box;
@@ -933,13 +1466,13 @@ async function abrirRecebimentoContaUI(contaId) {
                             📱 PIX
                         </option>
 
-                        <option value="CARTAO_DEBITO">
+                   <!--     <option value="CARTAO_DEBITO">
                             💳 Cartão de Débito
                         </option>
 
                         <option value="CARTAO_CREDITO">
                             💳 Cartão de Crédito
-                        </option>
+                        </option>     -->
 
                     </select>
 
@@ -1080,13 +1613,54 @@ async function confirmarRecebimentoContaUI(contaId) {
         return;
     }
 
-    const valor = Number(
+    const textoValor =
             String(campoValor.value || '')
-            .replace('R$', '')
-            .replace(/\./g, '')
-            .replace(',', '.')
-            .trim()
-            );
+            .replace(/R\$/gi, '')
+            .replace(/\s/g, '')
+            .trim();
+
+    let textoValorNormalizado = textoValor;
+
+    if (textoValor.includes(',')) {
+
+        textoValorNormalizado =
+                textoValor
+                .replace(/\./g, '')
+                .replace(',', '.');
+    }
+
+    const valor = Number(textoValorNormalizado);
+
+    const saldoMaximo = Number(campoValor.dataset.saldoMaximo || 0);
+
+    if (
+            !Number.isFinite(valor) ||
+            valor <= 0
+            ) {
+        alert(
+                '⚠️ Valor de recebimento inválido.'
+                );
+
+        campoValor.focus();
+        return;
+    }
+
+    if (
+            Number.isFinite(saldoMaximo) &&
+            saldoMaximo > 0 &&
+            valor > saldoMaximo + 0.000001
+            ) {
+
+        alert(
+                `⚠️ O valor informado não pode ser maior que o saldo da conta.\n\n` +
+                `Saldo disponível: R$ ${saldoMaximo
+                .toFixed(2)
+                .replace('.', ',')}`
+                );
+
+        campoValor.focus();
+        return;
+    }
 
     const formaPagamento =
             String(campoForma.value || '')
@@ -1617,9 +2191,10 @@ async function cancelarPedido(pedidoId) {
     // 2. O usuário atual não é gerente/admin
     if (exigirGerente && !ehGerente) {
 
-        pinGerente = prompt(
-                '🔐 Digite o PIN do Gerente para cancelar este pedido:'
-                );
+        pinGerente =
+                await solicitarPinGerenteSeguro(
+                        'Digite o PIN do Gerente para cancelar este pedido:'
+                        );
 
         if (pinGerente === null) {
             return;
@@ -1760,6 +2335,7 @@ async function alternarAba(nomeAba) {
     const abaMovEstoque = document.getElementById('aba-mov-estoque');
     const abaConfig = document.getElementById('aba-config');
     const abaFinancas = document.getElementById('aba-financas');
+    const abaAuditoria = document.getElementById('aba-auditoria');
     const abaPix = document.getElementById('aba-pix');
 
     const btnPedidos = document.getElementById('btn-tab-pedidos');
@@ -1772,6 +2348,7 @@ async function alternarAba(nomeAba) {
     const btnMovEstoque = document.getElementById('btn-tab-mov-estoque');
     const btnConfig = document.getElementById('btn-tab-config');
     const btnFinancas = document.getElementById('btn-tab-financas');
+    const btnAuditoria = document.getElementById('btn-tab-auditoria');
     const btnPix = document.getElementById('btn-tab-pix');
 
     // Oculta todas
@@ -1785,6 +2362,7 @@ async function alternarAba(nomeAba) {
     abaMovEstoque.style.display = 'none';
     abaConfig.style.display = 'none';
     abaFinancas.style.display = 'none';
+    abaAuditoria.style.display = 'none';
     abaPix.style.display = 'none';
 
     btnPedidos.classList.remove('active');
@@ -1797,6 +2375,7 @@ async function alternarAba(nomeAba) {
     btnMovEstoque.classList.remove('active');
     btnConfig.classList.remove('active');
     btnFinancas.classList.remove('active');
+    btnAuditoria.classList.remove('active');
     btnPix.classList.remove('active');
 
     // Remove classe ativa de todos os botões
@@ -1875,6 +2454,28 @@ async function alternarAba(nomeAba) {
         abaFinancas.style.display = 'block';
         btnFinancas.classList.add('active');
         carregarFinancas();
+    } else if (nomeAba === 'auditoria') {
+        const cargo = String(window.usuarioAtual?.cargo || '').toUpperCase();
+        const ehGerente = cargo === 'GERENTE' || cargo === 'ADMIN';
+        if (!ehGerente) {
+            alert('⛔ Apenas GERENTE ou ADMIN podem acessar a Auditoria.');
+            return;
+        }
+
+        document.querySelectorAll('main[id^="aba-"]').forEach(aba => {
+            aba.style.display = 'none';
+        });
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+        const abaAuditoria = document.getElementById('aba-auditoria');
+        const btnAuditoria = document.getElementById('btn-tab-auditoria');
+        if (abaAuditoria)
+            abaAuditoria.style.display = 'block';
+        if (btnAuditoria)
+            btnAuditoria.classList.add('active');
+
+        await inicializarAuditoria();
+        return;
     } else if (nomeAba === 'config') {
         abaConfig.style.display = 'block';
         btnConfig.classList.add('active');
@@ -1971,7 +2572,6 @@ async function carregarCadastroInsumosUI() {
         // ----------------------------------------------------
         // 3. PRODUTOS
         // ----------------------------------------------------
-
         const {
             data: produtos,
             error: erroProdutos
@@ -1986,6 +2586,23 @@ async function carregarCadastroInsumosUI() {
 
         if (erroProdutos) {
             throw erroProdutos;
+        }
+
+        // ----------------------------------------------------
+// 4. ESTOQUE DOS INSUMOS
+// ----------------------------------------------------
+        const {
+            data: estoques,
+            error: erroEstoques
+        } = await _supabase
+                .from('estoque_insumos')
+                .select(`
+            insumo_id,
+            quantidade_base
+        `);
+
+        if (erroEstoques) {
+            throw erroEstoques;
         }
 
         const listaInsumos =
@@ -2003,10 +2620,14 @@ async function carregarCadastroInsumosUI() {
                 ? produtos
                 : [];
 
+        const listaEstoques =
+                Array.isArray(estoques)
+                ? estoques
+                : [];
+
         // ----------------------------------------------------
         // NENHUM INSUMO
         // ----------------------------------------------------
-
         if (listaInsumos.length === 0) {
 
             tbody.innerHTML = `
@@ -2030,7 +2651,6 @@ async function carregarCadastroInsumosUI() {
         // ----------------------------------------------------
         // RENDERIZA A TABELA
         // ----------------------------------------------------
-
         tbody.innerHTML = '';
 
         listaInsumos.forEach(insumo => {
@@ -2056,6 +2676,18 @@ async function carregarCadastroInsumosUI() {
                                 Number(insumo.produto_id)
                     );
 
+            const estoqueAtual =
+                    listaEstoques.find(
+                            estoque =>
+                        Number(estoque.insumo_id) ===
+                                Number(insumo.id)
+                    );
+
+            const quantidadeEstoqueAtual =
+                    Number(
+                            estoqueAtual?.quantidade_base || 0
+                            );
+
             const fator =
                     Number(
                             insumo.fator_compra_base || 0
@@ -2072,7 +2704,6 @@ async function carregarCadastroInsumosUI() {
             // ------------------------------------------------
             // INSUMO
             // ------------------------------------------------
-
             const tdNome =
                     document.createElement('td');
 
@@ -2104,7 +2735,6 @@ async function carregarCadastroInsumosUI() {
             // ------------------------------------------------
             // UNIDADE DE COMPRA
             // ------------------------------------------------
-
             const tdCompra =
                     document.createElement('td');
 
@@ -2118,7 +2748,6 @@ async function carregarCadastroInsumosUI() {
             // ------------------------------------------------
             // UNIDADE BASE
             // ------------------------------------------------
-
             const tdBase =
                     document.createElement('td');
 
@@ -2132,7 +2761,6 @@ async function carregarCadastroInsumosUI() {
             // ------------------------------------------------
             // FATOR
             // ------------------------------------------------
-
             const tdFator =
                     document.createElement('td');
 
@@ -2154,7 +2782,6 @@ async function carregarCadastroInsumosUI() {
             // ------------------------------------------------
             // ESTOQUE MÍNIMO
             // ------------------------------------------------
-
             const tdMinimo =
                     document.createElement('td');
 
@@ -2180,9 +2807,114 @@ async function carregarCadastroInsumosUI() {
             tr.appendChild(tdMinimo);
 
             // ------------------------------------------------
+// ESTOQUE ATUAL
+// ------------------------------------------------
+            const tdEstoqueAtual =
+                    document.createElement('td');
+
+            tdEstoqueAtual.style.textAlign =
+                    'right';
+
+            tdEstoqueAtual.style.fontWeight =
+                    'bold';
+
+            const estoqueAtualValor =
+                    quantidadeEstoqueAtual;
+
+            const estoqueMinimoValor =
+                    estoqueMinimo;
+
+// ------------------------------------------------
+// DEFINIÇÃO DA COR
+// ------------------------------------------------
+            let corEstoque;
+            let fundoEstoque;
+
+// SEM ESTOQUE
+            if (estoqueAtualValor <= 0) {
+
+                corEstoque = '#ff4757';
+
+                fundoEstoque =
+                        'rgba(255,71,87,0.15)';
+
+            }
+// ABAIXO OU NO MÍNIMO
+            else if (
+                    estoqueMinimoValor > 0 &&
+                    estoqueAtualValor <= estoqueMinimoValor
+                    ) {
+
+                corEstoque = '#ff4757';
+
+                fundoEstoque =
+                        'rgba(255,71,87,0.15)';
+
+            }
+// ATÉ 2 VEZES O MÍNIMO
+            else if (
+                    estoqueMinimoValor > 0 &&
+                    estoqueAtualValor <=
+                    (estoqueMinimoValor * 2)
+                    ) {
+
+                corEstoque = '#ffa502';
+
+                fundoEstoque =
+                        'rgba(255,165,2,0.15)';
+
+            }
+// ACIMA DE 2 VEZES O MÍNIMO
+            else {
+
+                corEstoque = '#2ed573';
+
+                fundoEstoque =
+                        'rgba(46,213,115,0.15)';
+            }
+
+// ------------------------------------------------
+// FORMATAÇÃO VISUAL
+// ------------------------------------------------
+            tdEstoqueAtual.innerHTML = '';
+
+            const badgeEstoque =
+                    document.createElement('span');
+
+            badgeEstoque.textContent =
+                    estoqueAtualValor.toLocaleString(
+                            'pt-BR',
+                            {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 3
+                            }
+                    );
+
+            badgeEstoque.style.cssText = `
+    display:inline-block;
+    min-width:70px;
+    padding:5px 10px;
+    border-radius:15px;
+    background:${fundoEstoque};
+    color:${corEstoque};
+    font-weight:bold;
+    text-align:center;
+`;
+            if (unidadeBase) {
+
+                badgeEstoque.title =
+                        `Estoque atual na unidade-base: ${unidadeBase.nome}`;
+            }
+
+            tdEstoqueAtual.appendChild(
+                    badgeEstoque
+                    );
+
+            tr.appendChild(tdEstoqueAtual);
+
+            // ------------------------------------------------
             // STATUS
             // ------------------------------------------------
-
             const tdStatus =
                     document.createElement('td');
 
@@ -2224,7 +2956,6 @@ async function carregarCadastroInsumosUI() {
             // ------------------------------------------------
             // AÇÕES
             // ------------------------------------------------
-
             const tdAcoes =
                     document.createElement('td');
 
@@ -2241,11 +2972,9 @@ async function carregarCadastroInsumosUI() {
     gap:6px;
 `;
 
-
             // ------------------------------------------------
             // EDITAR
             // ------------------------------------------------
-
             const btnEditar =
                     document.createElement('button');
 
@@ -9175,7 +9904,7 @@ function imprimirPedido(pedidoId) {
 
     printArea.innerHTML = `
         <div class="receipt" style="color: #000; background: #fff; padding: 10px; font-family: monospace;">
-            <h2 style="text-align: center; margin: 0; color: #000;">🍰 Doces e Travessuras</h2>
+            <h2 style="text-align: center; margin: 0; color: #000;">🍨 Doces e Travessuras</h2>
             <p style="text-align: center; font-size: 10px; margin: 2px 0 8px 0; color: #000;">PEDIDO DE PRODUÇÃO / ENTREGA</p>
             <hr style="border-top: 1px dashed #000;">
             <p style="margin: 4px 0; color: #000;"><strong>PEDIDO:</strong> #${p.id} (${p.tipo || 'PDV'})</p>
@@ -10998,148 +11727,828 @@ function somenteNumerosCodigoBarras(input) {
 let carrinhoBalcao = [];
 let listaProdutosBalcao = [];
 
+// ============================================================
+// ESTOQUE VENDÁVEL DO BALCÃO
+// ============================================================
+// Regra:
+// 1. Se o produto possui lote(s), considera somente lotes:
+//    - ATIVO
+//    - quantidade_disponivel > 0
+//    - data_validade >= hoje
+//
+// 2. Se o produto NÃO possui lote, usa produtos.estoque.
+//
+// Isso mantém a tela do PDV alinhada com a baixa por lote.
+// ============================================================
+async function carregarEstoqueVendavelBalcao(produtos) {
+
+    const idsProdutos =
+            (produtos || [])
+            .map(p => Number(p.id))
+            .filter(Number.isInteger);
+
+    const mapaLotes = new Map();
+
+    if (idsProdutos.length > 0) {
+
+        const {
+            data: lotes,
+            error: erroLotes
+        } = await _supabase
+                .from('lotes_producao')
+                .select(`
+                id,
+                produto_id,
+                quantidade_disponivel,
+                data_validade,
+                status
+            `)
+                .in('produto_id', idsProdutos);
+
+        if (erroLotes) {
+
+            console.error(
+                    'Erro ao carregar lotes do balcão:',
+                    erroLotes
+                    );
+
+        } else {
+
+            (lotes || []).forEach(lote => {
+
+                const produtoId =
+                        Number(lote.produto_id);
+
+                if (!Number.isInteger(produtoId)) {
+                    return;
+                }
+
+                if (!mapaLotes.has(produtoId)) {
+
+                    mapaLotes.set(
+                            produtoId,
+                            {
+                                temLote: true,
+                                estoqueVendavel: 0
+                            }
+                    );
+                }
+
+                const quantidade =
+                        Number(
+                                lote.quantidade_disponivel || 0
+                                );
+
+                const dataValidade =
+                        lote.data_validade
+                        ? String(lote.data_validade)
+                        : null;
+
+                const status =
+                        String(
+                                lote.status || ''
+                                )
+                        .trim()
+                        .toUpperCase();
+
+                const hoje =
+                        new Date();
+
+                hoje.setHours(
+                        0,
+                        0,
+                        0,
+                        0
+                        );
+
+                const validade =
+                        dataValidade
+                        ? new Date(
+                                dataValidade + 'T00:00:00'
+                                )
+                        : null;
+
+                const loteValido =
+                        status === 'ATIVO' &&
+                        quantidade > 0 &&
+                        validade &&
+                        !Number.isNaN(
+                                validade.getTime()
+                                ) &&
+                        validade >= hoje;
+
+                if (loteValido) {
+
+                    const registro =
+                            mapaLotes.get(
+                                    produtoId
+                                    );
+
+                    registro.estoqueVendavel +=
+                            quantidade;
+                }
+
+            });
+        }
+    }
+
+    return (produtos || []).map(produto => {
+
+        const produtoId =
+                Number(produto.id);
+
+        const infoLote =
+                mapaLotes.get(
+                        produtoId
+                        );
+
+        const temLote =
+                !!infoLote?.temLote;
+
+        const estoqueFisico =
+                Number(
+                        produto.estoque || 0
+                        );
+
+        const estoqueVendavel =
+                temLote
+                ? Number(
+                        infoLote.estoqueVendavel || 0
+                        )
+                : estoqueFisico;
+
+        return {
+            ...produto,
+
+            estoqueFisico,
+
+            estoqueVendavel,
+
+            temLote
+        };
+    });
+}
+
 // --- INICIALIZAÇÃO DA ABA BALCÃO ---
-// 1. Ao carregar a aba, guarda a lista na memória mas mantém a grade VAZIA
 async function carregarBalcao() {
-    const {data: produtos, error} = await _supabase
+
+    const {
+        data: produtos,
+        error
+    } = await _supabase
             .from('produtos')
             .select('*')
             .eq('ativo', true)
             .order('nome');
 
     if (error) {
-        console.error('Erro ao carregar produtos do balcão:', error.message);
+
+        console.error(
+                'Erro ao carregar produtos do balcão:',
+                error.message
+                );
+
         return;
     }
 
-    listaProdutosBalcao = produtos;
-    renderizarProdutosBalcao([]); // "[]" Inicia a grade limpa ou "listaProdutosBalcao" inicia com a grade prenchida
+    listaProdutosBalcao =
+            await carregarEstoqueVendavelBalcao(
+                    produtos || []
+                    );
+
+    renderizarProdutosBalcao([]);
+
     verificarStatusCaixa();
 }
 
+// ============================================================
+// RENDERIZAÇÃO DOS PRODUTOS
+// ============================================================
 function renderizarProdutosBalcao(produtos) {
-    const grid = document.getElementById('grid-balcao-produtos');
+
+    const grid =
+            document.getElementById(
+                    'grid-balcao-produtos'
+                    );
+
+    if (!grid) {
+        return;
+    }
+
     grid.innerHTML = '';
 
-    produtos.forEach(p => {
-        const indisponivel = p.estoque <= 0;
+    (produtos || []).forEach(p => {
+
+        const estoqueFisico =
+                Number(
+                        p.estoqueFisico ?? p.estoque ?? 0
+                        );
+
+        const estoqueVendavel =
+                Number(
+                        p.estoqueVendavel ?? p.estoque ?? 0
+                        );
+
+        const indisponivel =
+                estoqueVendavel <= 0;
+
+        let textoEstoque = '';
+
+        if (p.temLote) {
+
+            if (indisponivel) {
+
+                textoEstoque = `
+                    <small style="
+                        display:block;
+                        color:#ff6b6b;
+                        margin-bottom:4px;
+                    ">
+                        Estoque físico: ${estoqueFisico}
+                    </small>
+
+                    <small style="
+                        display:block;
+                        color:#ff4757;
+                        font-weight:bold;
+                        margin-bottom:8px;
+                    ">
+                        ⚠️ Vendável: 0
+                    </small>
+                `;
+
+            } else {
+
+                textoEstoque = `
+                    <small style="
+                        display:block;
+                        color:#aaa;
+                        margin-bottom:4px;
+                    ">
+                        Estoque físico: ${estoqueFisico}
+                    </small>
+
+                    <small style="
+                        display:block;
+                        color:#2ed573;
+                        font-weight:bold;
+                        margin-bottom:8px;
+                    ">
+                        ✅ Vendável: ${estoqueVendavel}
+                    </small>
+                `;
+            }
+
+        } else {
+
+            textoEstoque = `
+                <small style="
+                    display:block;
+                    color:#aaa;
+                    margin-bottom:8px;
+                ">
+                    Estoque: ${estoqueVendavel}
+                </small>
+            `;
+        }
+
+        const textoBotao =
+                indisponivel
+                ? (
+                        p.temLote
+                        ? 'Sem lote válido'
+                        : 'Esgotado'
+                        )
+                : '➕ Adicionar';
+
+        const corBotao =
+                indisponivel
+                ? '#555'
+                : '#ff4757';
+
         grid.innerHTML += `
-            <div style="background: #2a2a32; padding: 12px; border-radius: 8px; border: 1px solid #3d3d4a; opacity: ${indisponivel ? '0.5' : '1'}; text-align: center;">
-              <td>
-                <img src="${p.imagem_url}" class="product-row-img" alt="${p.nome}">
-              </td>
-                
-                <strong style="display: block; font-size: 0.95rem; margin-bottom: 5px;">${p.nome}</strong>
-                <div style="color: #2ed573; font-weight: bold; margin-bottom: 5px;">R$ ${parseFloat(p.preco).toFixed(2).replace('.', ',')}</div>
-                <small style="display: block; color: #aaa; margin-bottom: 8px;">Estoque: ${p.estoque}</small>
-                
-                <button class="btn-qty" style="width: 100%; background: ${indisponivel ? '#555' : '#ff4757'}; height: 32px;" 
-                    onclick="adicionarAoCarrinhoBalcao('${p.id}')" ${indisponivel ? 'disabled' : ''}>
-                    ${indisponivel ? 'Esgotado' : '➕ Adicionar'}
+
+            <div
+                style="
+                    background:#2a2a32;
+                    padding:12px;
+                    border-radius:8px;
+                    border:1px solid #3d3d4a;
+                    opacity:${indisponivel ? '0.5' : '1'};
+                    text-align:center;
+                "
+            >
+
+                <div>
+                    <img
+                        src="${p.imagem_url || ''}"
+                        class="product-row-img"
+                        alt="${p.nome}"
+                    >
+                </div>
+
+                <strong
+                    style="
+                        display:block;
+                        font-size:0.95rem;
+                        margin-bottom:5px;
+                    "
+                >
+                    ${p.nome}
+                </strong>
+
+                <div
+                    style="
+                        color:#2ed573;
+                        font-weight:bold;
+                        margin-bottom:5px;
+                    "
+                >
+                    R$
+                    ${parseFloat(p.preco || 0)
+                .toFixed(2)
+                .replace('.', ',')}
+                </div>
+
+                ${textoEstoque}
+
+                <button
+                    class="btn-qty"
+                    style="
+                        width:100%;
+                        background:${corBotao};
+                        height:32px;
+                    "
+                    onclick="
+                        adicionarAoCarrinhoBalcao('${p.id}')
+                    "
+                    ${indisponivel ? 'disabled' : ''}
+                >
+                    ${textoBotao}
                 </button>
+
             </div>
         `;
     });
 }
 
-// 2. Filtra e exibe os cards APENAS quando houver texto no campo
+// ============================================================
+// FILTRO DE PRODUTOS
+// ============================================================
 function filtrarProdutosBalcao(termo) {
-    const busca = termo ? termo.toLowerCase().trim() : '';
 
-    // Se a busca estiver vazia, limpa a grade
+    const busca =
+            termo
+            ? termo.toLowerCase().trim()
+            : '';
+
     if (!busca) {
+
         renderizarProdutosBalcao([]);
+
         return;
     }
 
-    const filtrados = listaProdutosBalcao.filter(p =>
-        p.nome.toLowerCase().includes(busca) ||
-                (p.codigo_barras && String(p.codigo_barras).toLowerCase().includes(busca)) ||
-                String(p.id) === busca
-    );
+    const filtrados =
+            listaProdutosBalcao.filter(p =>
+                p.nome
+                        .toLowerCase()
+                        .includes(busca)
 
-    renderizarProdutosBalcao(filtrados);
+                        ||
+                        (
+                                p.codigo_barras &&
+                                String(
+                                        p.codigo_barras
+                                        )
+                                .toLowerCase()
+                                .includes(busca)
+                                )
+
+                        ||
+                        String(p.id) === busca
+            );
+
+    renderizarProdutosBalcao(
+            filtrados
+            );
 }
 
-// --- GERENCIAMENTO DO CARRINHO PRESENCIAL ---
+// ============================================================
+// ADICIONAR AO CARRINHO
+// ============================================================
 window.adicionarAoCarrinhoBalcao = function (produtoId) {
-    if (!caixaAtual || caixaAtual.status !== 'ABERTO') {
-        alert('⚠️ O caixa está FECHADO! Abra o caixa para iniciar o atendimento.');
+
+    if (
+            !caixaAtual ||
+            caixaAtual.status !== 'ABERTO'
+            ) {
+
+        alert(
+                '⚠️ O caixa está FECHADO! Abra o caixa para iniciar o atendimento.'
+                );
+
         return;
     }
-    // Converte os IDs para String para garantir a comparação correta
-    const prod = listaProdutosBalcao.find(p => String(p.id) === String(produtoId));
+
+    const prod =
+            listaProdutosBalcao.find(
+                    p =>
+                String(p.id) ===
+                        String(produtoId)
+            );
+
     if (!prod) {
-        console.error('Produto não encontrado:', produtoId);
+
+        console.error(
+                'Produto não encontrado:',
+                produtoId
+                );
+
         return;
     }
 
-    const itemExistente = carrinhoBalcao.find(i => String(i.id) === String(produtoId));
-    const qtdAtual = itemExistente ? itemExistente.qtd : 0;
+    const estoqueVendavel =
+            Number(
+                    prod.estoqueVendavel ??
+                    prod.estoque ??
+                    0
+                    );
 
-    if (qtdAtual + 1 > prod.estoque) {
-        alert(`Estoque insuficiente para "${prod.nome}". Restam apenas ${prod.estoque} unidades.`);
+    if (estoqueVendavel <= 0) {
+
+        if (prod.temLote) {
+
+            alert(
+                    `⚠️ "${prod.nome}" não possui lote válido para venda.`
+                    );
+
+        } else {
+
+            alert(
+                    `⚠️ Estoque insuficiente para "${prod.nome}".`
+                    );
+        }
+
+        return;
+    }
+
+    const itemExistente =
+            carrinhoBalcao.find(
+                    i =>
+                String(i.id) ===
+                        String(produtoId)
+            );
+
+    const qtdAtual =
+            itemExistente
+            ? Number(itemExistente.qtd || 0)
+            : 0;
+
+    if (
+            qtdAtual + 1 >
+            estoqueVendavel
+            ) {
+
+        alert(
+                `Estoque insuficiente para "${prod.nome}".\n\n` +
+                `Disponível para venda: ${estoqueVendavel} unidade(s).`
+                );
+
         return;
     }
 
     if (itemExistente) {
+
         itemExistente.qtd += 1;
+
     } else {
-        carrinhoBalcao.push({id: prod.id, nome: prod.nome, preco: prod.preco, qtd: 1});
+
+        carrinhoBalcao.push({
+
+            id:
+                    prod.id,
+
+            nome:
+                    prod.nome,
+
+            preco:
+                    prod.preco,
+
+            qtd:
+                    1
+
+        });
     }
 
     atualizarCarrinhoBalcaoUI();
 };
 
+// ============================================================
+// ALTERAR QUANTIDADE NO CARRINHO
+// ============================================================
 window.alterarQtdBalcao = function (produtoId, delta) {
-    const item = carrinhoBalcao.find(i => String(i.id) === String(produtoId));
-    if (!item)
+
+    const item =
+            carrinhoBalcao.find(
+                    i =>
+                String(i.id) ===
+                        String(produtoId)
+            );
+
+    if (!item) {
         return;
+    }
 
-    const prodOriginal = listaProdutosBalcao.find(p => String(p.id) === String(produtoId));
+    const prodOriginal =
+            listaProdutosBalcao.find(
+                    p =>
+                String(p.id) ===
+                        String(produtoId)
+            );
 
-    if (delta > 0 && prodOriginal && item.qtd + delta > prodOriginal.estoque) {
-        alert('Limite de estoque atingido!');
+    const estoqueVendavel =
+            Number(
+                    prodOriginal?.estoqueVendavel ??
+                    prodOriginal?.estoque ??
+                    0
+                    );
+
+    if (
+            delta > 0 &&
+            item.qtd + delta >
+            estoqueVendavel
+            ) {
+
+        alert(
+                `Limite de estoque vendável atingido.\n\n` +
+                `Disponível: ${estoqueVendavel} unidade(s).`
+                );
+
         return;
     }
 
     item.qtd += delta;
+
     if (item.qtd <= 0) {
-        carrinhoBalcao = carrinhoBalcao.filter(i => String(i.id) !== String(produtoId));
+
+        carrinhoBalcao =
+                carrinhoBalcao.filter(
+                        i =>
+                    String(i.id) !==
+                            String(produtoId)
+                );
     }
+
     atualizarCarrinhoBalcaoUI();
 };
 
+function moedaBalcaoUI(valor) {
+    return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
+}
+
+function numeroBalcaoUI(valor) {
+    const texto = String(valor ?? '').trim().replace(/\s/g, '');
+
+    if (!texto)
+        return 0;
+
+    // Aceita:
+    // 12.34
+    // 12,34
+    // 1.234,56
+    const normalizado = texto.includes(',')
+            ? texto.replace(/\./g, '').replace(',', '.')
+            : texto;
+
+    const numero = Number(normalizado);
+
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function recalcularTotaisBalcaoUI() {
+
+    const subtotal = carrinhoBalcao.reduce((total, item) => {
+
+        return total +
+                (
+                        Number(item.preco || 0) *
+                        Number(item.qtd || 0)
+                        );
+
+    }, 0);
+
+    const campoDesconto =
+            document.getElementById('balcao-desconto');
+
+    let desconto =
+            numeroBalcaoUI(
+                    campoDesconto?.value
+                    );
+
+    // Nunca permitir desconto negativo
+    if (desconto < 0) {
+        desconto = 0;
+    }
+
+    // Nunca permitir desconto maior que o subtotal
+    if (desconto > subtotal) {
+
+        desconto = subtotal;
+
+        if (campoDesconto) {
+            campoDesconto.value =
+                    desconto.toFixed(2);
+        }
+    }
+
+    const total =
+            Math.max(
+                    0,
+                    subtotal - desconto
+                    );
+
+    const subtotalEl =
+            document.getElementById(
+                    'balcao-subtotal-val'
+                    );
+
+    const totalEl =
+            document.getElementById(
+                    'balcao-total-val'
+                    );
+
+    if (subtotalEl) {
+        subtotalEl.textContent =
+                moedaBalcaoUI(subtotal);
+    }
+
+    if (totalEl) {
+        totalEl.textContent =
+                moedaBalcaoUI(total);
+    }
+
+    // ==========================
+    // CÁLCULO DO TROCO
+    // ==========================
+
+    const forma =
+            String(
+                    document.getElementById(
+                            'balcao-pagamento'
+                            )?.value || ''
+                    )
+            .toUpperCase()
+            .trim();
+
+    const recebidoEl =
+            document.getElementById(
+                    'balcao-valor-recebido'
+                    );
+
+    const trocoEl =
+            document.getElementById(
+                    'balcao-troco'
+                    );
+
+    if (
+            forma === 'DINHEIRO' &&
+            recebidoEl &&
+            trocoEl
+            ) {
+
+        const recebido =
+                numeroBalcaoUI(
+                        recebidoEl.value
+                        );
+
+        const diferenca =
+                recebido - total;
+
+        if (recebido <= 0) {
+
+            trocoEl.value =
+                    'R$ 0,00';
+
+            trocoEl.style.color =
+                    '#2ed573';
+
+        } else if (diferenca < 0) {
+
+            trocoEl.value =
+                    `Falta ${moedaBalcaoUI(
+                            Math.abs(diferenca)
+                            )}`;
+
+            trocoEl.style.color =
+                    '#ff4757';
+
+        } else {
+
+            trocoEl.value =
+                    moedaBalcaoUI(
+                            diferenca
+                            );
+
+            trocoEl.style.color =
+                    '#2ed573';
+        }
+    }
+
+    return {
+        subtotal,
+        desconto,
+        total
+    };
+}
+
 function atualizarCarrinhoBalcaoUI() {
-    const conteiner = document.getElementById('lista-carrinho-balcao');
+
+    const conteiner =
+            document.getElementById(
+                    'lista-carrinho-balcao'
+                    );
+
+    if (!conteiner)
+        return;
+
     conteiner.innerHTML = '';
 
-    let total = 0;
-
     if (carrinhoBalcao.length === 0) {
-        conteiner.innerHTML = '<p style="color: #888; text-align: center; margin-top: 30px;">Nenhum item selecionado.</p>';
+
+        conteiner.innerHTML =
+                '<p style="color: #888; text-align: center; margin-top: 30px;">Nenhum item selecionado.</p>';
+
     } else {
+
         carrinhoBalcao.forEach(i => {
-            const subtotal = i.preco * i.qtd;
-            total += subtotal;
+
+            const subtotal =
+                    Number(i.preco || 0) *
+                    Number(i.qtd || 0);
 
             conteiner.innerHTML += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #2a2a32;">
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    padding:8px 0;
+                    border-bottom:1px solid #2a2a32;
+                ">
+
                     <div>
-                        <div style="font-weight: bold; font-size: 0.9rem;">${i.nome}</div>
-                        <small style="color: #aaa;">R$ ${parseFloat(i.preco).toFixed(2).replace('.', ',')}</small>
+                        <div style="
+                            font-weight:bold;
+                            font-size:0.9rem;
+                        ">
+                            ${i.nome}
+                        </div>
+
+                        <small style="color:#aaa;">
+                            ${moedaBalcaoUI(i.preco)}
+                        </small>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <button class="btn-qty" style="width:24px; height:24px; padding:0;" onclick="alterarQtdBalcao('${i.id}', -1)">-</button>
+
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        gap:6px;
+                    ">
+
+                        <button
+                            class="btn-qty"
+                            style="
+                                width:24px;
+                                height:24px;
+                                padding:0;
+                            "
+                            onclick="alterarQtdBalcao('${i.id}', -1)"
+                        >
+                            -
+                        </button>
+
                         <span>${i.qtd}</span>
-                        <button class="btn-qty" style="width:24px; height:24px; padding:0;" onclick="alterarQtdBalcao('${i.id}', 1)">+</button>
+
+                        <button
+                            class="btn-qty"
+                            style="
+                                width:24px;
+                                height:24px;
+                                padding:0;
+                            "
+                            onclick="alterarQtdBalcao('${i.id}', 1)"
+                        >
+                            +
+                        </button>
+
                     </div>
+
                 </div>
             `;
         });
     }
 
-    document.getElementById('balcao-total-val').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    recalcularTotaisBalcaoUI();
 }
 
 // --- FINALIZAÇÃO DA VENDA, BAIXA NO ESTOQUE E COMPROVANTE ---
@@ -11372,34 +12781,64 @@ async function finalizarVendaBalcao() {
             }
 
             // ------------------------------------------------
-            // PIN DO GERENTE
-            // ------------------------------------------------
-            const pinGerente =
-                    prompt(
-                            '🔐 AUTORIZAÇÃO DO GERENTE\n\n' +
-                            'Informe o PIN do GERENTE ou ADMIN para autorizar esta venda FIADO:'
+// AUTORIZAÇÃO DO FIADO
+// ------------------------------------------------
+// GERENTE e ADMIN não precisam informar PIN.
+// OPERADOR e demais cargos precisam informar
+// o PIN de um gerente/admin.
+// ------------------------------------------------
+            const cargoAtual =
+                    String(
+                            window.usuarioAtual?.cargo || ''
+                            )
+                    .toUpperCase()
+                    .trim();
+
+            const ehGerente =
+                    cargoAtual === 'GERENTE' ||
+                    cargoAtual === 'ADMIN';
+
+            let pinGerente = null;
+
+// ------------------------------------------------
+// SOMENTE OPERADOR / OUTROS CARGOS
+// ------------------------------------------------
+            if (!ehGerente) {
+
+                pinGerente =
+                        await solicitarPinGerenteSeguro(
+                                'Informe o PIN do GERENTE ou ADMIN para autorizar esta venda FIADO:'
+                                );
+
+                if (
+                        pinGerente === null
+                        ) {
+
+                    alert(
+                            '⚠️ Venda FIADO cancelada. A autorização é obrigatória.'
                             );
 
-            if (
-                    pinGerente === null
-                    ) {
+                    return;
+                }
 
-                alert(
-                        '⚠️ Venda FIADO cancelada. A autorização é obrigatória.'
-                        );
+                pinGerente = pinGerente.trim();
 
-                return;
-            }
 
-            if (
-                    pinGerente.trim() === ''
-                    ) {
+                // ------------------------------------------------
+                // VALIDA FORMATO
+                // ------------------------------------------------
+                if (
+                        !/^\d{4,6}$/.test(
+                                pinGerente
+                                )
+                        ) {
 
-                alert(
-                        '⚠️ Informe o PIN do GERENTE ou ADMIN.'
-                        );
+                    alert(
+                            '⚠️ O PIN deve ter de 4 a 6 números.'
+                            );
 
-                return;
+                    return;
+                }
             }
 
             // ------------------------------------------------
@@ -11420,7 +12859,7 @@ async function finalizarVendaBalcao() {
                                 clienteId,
 
                         p_pin_gerente:
-                                pinGerente.trim(),
+                                pinGerente,
 
                         p_data_vencimento:
                                 dataVencimento,
@@ -11704,18 +13143,70 @@ async function finalizarVendaBalcao() {
         }
 
         // ====================================================
-        // 6. VENDA NORMAL
-        // ====================================================
+// 6. VENDA NORMAL
+// ====================================================
+
+        const totaisBalcao =
+                recalcularTotaisBalcaoUI();
+
+        const descontoBalcao =
+                Number(
+                        totaisBalcao?.desconto || 0
+                        );
+
+        const totalBalcao =
+                Number(
+                        totaisBalcao?.total || 0
+                        );
+
+        let valorRecebido = null;
+
+// ================================================
+// DINHEIRO
+// ================================================
+
+        if (formaPagamento === 'DINHEIRO') {
+
+            valorRecebido =
+                    numeroBalcaoUI(
+                            document.getElementById(
+                                    'balcao-valor-recebido'
+                                    )?.value
+                            );
+
+            if (
+                    !Number.isFinite(valorRecebido) ||
+                    valorRecebido < totalBalcao
+                    ) {
+
+                alert(
+                        `⚠️ Valor recebido insuficiente.\n\n` +
+                        `Total: ${moedaBalcaoUI(totalBalcao)}\n` +
+                        `Recebido: ${moedaBalcaoUI(valorRecebido)}`
+                        );
+
+                document
+                        .getElementById(
+                                'balcao-valor-recebido'
+                                )
+                        ?.focus();
+
+                return;
+            }
+        }
+
+// ================================================
+// REGISTRA VENDA
+// ================================================
+
         const {
             data: pedidoId,
             error: erroVenda
         } = await _supabase.rpc(
-                'registrar_venda_balcao',
+                'registrar_venda_balcao_com_desconto',
                 {
                     p_caixa_id:
-                            Number(
-                                    caixaAtual.id
-                                    ),
+                            Number(caixaAtual.id),
 
                     p_forma_pagamento:
                             formaPagamento,
@@ -11723,21 +13214,27 @@ async function finalizarVendaBalcao() {
                     p_nome_cliente:
                             nomeCliente || null,
 
+                    p_desconto:
+                            descontoBalcao,
+
+                    p_valor_recebido:
+                            valorRecebido,
+
                     p_itens:
                             itensRPC
                 }
         );
 
-        // ----------------------------------------------------
-        // Erro
-        // ----------------------------------------------------
+// ================================================
+// ERROS
+// ================================================
+
         if (erroVenda) {
 
             console.error(
-                    'Erro na RPC registrar_venda_balcao:',
+                    'Erro na RPC registrar_venda_balcao_com_desconto:',
                     erroVenda
                     );
-
 
             if (
                     erroVenda.message?.includes(
@@ -11779,10 +13276,30 @@ async function finalizarVendaBalcao() {
                         '⚠️ Forma de pagamento inválida.'
                         );
 
+            } else if (
+                    erroVenda.message?.includes(
+                            'DESCONTO_MAIOR_QUE_TOTAL'
+                            )
+                    ) {
+
+                alert(
+                        '⚠️ O desconto não pode ser maior que o valor da venda.'
+                        );
+
+            } else if (
+                    erroVenda.message?.includes(
+                            'VALOR_RECEBIDO_INSUFICIENTE'
+                            )
+                    ) {
+
+                alert(
+                        '⚠️ O valor recebido em dinheiro é menor que o total da venda.'
+                        );
+
             } else {
 
                 alert(
-                        '❌ Não foi possível registrar a venda: ' +
+                        '❌ Erro ao registrar a venda:\n\n' +
                         erroVenda.message
                         );
             }
@@ -11875,12 +13392,37 @@ async function finalizarVendaBalcao() {
         // Atualiza caixa
         // ----------------------------------------------------
         await exibirPainelCaixaAberto();
-
-
+        
         alert(
                 `✅ Venda #${pedidoId} realizada com sucesso!`
                 );
 
+        const campoDesconto =
+                document.getElementById(
+                        'balcao-desconto'
+                        );
+
+        const campoValorRecebido =
+                document.getElementById(
+                        'balcao-valor-recebido'
+                        );
+
+        const campoTroco =
+                document.getElementById(
+                        'balcao-troco'
+                        );
+
+        if (campoDesconto) {
+            campoDesconto.value = '0.00';
+        }
+
+        if (campoValorRecebido) {
+            campoValorRecebido.value = '';
+        }
+
+        if (campoTroco) {
+            campoTroco.value = 'R$ 0,00';
+        }
 
     } catch (err) {
 
@@ -14571,7 +16113,7 @@ async function salvarNovoUsuario() {
         return;
     }
 
-    if (!['GERENTE', 'ADMIN', 'OPERADOR'].includes(cargo.toUpperCase())) {
+    if (!['GERENTE', 'ADMIN', 'OPERADOR', 'ATENDENTE', 'ENTREGADOR'].includes(cargo.toUpperCase())) {
         alert('⚠️ Selecione um cargo válido.');
         return;
     }
@@ -18466,6 +20008,26 @@ function alterarFormaPagamentoBalcaoUI(formaPagamento) {
                     'balcao-cliente-id'
                     );
 
+    const boxDinheiro =
+            document.getElementById(
+                    'box-dinheiro-balcao'
+                    );
+
+    const campoDesconto =
+            document.getElementById(
+                    'balcao-desconto'
+                    );
+
+    const campoValorRecebido =
+            document.getElementById(
+                    'balcao-valor-recebido'
+                    );
+
+    const campoTroco =
+            document.getElementById(
+                    'balcao-troco'
+                    );
+
     // --------------------------------------------------------
     // FIADO
     // --------------------------------------------------------
@@ -18523,10 +20085,50 @@ function alterarFormaPagamentoBalcaoUI(formaPagamento) {
             seletorCliente.value = '';
         }
 
+        if (boxDinheiro) {
+            boxDinheiro.style.display = 'none';
+        }
+
+        if (campoValorRecebido) {
+            campoValorRecebido.value = '';
+        }
+
+        if (campoTroco) {
+            campoTroco.value = 'R$ 0,00';
+        }
+
+        if (campoDesconto) {
+            campoDesconto.value = '0.00';
+            campoDesconto.disabled = true;
+        }
+
         // Data padrão: hoje + 30 dias
         definirVencimentoFiadoPadraoUI();
 
         return;
+    }
+
+    if (campoDesconto) {
+        campoDesconto.disabled = false;
+    }
+
+    if (boxDinheiro) {
+
+        boxDinheiro.style.display =
+                forma === 'DINHEIRO'
+                ? 'block'
+                : 'none';
+    }
+
+    if (forma !== 'DINHEIRO') {
+
+        if (campoValorRecebido) {
+            campoValorRecebido.value = '';
+        }
+
+        if (campoTroco) {
+            campoTroco.value = 'R$ 0,00';
+        }
     }
 
     // --------------------------------------------------------
@@ -18580,6 +20182,7 @@ function alterarFormaPagamentoBalcaoUI(formaPagamento) {
     }
 
     limparVencimentoFiadoUI();
+    recalcularTotaisBalcaoUI();
 }
 
 // ============================================================
@@ -18642,21 +20245,79 @@ function buscarClienteFiadoUI(valor) {
                     }
 
 
-                    const clientes =
+                    const clientesRecebidos =
                             Array.isArray(data)
                             ? data
                             : [];
 
+// ------------------------------------------------------------
+// FILTRO LOCAL DE SEGURANÇA
+// Evita que um RPC muito amplo carregue todos os clientes.
+// Pesquisa por nome, CPF ou telefone.
+// ------------------------------------------------------------
+
+                    const buscaNormalizada =
+                            busca
+                            .toLowerCase()
+                            .normalize('NFD')
+                            .replace(/[\u0300-\u036f]/g, '');
+
+                    const buscaNumerica =
+                            busca.replace(/\D/g, '');
+
+                    const clientes =
+                            clientesRecebidos.filter(cliente => {
+
+                                const nome =
+                                        String(cliente.nome || '')
+                                        .toLowerCase()
+                                        .normalize('NFD')
+                                        .replace(/[\u0300-\u036f]/g, '');
+
+                                const documento =
+                                        String(cliente.documento || '')
+                                        .replace(/\D/g, '');
+
+                                const telefone =
+                                        String(cliente.telefone || '')
+                                        .replace(/\D/g, '');
+
+                                // Busca por nome
+                                if (
+                                        buscaNormalizada &&
+                                        nome.includes(buscaNormalizada)
+                                        ) {
+                                    return true;
+                                }
+
+                                // Busca numérica por CPF/documento
+                                if (
+                                        buscaNumerica &&
+                                        documento.includes(buscaNumerica)
+                                        ) {
+                                    return true;
+                                }
+
+                                // Busca numérica por telefone
+                                if (
+                                        buscaNumerica &&
+                                        telefone.includes(buscaNumerica)
+                                        ) {
+                                    return true;
+                                }
+
+                                return false;
+                            });
 
                     if (
                             clientes.length === 0
                             ) {
 
                         select.innerHTML = `
-                        <option value="">
-                            ❌ Nenhum cliente encontrado
-                        </option>
-                    `;
+        <option value="">
+            ❌ Nenhum cliente encontrado
+        </option>
+    `;
 
                         return;
                     }
@@ -19399,4 +21060,1277 @@ function formatarDocumentoFornecedorInput(input) {
     }
 
     input.value = formatado;
+}
+
+// ============================================================
+// AUDITORIA DO SISTEMA
+// ============================================================
+let auditoriaInicializada = false;
+let auditoriaCarregando = false;
+let auditoriaDados = {
+    eventos: [],
+    vendas: [],
+    caixas: [],
+    estoque: [],
+    despesas: [],
+    contas: []
+};
+
+function escaparAuditoria(valor) {
+    return String(valor ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+}
+
+function dinheiroAuditoria(valor) {
+    return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
+}
+
+function dataHoraAuditoria(valor) {
+    return valor ? new Date(valor).toLocaleString('pt-BR') : '-';
+}
+
+function dataSomenteAuditoria(valor) {
+    if (!valor)
+        return '-';
+    const d = new Date(valor);
+    return Number.isNaN(d.getTime()) ? '-' : d.toLocaleDateString('pt-BR');
+}
+
+function inicioFimAuditoria() {
+    const periodo = document.getElementById('auditoria-periodo')?.value || 'hoje';
+    const agora = new Date();
+    let inicio = null;
+    let fim = null;
+
+    if (periodo === 'hoje') {
+        inicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    } else if (periodo === '7dias') {
+        inicio = new Date(agora);
+        inicio.setDate(inicio.getDate() - 7);
+    } else if (periodo === 'mes') {
+        inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    } else if (periodo === 'personalizado') {
+        const valorInicio = document.getElementById('auditoria-data-inicio')?.value || '';
+        const valorFim = document.getElementById('auditoria-data-fim')?.value || '';
+        if (valorInicio)
+            inicio = new Date(`${valorInicio}T00:00:00`);
+        if (valorFim) {
+            fim = new Date(`${valorFim}T23:59:59.999`);
+        }
+    }
+
+    return {
+        inicioISO: inicio ? inicio.toISOString() : null,
+        fimISO: fim ? fim.toISOString() : null
+    };
+}
+
+function atualizarVisibilidadeDatasAuditoria() {
+    const personalizado = document.getElementById('auditoria-periodo')?.value === 'personalizado';
+    document.querySelectorAll('.audit-data-custom').forEach(el => {
+        el.style.display = personalizado ? 'block' : 'none';
+    });
+}
+
+async function carregarFiltrosAuditoria() {
+    const selectUsuario = document.getElementById('auditoria-usuario');
+    const selectCaixa = document.getElementById('auditoria-caixa');
+    const selectCliente = document.getElementById('auditoria-cliente');
+
+    if (selectUsuario && selectUsuario.options.length <= 1) {
+        const {data, error} = await _supabase
+                .from('usuarios')
+                .select('nome, auth_user_id, ativo')
+                .order('nome', {ascending: true});
+
+        if (!error && Array.isArray(data)) {
+            data.forEach(usuario => {
+                const option = document.createElement('option');
+                option.value = usuario.auth_user_id || '';
+                option.textContent = `${usuario.nome || 'Sem nome'}${usuario.ativo === false ? ' (inativo)' : ''}`;
+                if (option.value)
+                    selectUsuario.appendChild(option);
+            });
+
+        }
+    }
+
+
+    if (selectCaixa && selectCaixa.options.length <= 1) {
+        const {data, error} = await _supabase
+                .from('caixa_diario')
+                .select('id, data_abertura, data_fechamento, status')
+                .order('data_abertura', {ascending: false})
+                .limit(100);
+
+        if (!error && Array.isArray(data)) {
+            data.forEach(caixa => {
+                const option = document.createElement('option');
+                option.value = String(caixa.id);
+                const inicio = dataSomenteAuditoria(caixa.data_abertura);
+                const fim = caixa.data_fechamento ? ` → ${dataSomenteAuditoria(caixa.data_fechamento)}` : ' → ABERTO';
+                option.textContent = `Caixa #${caixa.id} (${inicio}${fim})`;
+                selectCaixa.appendChild(option);
+            });
+        }
+    }
+
+    // ------------------------------------------------------------
+// CLIENTES
+// ------------------------------------------------------------
+
+    if (
+            selectCliente &&
+            selectCliente.options.length <= 1
+            ) {
+
+        const {
+            data,
+            error
+        } = await _supabase.rpc(
+                'listar_clientes_admin',
+                {
+                    p_busca: null
+                }
+        );
+
+        if (error) {
+
+            console.error(
+                    'Erro ao carregar clientes da Auditoria:',
+                    error
+                    );
+
+        } else if (
+                Array.isArray(data)
+                ) {
+
+            data.forEach(cliente => {
+
+                const option =
+                        document.createElement(
+                                'option'
+                                );
+
+                option.value =
+                        String(
+                                cliente.id
+                                );
+
+                option.textContent =
+                        cliente.nome ||
+                        'Cliente sem nome';
+
+                if (
+                        cliente.ativo === false
+                        ) {
+
+                    option.textContent +=
+                            ' (inativo)';
+                }
+
+                selectCliente.appendChild(
+                        option
+                        );
+            });
+        }
+    }
+}
+
+function aplicaFiltroQueryAuditoria(query, campoData, filtros) {
+    let q = query;
+    if (filtros.inicioISO)
+        q = q.gte(campoData, filtros.inicioISO);
+    if (filtros.fimISO)
+        q = q.lte(campoData, filtros.fimISO);
+    return q;
+}
+
+function filtrarArrayAuditoria(lista, campoData, filtros) {
+    return (lista || []).filter(item => {
+        const valor = item?.[campoData];
+        // Alguns RPCs podem não expor a data de criação. Mantemos o registro
+        // em vez de removê-lo indevidamente quando a data não está disponível.
+        if (!valor)
+            return true;
+        const tempo = new Date(valor).getTime();
+        if (Number.isNaN(tempo))
+            return true;
+        if (filtros.inicioISO && tempo < new Date(filtros.inicioISO).getTime())
+            return false;
+        if (filtros.fimISO && tempo > new Date(filtros.fimISO).getTime())
+            return false;
+        return true;
+    });
+}
+
+async function consultarEventosAuditoria(filtros) {
+    let query = _supabase
+            .from('auditoria_eventos')
+            .select(`
+            id,
+            criado_em,
+            usuario_auth_id,
+            usuario_nome,
+            acao,
+            entidade,
+            registro_id,
+            descricao,
+            dados_anteriores,
+            dados_novos,
+            caixa_id
+        `)
+            .order('criado_em', {ascending: false})
+            .limit(1000);
+
+    query = aplicaFiltroQueryAuditoria(query, 'criado_em', filtros);
+
+    if (filtros.usuario !== 'TODOS')
+        query = query.eq('usuario_auth_id', filtros.usuario);
+
+    if (filtros.caixa !== 'TODOS')
+        query = query.eq('caixa_id', Number(filtros.caixa));
+
+    const {data, error} = await query;
+
+    return {
+        data: data || [],
+        error
+    };
+}
+
+async function consultarVendasAuditoria(filtros) {
+    let query = _supabase
+            .from('pedidos')
+            .select(`
+    id,
+    status,
+    tipo,
+    forma_pagamento,
+    valor_total,
+    criado_em,
+    caixa_id,
+    cliente_id,
+    endereco_snapshot,
+
+    clientes (
+        nome
+    ),
+
+    itens_pedido (
+        quantidade,
+        produtos(nome)
+    )
+`)
+            .order('criado_em', {ascending: false})
+            .limit(1000);
+
+    query = aplicaFiltroQueryAuditoria(query, 'criado_em', filtros);
+
+    if (filtros.caixa !== 'TODOS') {
+        query = query.eq('caixa_id', Number(filtros.caixa));
+    }
+
+    if (filtros.cliente !== 'TODOS') {
+        query = query.eq('cliente_id', Number(filtros.cliente));
+    }
+
+    const {data, error} = await query;
+    return {data: data || [], error};
+}
+
+async function consultarCaixasAuditoria(filtros) {
+    let query = _supabase
+            .from('caixa_diario')
+            .select(`
+            id,
+            data_abertura,
+            data_fechamento,
+            saldo_inicial,
+            total_entradas_dinheiro,
+            total_outras_formas,
+            total_saidas,
+            saldo_esperado,
+            saldo_informado,
+            diferenca,
+            status
+        `)
+            .order('data_abertura', {ascending: false})
+            .limit(500);
+
+    query = aplicaFiltroQueryAuditoria(query, 'data_abertura', filtros);
+    if (filtros.caixa !== 'TODOS')
+        query = query.eq('id', Number(filtros.caixa));
+
+    const {data, error} = await query;
+    return {data: data || [], error};
+}
+
+async function consultarEstoqueAuditoria(filtros) {
+    let query = _supabase
+            .from('movimentacoes_estoque')
+            .select(`
+            id,
+            produto_nome,
+            tipo,
+            quantidade,
+            estoque_anterior,
+            estoque_posterior,
+            motivo,
+            pedido_id,
+            usuario_auth_id,
+            usuario_nome,
+            criado_em
+        `)
+            .order('criado_em', {ascending: false})
+            .limit(1000);
+
+    query = aplicaFiltroQueryAuditoria(query, 'criado_em', filtros);
+    if (filtros.usuario !== 'TODOS')
+        query = query.eq('usuario_auth_id', filtros.usuario);
+
+    const {data, error} = await query;
+    return {data: data || [], error};
+}
+
+async function consultarDespesasAuditoria(filtros) {
+    let query = _supabase
+            .from('despesas')
+            .select(`
+            id,
+            descricao,
+            categoria,
+            valor,
+            pago,
+            forma_pagamento,
+            caixa_id,
+            created_at,
+            data_vencimento
+        `)
+            .order('created_at', {ascending: false})
+            .limit(1000);
+
+    query = aplicaFiltroQueryAuditoria(query, 'created_at', filtros);
+    if (filtros.caixa !== 'TODOS')
+        query = query.eq('caixa_id', Number(filtros.caixa));
+
+    const {data, error} = await query;
+    return {data: data || [], error};
+}
+
+async function consultarContasAuditoria(filtros) {
+    const {data, error} = await _supabase.rpc('listar_contas_receber_admin', {
+        p_busca: null,
+        p_status: 'TODOS'
+    });
+
+    let contas = Array.isArray(data) ? data : [];
+    // O RPC atual não expõe obrigatoriamente a data de criação; quando existir, o filtro de período é aplicado.
+    contas = filtrarArrayAuditoria(contas, 'created_at', filtros);
+    return {data: contas, error};
+}
+
+function eventosPorRegistroAuditoria(entidade, registroId) {
+    return auditoriaDados.eventos.filter(ev =>
+        String(ev.entidade || '').toLowerCase() === entidade.toLowerCase() &&
+                Number(ev.registro_id || 0) === Number(registroId || 0)
+    );
+}
+
+function usuarioVendaAuditoria(pedidoId) {
+    const eventos = eventosPorRegistroAuditoria('pedidos', pedidoId);
+    const eventoCriacao = eventos.find(ev => ev.acao === 'INSERT') || eventos[0];
+    return eventoCriacao?.usuario_nome || '-';
+}
+
+function renderizarResumoAuditoria() {
+    const resumo = document.getElementById('auditoria-resumo-grid');
+    if (!resumo)
+        return;
+
+    const vendasValidas = auditoriaDados.vendas.filter(v => v.status === 'CONCLUIDO');
+    const faturamento = vendasValidas.reduce((acc, v) => acc + Number(v.valor_total || 0), 0);
+    const cancelados = auditoriaDados.vendas.filter(v => v.status === 'CANCELADO').length;
+    const diferencas = auditoriaDados.caixas.filter(c => Number(c.diferenca || 0) !== 0).length;
+    const movimentosEstoque = auditoriaDados.estoque.length;
+    const eventos = auditoriaDados.eventos.length;
+
+    resumo.innerHTML = `
+        <div class="audit-card"><span>Vendas concluídas</span><strong>${vendasValidas.length}</strong></div>
+        <div class="audit-card"><span>Faturamento</span><strong>${dinheiroAuditoria(faturamento)}</strong></div>
+        <div class="audit-card"><span>Cancelamentos</span><strong>${cancelados}</strong></div>
+        <div class="audit-card"><span>Diferenças de caixa</span><strong>${diferencas}</strong></div>
+        <div class="audit-card"><span>Mov. de estoque</span><strong>${movimentosEstoque}</strong></div>
+        <div class="audit-card"><span>Eventos registrados</span><strong>${eventos}</strong></div>
+    `;
+}
+
+function tabelaAuditoria(titulo, cabecalhos, linhas, vazio = 'Nenhum registro encontrado.') {
+    const body = linhas.length ? linhas.join('') : `<tr><td colspan="${cabecalhos.length}" class="audit-empty">${vazio}</td></tr>`;
+    return `
+        <section class="audit-section">
+            <div class="audit-section-title"><h3>${titulo}</h3><span>${linhas.length} registro(s)</span></div>
+            <div class="audit-table-wrap">
+                <table class="products-table audit-table">
+                    <thead><tr>${cabecalhos.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                    <tbody>${body}</tbody>
+                </table>
+            </div>
+        </section>
+    `;
+}
+
+function renderizarAuditoriaAtual() {
+    const conteudo = document.getElementById('auditoria-conteudo');
+    if (!conteudo)
+        return;
+
+    const tipo = document.getElementById('auditoria-tipo')?.value || 'GERAL';
+    const eventos = auditoriaDados.eventos || [];
+
+    if (tipo === 'GERAL') {
+        const recentes = eventos.slice(0, 20);
+        const linhas = recentes.map(ev => `
+            <tr>
+                <td>${dataHoraAuditoria(ev.criado_em)}</td>
+                <td>${escaparAuditoria(ev.usuario_nome || '-')}</td>
+                <td>${escaparAuditoria(ev.acao || '-')}</td>
+                <td>${escaparAuditoria(ev.entidade || '-')} #${escaparAuditoria(ev.registro_id || '-')}</td>
+                <td>${escaparAuditoria(ev.descricao || '-')}</td>
+                <td>${ev.caixa_id ? `#${escaparAuditoria(ev.caixa_id)}` : '-'}</td>
+            </tr>
+        `);
+        const vendas = auditoriaDados.vendas.filter(v => v.status === 'CONCLUIDO');
+        const faturamento = vendas.reduce((acc, v) => acc + Number(v.valor_total || 0), 0);
+        const finance = `
+            <section class="audit-section audit-highlight-section">
+                <div class="audit-section-title"><h3>Resumo financeiro auditado</h3></div>
+                <div class="audit-finance-line">
+                    <div><span>Faturamento</span><strong>${dinheiroAuditoria(faturamento)}</strong></div>
+                    <div><span>Vendas concluídas</span><strong>${vendas.length}</strong></div>
+                    <div><span>Despesas pagas</span><strong>${dinheiroAuditoria(auditoriaDados.despesas.filter(d => d.pago).reduce((a, d) => a + Number(d.valor || 0), 0))}</strong></div>
+                    <div><span>Contas em aberto</span><strong>${dinheiroAuditoria(auditoriaDados.contas.reduce((a, c) => a + Number(c.saldo_aberto || 0), 0))}</strong></div>
+                </div>
+            </section>
+        `;
+        conteudo.innerHTML = finance + tabelaAuditoria('Últimos eventos', ['Data / Hora', 'Usuário', 'Ação', 'Registro', 'Descrição', 'Caixa'], linhas);
+        return;
+    }
+
+    if (tipo === 'VENDAS') {
+        const linhas =
+                auditoriaDados.vendas.map(v => `
+    <tr>
+
+        <td>
+            #${v.id}
+        </td>
+
+        <td>
+            ${dataHoraAuditoria(v.criado_em)}
+        </td>
+
+        <td>
+            ${escaparAuditoria(
+                            v.clientes?.nome ||
+                            'Cliente não informado'
+                            )}
+        </td>
+
+        <td>
+            ${escaparAuditoria(
+                            usuarioVendaAuditoria(v.id)
+                            )}
+        </td>
+
+        <td>
+            ${escaparAuditoria(
+                            v.tipo || 'PDV'
+                            )}
+        </td>
+
+        <td>
+            ${escaparAuditoria(
+                            v.forma_pagamento || '-'
+                            )}
+        </td>
+
+        <td>
+            ${
+                            (v.itens_pedido || [])
+                            .reduce(
+                                    (a, i) =>
+                                a +
+                                        Number(
+                                                i.quantidade || 0
+                                                ),
+                                    0
+                                    )
+                            }
+        </td>
+
+        <td>
+            ${dinheiroAuditoria(v.valor_total)}
+        </td>
+
+        <td>
+            ${escaparAuditoria(
+                            v.status || '-'
+                            )}
+        </td>
+
+        <td>
+            ${v.caixa_id ? `#${v.caixa_id}` : '-'}
+        </td>
+
+    </tr>
+`);
+        return conteudo.innerHTML =
+                tabelaAuditoria(
+                        'Vendas',
+                        [
+                            'Pedido',
+                            'Data / Hora',
+                            'Cliente',
+                            'Operador',
+                            'Tipo',
+                            'Pagamento',
+                            'Itens',
+                            'Total',
+                            'Status',
+                            'Caixa'
+                        ],
+                        linhas
+                        );
+    }
+
+    if (tipo === 'CAIXAS') {
+        const linhas = auditoriaDados.caixas.map(c => `
+            <tr>
+                <td>#${c.id}</td>
+                <td>${dataHoraAuditoria(c.data_abertura)}</td>
+                <td>${dataHoraAuditoria(c.data_fechamento)}</td>
+                <td>${dinheiroAuditoria(c.saldo_inicial)}</td>
+                <td>${dinheiroAuditoria(c.total_entradas_dinheiro)}</td>
+                <td>${dinheiroAuditoria(c.total_outras_formas)}</td>
+                <td>${dinheiroAuditoria(c.total_saidas)}</td>
+                <td>${dinheiroAuditoria(c.saldo_esperado)}</td>
+                <td>${dinheiroAuditoria(c.saldo_informado)}</td>
+                <td>${dinheiroAuditoria(c.diferenca)}</td>
+            </tr>
+        `);
+        return conteudo.innerHTML = tabelaAuditoria('Caixas', ['Caixa', 'Abertura', 'Fechamento', 'Inicial', 'Dinheiro', 'Outras', 'Saídas', 'Esperado', 'Informado', 'Diferença'], linhas);
+    }
+
+    if (tipo === 'CANCELAMENTOS') {
+        const linhas = auditoriaDados.vendas
+                .filter(v => v.status === 'CANCELADO')
+                .map(v => {
+                    const eventos = eventosPorRegistroAuditoria('pedidos', v.id).filter(ev => {
+                        const novo = ev.dados_novos || {};
+                        return String(novo.status || '').toUpperCase() === 'CANCELADO' || ev.acao === 'DELETE';
+                    });
+                    const ev = eventos[0] || {};
+                    return `
+                    <tr>
+                        <td>#${v.id}</td>
+                        <td>${dataHoraAuditoria(v.criado_em)}</td>
+                        <td>${dataHoraAuditoria(ev.criado_em)}</td>
+                        <td>${escaparAuditoria(ev.usuario_nome || usuarioVendaAuditoria(v.id))}</td>
+                        <td>${dinheiroAuditoria(v.valor_total)}</td>
+                        <td>${escaparAuditoria(v.forma_pagamento || '-')}</td>
+                        <td>${escaparAuditoria(ev.descricao || 'Pedido cancelado')}</td>
+                    </tr>
+                `;
+                });
+        return conteudo.innerHTML = tabelaAuditoria('Cancelamentos', ['Pedido', 'Venda', 'Cancelamento', 'Usuário', 'Valor', 'Pagamento', 'Motivo'], linhas);
+    }
+
+    if (tipo === 'ESTOQUE') {
+        const linhas = auditoriaDados.estoque.map(m => `
+            <tr>
+                <td>${dataHoraAuditoria(m.criado_em)}</td>
+                <td>${escaparAuditoria(m.produto_nome || '-')}</td>
+                <td>${escaparAuditoria(m.tipo || '-')}</td>
+                <td>${Number(m.quantidade || 0)}</td>
+                <td>${m.estoque_anterior ?? '-'}</td>
+                <td>${m.estoque_posterior ?? '-'}</td>
+                <td>${escaparAuditoria(m.motivo || '-')}</td>
+                <td>${m.pedido_id ? `#${m.pedido_id}` : '-'}</td>
+                <td>${escaparAuditoria(m.usuario_nome || '-')}</td>
+            </tr>
+        `);
+        return conteudo.innerHTML = tabelaAuditoria('Movimentações de estoque', ['Data / Hora', 'Produto', 'Tipo', 'Qtd.', 'Anterior', 'Posterior', 'Motivo', 'Pedido', 'Usuário'], linhas);
+    }
+
+    if (tipo === 'FINANCEIRO') {
+        const faturamento = auditoriaDados.vendas.filter(v => v.status === 'CONCLUIDO').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+        const despesas = auditoriaDados.despesas.filter(d => d.pago).reduce((a, d) => a + Number(d.valor || 0), 0);
+        const entradasDinheiro = auditoriaDados.caixas.reduce((a, c) => a + Number(c.total_entradas_dinheiro || 0), 0);
+        const outras = auditoriaDados.caixas.reduce((a, c) => a + Number(c.total_outras_formas || 0), 0);
+        const linhas = [
+            `<tr><td>Vendas concluídas</td><td>${dinheiroAuditoria(faturamento)}</td><td>${auditoriaDados.vendas.filter(v => v.status === 'CONCLUIDO').length}</td></tr>`,
+            `<tr><td>Despesas pagas</td><td>${dinheiroAuditoria(despesas)}</td><td>${auditoriaDados.despesas.filter(d => d.pago).length}</td></tr>`,
+            `<tr><td>Entradas em dinheiro</td><td>${dinheiroAuditoria(entradasDinheiro)}</td><td>${auditoriaDados.caixas.length} caixa(s)</td></tr>`,
+            `<tr><td>Entradas outras formas</td><td>${dinheiroAuditoria(outras)}</td><td>${auditoriaDados.caixas.length} caixa(s)</td></tr>`
+        ];
+        return conteudo.innerHTML = tabelaAuditoria('Resumo financeiro', ['Indicador', 'Valor', 'Referência'], linhas);
+    }
+
+    if (tipo === 'CONTAS_RECEBER') {
+        const linhas = auditoriaDados.contas.map(c => `
+            <tr>
+                <td>${escaparAuditoria(c.cliente_nome || 'Sem nome')}</td>
+                <td>${c.pedido_id ? `#${c.pedido_id}` : '-'}</td>
+                <td>${dinheiroAuditoria(c.valor_total)}</td>
+                <td>${dinheiroAuditoria(c.valor_pago)}</td>
+                <td>${dinheiroAuditoria(c.saldo_aberto)}</td>
+                <td>${dataSomenteAuditoria(c.data_vencimento)}</td>
+                <td>${escaparAuditoria(c.status || '-')}</td>
+            </tr>
+        `);
+        return conteudo.innerHTML = tabelaAuditoria('Contas a Receber', ['Cliente', 'Pedido', 'Valor', 'Pago', 'Saldo', 'Vencimento', 'Status'], linhas);
+    }
+
+    if (tipo === 'EVENTOS') {
+        const linhas = eventos.map(ev => `
+            <tr>
+                <td>${dataHoraAuditoria(ev.criado_em)}</td>
+                <td>${escaparAuditoria(ev.usuario_nome || '-')}</td>
+                <td>${escaparAuditoria(ev.acao || '-')}</td>
+                <td>${escaparAuditoria(ev.entidade || '-')}</td>
+                <td>${escaparAuditoria(ev.registro_id || '-')}</td>
+                <td>${ev.caixa_id ? `#${escaparAuditoria(ev.caixa_id)}` : '-'}</td>
+                <td>${escaparAuditoria(ev.descricao || '-')}</td>
+            </tr>
+        `);
+        return conteudo.innerHTML = tabelaAuditoria('Eventos de auditoria', ['Data / Hora', 'Usuário', 'Ação', 'Entidade', 'Registro', 'Caixa', 'Descrição'], linhas);
+    }
+}
+
+async function carregarAuditoria() {
+    if (auditoriaCarregando)
+        return;
+    auditoriaCarregando = true;
+    atualizarVisibilidadeDatasAuditoria();
+
+    const statusEl = document.getElementById('auditoria-status');
+    const conteudo = document.getElementById('auditoria-conteudo');
+    if (statusEl)
+        statusEl.textContent = 'Carregando...';
+    if (conteudo)
+        conteudo.innerHTML = '<div class="audit-empty">⏳ Carregando dados da auditoria...</div>';
+
+    const filtros = {
+        ...inicioFimAuditoria(),
+
+        usuario:
+                document.getElementById(
+                        'auditoria-usuario'
+                        )?.value ||
+                'TODOS',
+
+        caixa:
+                document.getElementById(
+                        'auditoria-caixa'
+                        )?.value ||
+                'TODOS',
+
+        cliente:
+                document.getElementById(
+                        'auditoria-cliente'
+                        )?.value ||
+                'TODOS'
+    };
+
+    try {
+        await carregarFiltrosAuditoria();
+
+        const [eventos, vendas, caixas, estoque, despesas, contas] = await Promise.all([
+            consultarEventosAuditoria(filtros),
+            consultarVendasAuditoria(filtros),
+            consultarCaixasAuditoria(filtros),
+            consultarEstoqueAuditoria(filtros),
+            consultarDespesasAuditoria(filtros),
+            consultarContasAuditoria(filtros)
+        ]);
+
+        const erros = [eventos, vendas, caixas, estoque, despesas, contas]
+                .filter(r => r?.error)
+                .map(r => r.error?.message || 'Erro de consulta');
+
+        auditoriaDados = {
+            eventos: eventos.data || [],
+            vendas: vendas.data || [],
+            caixas: caixas.data || [],
+            estoque: estoque.data || [],
+            despesas: despesas.data || [],
+            contas: contas.data || []
+        };
+
+        // ------------------------------------------------------------
+// FILTRO POR CLIENTE
+// ------------------------------------------------------------
+
+        if (filtros.cliente !== 'TODOS') {
+
+            const pedidosDoCliente =
+                    auditoriaDados.vendas.map(
+                            venda =>
+                        Number(venda.id)
+                    );
+
+            // Vendas já vieram filtradas pelo cliente.
+            // Agora usamos os IDs dos pedidos para filtrar
+            // eventos e movimentações relacionadas.
+
+            auditoriaDados.estoque =
+                    auditoriaDados.estoque.filter(
+                            movimento =>
+                        movimento.pedido_id &&
+                                pedidosDoCliente.includes(
+                                        Number(
+                                                movimento.pedido_id
+                                                )
+                                        )
+                    );
+
+            auditoriaDados.eventos =
+                    auditoriaDados.eventos.filter(
+                            evento => {
+
+                                if (
+                                        String(
+                                                evento.entidade ||
+                                                ''
+                                                )
+                                        .toLowerCase() !==
+                                        'pedidos'
+                                        ) {
+
+                                    return false;
+                                }
+
+                                return pedidosDoCliente.includes(
+                                        Number(
+                                                evento.registro_id
+                                                )
+                                        );
+                            }
+                    );
+        }
+
+        if (filtros.usuario !== 'TODOS') {
+            const eventosAntesDoFiltro = auditoriaDados.eventos.slice();
+            auditoriaDados.eventos = auditoriaDados.eventos.filter(ev => ev.usuario_auth_id === filtros.usuario);
+            auditoriaDados.estoque = auditoriaDados.estoque.filter(m => m.usuario_auth_id === filtros.usuario);
+
+            if (!eventos.error && eventosAntesDoFiltro.length > 0) {
+                auditoriaDados.vendas = auditoriaDados.vendas.filter(v => usuarioVendaAuditoria(v.id) !== '-');
+                auditoriaDados.caixas = auditoriaDados.caixas.filter(c =>
+                    eventosAntesDoFiltro.some(ev =>
+                        String(ev.entidade || '').toUpperCase() === 'CAIXA_DIARIO' &&
+                                Number(ev.registro_id || 0) === Number(c.id || 0) &&
+                                ev.usuario_auth_id === filtros.usuario
+                    )
+                );
+            }
+        }
+
+        renderizarResumoAuditoria();
+        renderizarAuditoriaAtual();
+
+        if (statusEl) {
+            statusEl.textContent = erros.length
+                    ? `Concluído com ${erros.length} alerta(s)`
+                    : `Atualizado ${new Date().toLocaleTimeString('pt-BR')}`;
+        }
+
+        if (erros.length) {
+            console.warn('Auditoria carregada com alertas:', erros);
+            if (conteudo) {
+                conteudo.insertAdjacentHTML('afterbegin', `
+                    <div class="audit-warning">
+                        ⚠️ Alguns dados não puderam ser consultados: ${escaparAuditoria(erros.join(' | '))}
+                        ${erros.some(e => e.toLowerCase().includes('auditoria_eventos'))
+                        ? '<br><small>A tabela de trilha de auditoria ainda não foi criada. Execute o arquivo <strong>auditoria.sql</strong> na base do Supabase.</small>'
+                        : ''}
+                    </div>
+                `);
+            }
+        }
+    } catch (err) {
+        console.error('Erro ao carregar Auditoria:', err);
+        if (statusEl)
+            statusEl.textContent = 'Erro';
+        if (conteudo)
+            conteudo.innerHTML = `<div class="audit-warning">❌ ${escaparAuditoria(err.message || err)}</div>`;
+    } finally {
+        auditoriaCarregando = false;
+    }
+}
+
+async function inicializarAuditoria() {
+    atualizarVisibilidadeDatasAuditoria();
+    if (!auditoriaInicializada) {
+        auditoriaInicializada = true;
+        await carregarFiltrosAuditoria();
+    }
+    await carregarAuditoria();
+}
+
+function limparFiltrosAuditoria() {
+    const periodo = document.getElementById('auditoria-periodo');
+    const usuario = document.getElementById('auditoria-usuario');
+    const caixa = document.getElementById('auditoria-caixa');
+    const cliente = document.getElementById('auditoria-cliente');
+    const tipo = document.getElementById('auditoria-tipo');
+    const inicio = document.getElementById('auditoria-data-inicio');
+    const fim = document.getElementById('auditoria-data-fim');
+
+    if (periodo)
+        periodo.value = 'hoje';
+    if (usuario)
+        usuario.value = 'TODOS';
+    if (caixa)
+        caixa.value = 'TODOS';
+    if (cliente)
+        cliente.value = 'TODOS';
+    if (tipo)
+        tipo.value = 'GERAL';
+    if (inicio)
+        inicio.value = '';
+    if (fim)
+        fim.value = '';
+
+    atualizarVisibilidadeDatasAuditoria();
+    carregarAuditoria();
+}
+
+function prepararRelatorioAuditoriaImpressao() {
+    document.body.classList.add('auditoria-impressao');
+}
+
+function restaurarRelatorioAuditoriaImpressao() {
+    document.body.classList.remove('auditoria-impressao');
+}
+
+async function registrarEventoAuditoriaUI(acao, entidade, descricao) {
+    try {
+        await _supabase.rpc('registrar_auditoria_evento', {
+            p_acao: acao,
+            p_entidade: entidade,
+            p_registro_id: null,
+            p_descricao: descricao,
+            p_dados_anteriores: null,
+            p_dados_novos: null,
+            p_caixa_id: caixaAtual?.id ? Number(caixaAtual.id) : null
+        });
+    } catch (err) {
+        console.warn('Não foi possível registrar evento de auditoria da interface:', err);
+    }
+}
+
+function imprimirAuditoria() {
+    registrarEventoAuditoriaUI('PRINT', 'AUDITORIA', `Impressão do relatório ${document.getElementById('auditoria-tipo')?.value || 'GERAL'}`);
+    prepararRelatorioAuditoriaImpressao();
+    setTimeout(() => {
+        window.print();
+        setTimeout(restaurarRelatorioAuditoriaImpressao, 300);
+    }, 100);
+}
+
+function exportarAuditoriaPDF() {
+    registrarEventoAuditoriaUI('EXPORT_PDF', 'AUDITORIA', `Exportação em PDF do relatório ${document.getElementById('auditoria-tipo')?.value || 'GERAL'}`);
+    prepararRelatorioAuditoriaImpressao();
+    setTimeout(() => {
+        window.print();
+        setTimeout(restaurarRelatorioAuditoriaImpressao, 300);
+    }, 100);
+}
+
+function csvEscapeAuditoria(valor) {
+    const texto = String(valor ?? '').replace(/\r?\n/g, ' ');
+    return `"${texto.replace(/"/g, '""')}"`;
+}
+
+function dadosCSVAuditoria() {
+    const tipo = document.getElementById('auditoria-tipo')?.value || 'GERAL';
+    const linhas = [];
+
+    if (tipo === 'VENDAS') {
+        linhas.push(['Pedido', 'Data/Hora', 'Operador', 'Tipo', 'Pagamento', 'Itens', 'Total', 'Status', 'Caixa']);
+        auditoriaDados.vendas.forEach(v => linhas.push([
+                v.id, dataHoraAuditoria(v.criado_em), usuarioVendaAuditoria(v.id), v.tipo || 'PDV', v.forma_pagamento || '',
+                (v.itens_pedido || []).reduce((a, i) => a + Number(i.quantidade || 0), 0), Number(v.valor_total || 0).toFixed(2), v.status || '', v.caixa_id || ''
+            ]));
+    } else if (tipo === 'CAIXAS') {
+        linhas.push(['Caixa', 'Abertura', 'Fechamento', 'Saldo Inicial', 'Entradas Dinheiro', 'Entradas Outras', 'Saídas', 'Esperado', 'Informado', 'Diferença']);
+        auditoriaDados.caixas.forEach(c => linhas.push([c.id, dataHoraAuditoria(c.data_abertura), dataHoraAuditoria(c.data_fechamento), c.saldo_inicial, c.total_entradas_dinheiro, c.total_outras_formas, c.total_saidas, c.saldo_esperado, c.saldo_informado, c.diferenca]));
+    } else if (tipo === 'CANCELAMENTOS') {
+        linhas.push(['Pedido', 'Venda', 'Cancelamento', 'Usuário', 'Valor', 'Pagamento', 'Motivo']);
+        auditoriaDados.vendas.filter(v => v.status === 'CANCELADO').forEach(v => {
+            const ev = eventosPorRegistroAuditoria('pedidos', v.id).find(e => String(e.dados_novos?.status || '').toUpperCase() === 'CANCELADO') || {};
+            linhas.push([v.id, dataHoraAuditoria(v.criado_em), dataHoraAuditoria(ev.criado_em), ev.usuario_nome || usuarioVendaAuditoria(v.id), v.valor_total, v.forma_pagamento || '', ev.descricao || 'Pedido cancelado']);
+        });
+    } else if (tipo === 'ESTOQUE') {
+        linhas.push(['Data/Hora', 'Produto', 'Tipo', 'Quantidade', 'Estoque Anterior', 'Estoque Posterior', 'Motivo', 'Pedido', 'Usuário']);
+        auditoriaDados.estoque.forEach(m => linhas.push([dataHoraAuditoria(m.criado_em), m.produto_nome || '', m.tipo || '', m.quantidade, m.estoque_anterior, m.estoque_posterior, m.motivo || '', m.pedido_id || '', m.usuario_nome || '']));
+    } else if (tipo === 'EVENTOS') {
+        linhas.push(['Data/Hora', 'Usuário', 'Ação', 'Entidade', 'Registro', 'Caixa', 'Descrição']);
+        auditoriaDados.eventos.forEach(e => linhas.push([dataHoraAuditoria(e.criado_em), e.usuario_nome || '', e.acao || '', e.entidade || '', e.registro_id || '', e.caixa_id || '', e.descricao || '']));
+    } else {
+        linhas.push(['Indicador', 'Valor', 'Referência']);
+        const faturamento = auditoriaDados.vendas.filter(v => v.status === 'CONCLUIDO').reduce((a, v) => a + Number(v.valor_total || 0), 0);
+        const despesas = auditoriaDados.despesas.filter(d => d.pago).reduce((a, d) => a + Number(d.valor || 0), 0);
+        linhas.push(['Vendas concluídas', faturamento, auditoriaDados.vendas.filter(v => v.status === 'CONCLUIDO').length]);
+        linhas.push(['Despesas pagas', despesas, auditoriaDados.despesas.filter(d => d.pago).length]);
+        linhas.push(['Cancelamentos', auditoriaDados.vendas.filter(v => v.status === 'CANCELADO').length, 'pedidos']);
+        linhas.push(['Eventos de auditoria', auditoriaDados.eventos.length, 'eventos']);
+    }
+    return linhas;
+}
+
+function exportarAuditoriaCSV() {
+    try {
+        const linhas = dadosCSVAuditoria();
+        const csv = '\ufeff' + linhas.map(linha => linha.map(csvEscapeAuditoria).join(';')).join('\r\n');
+        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const tipo = document.getElementById('auditoria-tipo')?.value || 'GERAL';
+        const hoje = new Date().toISOString().slice(0, 10);
+        a.download = `auditoria_${tipo.toLowerCase()}_${hoje}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        registrarEventoAuditoriaUI('EXPORT_CSV', 'AUDITORIA', `Exportação CSV do relatório ${tipo}`);
+    } catch (err) {
+        console.error('Erro ao exportar auditoria:', err);
+        alert('❌ Não foi possível exportar a auditoria.');
+    }
+}
+
+// Reage a mudança do período personalizado sem exigir botão extra.
+document.addEventListener('change', event => {
+    if (event.target?.id === 'auditoria-periodo') {
+        atualizarVisibilidadeDatasAuditoria();
+    }
+});
+
+// ============================================================
+// SOLICITAR PIN DO GERENTE COM CAMPO PROTEGIDO
+// ============================================================
+function solicitarPinGerenteSeguro(mensagem) {
+
+    return new Promise(function (resolve) {
+
+        // ----------------------------------------------------
+        // OVERLAY
+        // ----------------------------------------------------
+        const overlay =
+                document.createElement('div');
+
+        overlay.style.cssText = `
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,0.75);
+            z-index:99999;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            padding:20px;
+        `;
+
+        // ----------------------------------------------------
+        // CARD
+        // ----------------------------------------------------
+        const card =
+                document.createElement('div');
+
+        card.style.cssText = `
+            width:100%;
+            max-width:400px;
+            background:#24242f;
+            border-radius:10px;
+            padding:25px;
+            box-shadow:0 10px 40px rgba(0,0,0,0.5);
+            color:#fff;
+        `;
+
+        // ----------------------------------------------------
+        // TÍTULO
+        // ----------------------------------------------------
+        const titulo =
+                document.createElement('h2');
+
+        titulo.textContent =
+                '🔐 Autorização do Gerente';
+
+        titulo.style.cssText = `
+            margin:0 0 12px 0;
+            font-size:1.25rem;
+        `;
+
+        // ----------------------------------------------------
+        // MENSAGEM
+        // ----------------------------------------------------
+        const texto =
+                document.createElement('div');
+
+        texto.textContent =
+                mensagem;
+
+        texto.style.cssText = `
+            color:#aaa;
+            font-size:0.9rem;
+            line-height:1.5;
+            margin-bottom:18px;
+        `;
+
+        // ----------------------------------------------------
+        // CAMPO PIN
+        // ----------------------------------------------------
+        const input =
+                document.createElement('input');
+
+        input.type =
+                'password';
+
+        input.inputMode =
+                'numeric';
+
+        input.autocomplete =
+                'off';
+
+        input.maxLength =
+                6;
+
+        input.placeholder =
+                'Digite o PIN';
+
+        input.style.cssText = `
+            width:100%;
+            box-sizing:border-box;
+            padding:12px;
+            border:1px solid #555;
+            border-radius:6px;
+            background:#181820;
+            color:#fff;
+            font-size:1.2rem;
+            text-align:center;
+            letter-spacing:6px;
+            outline:none;
+        `;
+
+        // Permite somente números
+        input.addEventListener(
+                'input',
+                function () {
+
+                    this.value =
+                            this.value
+                            .replace(/\D/g, '')
+                            .slice(0, 6);
+                }
+        );
+
+        // ----------------------------------------------------
+        // MENSAGEM DE VALIDAÇÃO
+        // ----------------------------------------------------
+        const erro =
+                document.createElement('div');
+
+        erro.style.cssText = `
+            display:none;
+            color:#ff4757;
+            font-size:0.85rem;
+            margin-top:8px;
+            text-align:center;
+        `;
+
+        // ----------------------------------------------------
+        // BOTÕES
+        // ----------------------------------------------------
+        const botoes =
+                document.createElement('div');
+
+        botoes.style.cssText = `
+            display:flex;
+            gap:10px;
+            margin-top:20px;
+        `;
+
+        const btnCancelar =
+                document.createElement('button');
+
+        btnCancelar.type =
+                'button';
+
+        btnCancelar.textContent =
+                'Cancelar';
+
+        btnCancelar.style.cssText = `
+            flex:1;
+            padding:11px;
+            border:none;
+            border-radius:6px;
+            background:#3d3d4e;
+            color:#fff;
+            cursor:pointer;
+        `;
+
+        const btnConfirmar =
+                document.createElement('button');
+
+        btnConfirmar.type =
+                'button';
+
+        btnConfirmar.textContent =
+                'Autorizar';
+
+        btnConfirmar.style.cssText = `
+            flex:1;
+            padding:11px;
+            border:none;
+            border-radius:6px;
+            background:#2ed573;
+            color:#000;
+            font-weight:bold;
+            cursor:pointer;
+        `;
+
+        // ----------------------------------------------------
+        // FECHAR
+        // ----------------------------------------------------
+        function fechar(valor) {
+
+            document.removeEventListener(
+                    'keydown',
+                    eventoTeclado
+                    );
+
+            overlay.remove();
+
+            resolve(valor);
+        }
+
+        // ----------------------------------------------------
+        // CONFIRMAR
+        // ----------------------------------------------------
+        function confirmar() {
+
+            const pin =
+                    input.value.trim();
+
+            if (!/^\d{4,6}$/.test(pin)) {
+
+                erro.textContent =
+                        '⚠️ O PIN deve ter de 4 a 6 números.';
+
+                erro.style.display =
+                        'block';
+
+                input.focus();
+
+                return;
+            }
+
+            fechar(pin);
+        }
+
+        // ----------------------------------------------------
+        // CANCELAR
+        // ----------------------------------------------------
+        btnCancelar.onclick =
+                function () {
+
+                    fechar(null);
+                };
+
+        // ----------------------------------------------------
+        // AUTORIZAR
+        // ----------------------------------------------------
+        btnConfirmar.onclick =
+                confirmar;
+
+        // ----------------------------------------------------
+        // ENTER / ESC
+        // ----------------------------------------------------
+        function eventoTeclado(event) {
+
+            if (event.key === 'Enter') {
+
+                event.preventDefault();
+
+                confirmar();
+
+            } else if (event.key === 'Escape') {
+
+                event.preventDefault();
+
+                fechar(null);
+            }
+        }
+
+        document.addEventListener(
+                'keydown',
+                eventoTeclado
+                );
+
+        // ----------------------------------------------------
+        // MONTA A JANELA
+        // ----------------------------------------------------
+        botoes.appendChild(
+                btnCancelar
+                );
+
+        botoes.appendChild(
+                btnConfirmar
+                );
+
+        card.appendChild(
+                titulo
+                );
+
+        card.appendChild(
+                texto
+                );
+
+        card.appendChild(
+                input
+                );
+
+        card.appendChild(
+                erro
+                );
+
+        card.appendChild(
+                botoes
+                );
+
+        overlay.appendChild(
+                card
+                );
+
+        document.body.appendChild(
+                overlay
+                );
+
+        // ----------------------------------------------------
+        // FOCO AUTOMÁTICO
+        // ----------------------------------------------------
+        setTimeout(
+                function () {
+                    input.focus();
+                },
+                50
+                );
+    });
 }

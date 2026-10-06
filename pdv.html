@@ -46,29 +46,29 @@
 
         <header class="pdv-header">
             <div class="header-left">
-                <h1>🖥️ Gestor PDV</h1>
+                <h3>🖥️ Gestor PDV</h3>
                 <!-- Botões das Abas -->
                 <nav class="nav-tabs">
-                    <button class="tab-btn active" id="btn-tab-pedidos" onclick="alternarAba('pedidos')">📋 Pedidos</button>
-                    <button class="tab-btn" id="btn-tab-balcao" onclick="alternarAba('balcao')">🛒 Venda de Balcão</button>
-                    <button class="tab-btn" id="btn-tab-produtos" onclick="alternarAba('produtos')">📦 Produtos & Estoque</button>
-                    <button class="tab-btn" id="btn-tab-ficha-tecnica" onclick="alternarAba('ficha-tecnica')" style="display: none;">📋 Ficha Técnica</button>
-                    <button class="tab-btn" id="btn-tab-cadastros" onclick="alternarAba('cadastros')" style="display: none;">📚 Cadastros</button>
-                    <button class="tab-btn" id="btn-tab-compras" onclick="alternarAba('compras')">🛒 Compras</button>
-                    <button class="tab-btn" id="btn-tab-mov-estoque" onclick="alternarAba('mov-estoque')">📦 Mov. Estoque</button>
-                    <button class="tab-btn" id="btn-tab-historico" onclick="alternarAba('historico')">📜 Histórico & Relatórios</button>
-                    <button class="tab-btn" id="btn-tab-pix" onclick="alternarAba('pix')">❖ Pagamento via PIX</button>
-                    <button class="tab-btn" id="btn-tab-financas" onclick="alternarAba('financas')">📊 Finanças</button>
-                    <button class="tab-btn" id="btn-tab-config" onclick="alternarAba('config')">⚙️ Configurações</button>
+                    <button class="tab-btn active" id="btn-tab-pedidos" style="width: 100%;" onclick="alternarAba('pedidos')">📋 Pedidos</button>
+                    <button class="tab-btn" id="btn-tab-balcao" style="width: 100%;" onclick="alternarAba('balcao')">🛒 Venda de Balcão</button>
+                    <button class="tab-btn" id="btn-tab-produtos" style="width: 100%;" onclick="alternarAba('produtos')">📦 Produtos & Estoque</button>
+                    <button class="tab-btn" id="btn-tab-ficha-tecnica" style="width: 100%;" onclick="alternarAba('ficha-tecnica')">📋 Ficha Técnica</button>
+                    <button class="tab-btn" id="btn-tab-cadastros" style="width: 100%;" onclick="alternarAba('cadastros')">📚 Cadastros</button>
+                    <button class="tab-btn" id="btn-tab-compras" style="width: 100%;" onclick="alternarAba('compras')">🛒 Compras</button>
+                    <button class="tab-btn" id="btn-tab-mov-estoque" style="width: 100%;" onclick="alternarAba('mov-estoque')">📦 Mov. Estoque</button>
+                    <button class="tab-btn" id="btn-tab-historico" style="width: 100%;" onclick="alternarAba('historico')">📜 Histórico de Pedidos</button>
+                    <button class="tab-btn" id="btn-tab-pix" style="width: 100%;" onclick="alternarAba('pix')">❖ Pagamento via PIX</button>
+                    <button class="tab-btn" id="btn-tab-financas" style="width: 100%;" onclick="alternarAba('financas')">📊 Finanças</button>
+                    <button class="tab-btn" id="btn-tab-auditoria" style="width: 100%;" onclick="alternarAba('auditoria')">🔎 Auditoria</button>
+                    <button class="tab-btn" id="btn-tab-config" style="width: 100%;" onclick="alternarAba('config')">⚙️ Configurações</button>
                 </nav>
             </div>
             <div>
-                <span class="status-badge" id="realtime-status">🔴 Conectando ao Banco...</span>
-                <button class="sound-btn" id="btn-som" onclick="ativarSom()">🔔 Ativar Alerta</button>
+                <span class="status-badge" id="realtime-status" style="width: 100%;">🔴 Conectando ao Banco...</span>
+                <button class="sound-btn" id="btn-som" style="width: 100%;" onclick="ativarSom()">🔔 Ativar Alerta</button>
             </div>
 
-            <button class="sound-btn" id="btn-logout" onclick="fazerLogout()" style="display: none; background: #dc3545;">🚪 Sair</button>
-
+            <button class="sound-btn" id="btn-logout" onclick="fazerLogout()" style="display: none; background: #dc3545;">🚪 Sair</button> 
         </header>
 
         <!-- ABA 1: Quadro Kanban de Pedidos -->
@@ -546,8 +546,8 @@
             </div>
 
             <!-- =========================================================
-     MODAL: EDITAR PRODUTO
-========================================================= -->
+                     MODAL: EDITAR PRODUTO
+            ========================================================= -->
             <div
                 id="modal-edicao-produto"
                 class="login-overlay"
@@ -1022,6 +1022,10 @@
                                         Estoque Mínimo
                                     </th>
 
+                                    <th style="text-align:right;">
+                                        Estoque Atual
+                                    </th>
+
                                     <th style="text-align:center;">
                                         Status
                                     </th>
@@ -1036,7 +1040,7 @@
 
                                 <tr>
                                     <td
-                                        colspan="7"
+                                        colspan="8"
                                         style="
                                         text-align:center;
                                         color:#aaa;
@@ -1051,8 +1055,8 @@
                 </div>
 
                 <!-- =========================================================
-     CONTEÚDO: CIDADES DE ENTREGA
-     ========================================================= -->
+                CONTEÚDO: CIDADES DE ENTREGA
+                ========================================================= -->
                 <div
                     id="cadastro-cidades"
                     style="display:none;"
@@ -1416,8 +1420,8 @@
                 </div>
 
                 <!-- =========================================================
-     CONTEÚDO: CLIENTES
-     ========================================================= -->
+               CONTEÚDO: CLIENTES
+               ========================================================= -->
                 <div
                     id="cadastro-clientes"
                     style="display:none;">
@@ -1846,8 +1850,8 @@
                 </div>
 
                 <!-- =========================================================
-     MODAL: NOVO FORNECEDOR
-     ========================================================= -->
+               MODAL: NOVO FORNECEDOR
+               ========================================================= -->
                 <div
                     id="modal-fornecedor"
                     class="login-overlay"
@@ -2907,11 +2911,8 @@
                         onclick="salvarFichaTecnicaUI()">
                         💾 Salvar Ficha
                     </button>
-
                 </div>
-
             </div>
-
         </main>
 
         <!-- ABA: COMPRAS -->
@@ -3685,6 +3686,116 @@
             </div>
         </main>
 
+        <!-- ABA: Auditoria do Sistema -->
+        <main class="audit-manager" id="aba-auditoria" style="display: none;">
+            <div class="manager-container">
+
+                <div class="audit-header">
+                    <div>
+                        <h2 style="margin:0; color:#fff;">🔎 Auditoria do Sistema</h2>
+                        <p style="margin:6px 0 0; color:#aaa;">
+                            Visão consolidada de vendas, caixa, estoque, financeiro e trilha de eventos.
+                        </p>
+                    </div>
+                    <span id="auditoria-status" class="audit-status">Pronto</span>
+                </div>
+
+                <!-- FILTROS -->
+                <div class="audit-filter-panel">
+                    <div class="audit-filter-field audit-filter-periodo">
+                        <label for="auditoria-periodo">📅 Período</label>
+                        <select id="auditoria-periodo" class="input-table" onchange="carregarAuditoria()" style="width: 100%;">
+                            <option value="hoje">Hoje</option>
+                            <option value="7dias">Últimos 7 dias</option>
+                            <option value="mes">Este mês</option>
+                            <option value="personalizado">Personalizado</option>
+                            <option value="todos">Todo o período</option>
+                        </select>
+                    </div>
+
+                    <div class="audit-filter-field audit-data-custom" id="auditoria-datas-wrap" style="display:none;">
+                        <label for="auditoria-data-inicio">De</label>
+                        <input type="date" id="auditoria-data-inicio" class="input-table" onchange="carregarAuditoria()" style="width: 100%;">
+                    </div>
+
+                    <div class="audit-filter-field audit-data-custom" id="auditoria-data-fim-wrap" style="display:none;">
+                        <label for="auditoria-data-fim">Até</label>
+                        <input type="date" id="auditoria-data-fim" class="input-table" onchange="carregarAuditoria()" style="width: 100%;">
+                    </div>
+
+                    <div class="audit-filter-field">
+                        <label for="auditoria-usuario">👤 Usuário</label>
+                        <select id="auditoria-usuario" class="input-table" onchange="carregarAuditoria()" style="width: 100%;">
+                            <option value="TODOS">Todos os usuários</option>
+                        </select>
+                    </div>
+
+                    <div class="audit-filter-field">
+                        <label for="auditoria-caixa">💵 Caixa</label>
+                        <select id="auditoria-caixa" class="input-table" onchange="carregarAuditoria()" style="width: 100%;">
+                            <option value="TODOS">Todos os caixas</option>
+                        </select>
+                    </div>
+
+                    <div class="audit-filter-field">
+                        <label for="auditoria-cliente">👥 Cliente</label>
+
+                        <select
+                            id="auditoria-cliente"
+                            class="input-table"
+                            onchange="carregarAuditoria()"
+                            style="width: 100%;"
+                            >
+                            <option value="TODOS">
+                                Todos os clientes
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="audit-filter-field">
+                        <label for="auditoria-tipo">📑 Relatório</label>
+                        <select id="auditoria-tipo" class="input-table" onchange="renderizarAuditoriaAtual()" style="width: 100%;">
+                            <option value="GERAL">Visão geral</option>
+                            <option value="VENDAS">Vendas</option>
+                            <option value="CAIXAS">Caixas</option>
+                            <option value="CANCELAMENTOS">Cancelamentos</option>
+                            <option value="ESTOQUE">Estoque</option>
+                            <option value="FINANCEIRO">Financeiro</option>
+                            <option value="CONTAS_RECEBER">Contas a Receber</option>
+                            <option value="EVENTOS">Eventos de auditoria</option>
+                        </select>
+                    </div>
+
+                    <div class="audit-filter-actions">
+                        <button class="audit-btn secondary" onclick="limparFiltrosAuditoria()">✖ Limpar</button>
+                        <button class="audit-btn primary" onclick="carregarAuditoria()">🔄 Atualizar</button>
+                    </div>
+                </div>
+
+                <!-- AÇÕES DE SAÍDA -->
+                <div class="audit-toolbar">
+                    <div>
+                        <strong style="color:#fff;">Saída do relatório</strong>
+                        <span style="color:#888; margin-left:8px;">O filtro atual será aplicado.</span>
+                    </div>
+                    <div class="audit-toolbar-actions">
+                        <button class="audit-btn" onclick="exportarAuditoriaPDF()">📄 Exportar PDF</button>
+                        <button class="audit-btn" onclick="exportarAuditoriaCSV()">📊 Exportar Excel/CSV</button>
+                        <button class="audit-btn" onclick="imprimirAuditoria()">🖨️ Imprimir</button>
+                    </div>
+                </div>
+
+                <!-- RESUMO -->
+                <div id="auditoria-resumo-grid" class="audit-summary-grid"></div>
+
+                <!-- CONTEÚDO -->
+                <div id="auditoria-conteudo" class="audit-content">
+                    <div class="audit-empty">Carregando auditoria...</div>
+                </div>
+
+            </div>
+        </main>
+
         <!-- ABA 4: Configurações do Sistema e Gestão -->
         <main class="config-manager" id="aba-config" style="display: none; padding: 20px;">
             <div style="max-width: 900px; margin: 0 auto;">
@@ -3843,7 +3954,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </main>
 
@@ -4029,144 +4139,317 @@
                     </div>
 
                     <div style="border-top: 1px solid #333; padding-top: 15px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: bold; margin-bottom: 15px;">
-                            <span>Total:</span>
-                            <span id="balcao-total-val" style="color: #2ed573;">R$ 0,00</span>
-                        </div>
 
-                        <!-- ============================================================
-                                         FORMA DE PAGAMENTO
-                             ============================================================ -->
-                        <div class="form-group" style="margin-bottom: 12px;">
-                            <label>Forma de Pagamento</label>
+                        <div style="border-top: 1px solid #333; padding-top: 15px;">
 
-                            <select
-                                id="balcao-pagamento"
-                                class="input-table"
-                                style="width: 100%; font-weight: bold;"
-                                onchange="alterarFormaPagamentoBalcaoUI(this.value)"
+                            <!-- TOTAIS DA VENDA -->
+                            <div style="
+                                 background:#2a2a35;
+                                 border:1px solid #3d3d4e;
+                                 border-radius:8px;
+                                 padding:12px;
+                                 margin-bottom:12px;
+                                 ">
+
+                                <!-- SUBTOTAL -->
+                                <div style="
+                                     display:flex;
+                                     justify-content:space-between;
+                                     align-items:center;
+                                     margin-bottom:8px;
+                                     ">
+                                    <span style="color:#aaa;">
+                                        Subtotal:
+                                    </span>
+
+                                    <strong id="balcao-subtotal-val">
+                                        R$ 0,00
+                                    </strong>
+                                </div>
+
+                                <!-- DESCONTO -->
+                                <div style="
+                                     display:flex;
+                                     justify-content:space-between;
+                                     align-items:center;
+                                     gap:10px;
+                                     margin-bottom:8px;
+                                     ">
+
+                                    <label
+                                        for="balcao-desconto"
+                                        style="color:#aaa;"
+                                        >
+                                        Desconto:
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        id="balcao-desconto"
+                                        class="input-table"
+                                        value="0.00"
+                                        min="0"
+                                        step="0.01"
+                                        inputmode="decimal"
+                                        placeholder="0,00"
+                                        style="
+                                        width:120px;
+                                        text-align:right;
+                                        "
+                                        oninput="recalcularTotaisBalcaoUI()"
+                                        >
+
+                                </div>
+
+                                <!-- TOTAL FINAL -->
+                                <div style="
+                                     display:flex;
+                                     justify-content:space-between;
+                                     align-items:center;
+                                     border-top:1px solid #3d3d4e;
+                                     padding-top:8px;
+                                     font-size:1.2rem;
+                                     font-weight:bold;
+                                     ">
+
+                                    <span>
+                                        Total:
+                                    </span>
+
+                                    <span
+                                        id="balcao-total-val"
+                                        style="color:#2ed573;"
+                                        >
+                                        R$ 0,00
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div
+                                id="box-dinheiro-balcao"
+                                style="
+                                display:none;
+                                background:#2a2a35;
+                                border:1px solid #3d3d4e;
+                                border-radius:8px;
+                                padding:12px;
+                                margin-bottom:12px;
+                                "
                                 >
-                                <option value="PIX">⚡ PIX</option>
-                                <option value="DINHEIRO">💵 Dinheiro</option>
 
-                                <!-- Cartões permanecem disponíveis para futura reativação -->
-                                <!--
-                                <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
-                                <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>
-                                -->
+                                <div style="
+                                     display:grid;
+                                     grid-template-columns:1fr 1fr;
+                                     gap:10px;
+                                     ">
 
-                                <option value="FIADO">📒 Fiado</option>
-                            </select>
-                        </div>
+                                    <div>
 
+                                        <label
+                                            for="balcao-valor-recebido"
+                                            style="
+                                            display:block;
+                                            color:#aaa;
+                                            font-size:.85rem;
+                                            margin-bottom:5px;
+                                            "
+                                            >
+                                            Valor recebido
+                                        </label>
 
-                        <!-- ============================================================
-                             CLIENTE
-                        ============================================================ -->
-                        <div class="form-group" id="box-cliente-balcao" style="margin-bottom: 12px;">
+                                        <input
+                                            type="number"
+                                            id="balcao-valor-recebido"
+                                            class="input-table"
+                                            min="0"
+                                            step="0.01"
+                                            inputmode="decimal"
+                                            placeholder="0,00"
+                                            style="
+                                            width:100%;
+                                            box-sizing:border-box;
+                                            font-size:1.05rem;
+                                            "
+                                            oninput="recalcularTotaisBalcaoUI()"
+                                            >
 
-                            <label id="label-cliente-balcao">
-                                Nome do Cliente (Opcional)
-                            </label>
+                                    </div>
 
-                            <!--
-                                Campo usado atualmente para vendas normais.
-                                Será mantido para não quebrar o fluxo existente.
-                            -->
-                            <input
-                                id="balcao-cliente"
-                                class="input-table"
-                                style="width: 100%;"
-                                onchange="selecionarClienteFiadoUI()"
-                                >
+                                    <div>
 
-                            <!--
-                                Cliente cadastrado usado pelo FIADO.
-                                Inicialmente oculto.
-                            -->
-                            <div id="box-cliente-fiado" style="display: none; margin-top: 10px;">
+                                        <label
+                                            for="balcao-troco"
+                                            style="
+                                            display:block;
+                                            color:#aaa;
+                                            font-size:.85rem;
+                                            margin-bottom:5px;
+                                            "
+                                            >
+                                            Troco
+                                        </label>
 
-                                <label style="display: block; margin-bottom: 5px;">
-                                    Cliente cadastrado
-                                </label>
+                                        <input
+                                            type="text"
+                                            id="balcao-troco"
+                                            class="input-table"
+                                            value="R$ 0,00"
+                                            readonly
+                                            style="
+                                            width:100%;
+                                            box-sizing:border-box;
+                                            font-weight:bold;
+                                            color:#2ed573;
+                                            "
+                                            >
+
+                                    </div>
+
+                                </div>
+
+                                <small style="
+                                       display:block;
+                                       color:#888;
+                                       margin-top:7px;
+                                       ">
+                                    Informe quanto o cliente entregou.
+                                    O troco é calculado automaticamente.
+                                </small>
+                            </div>
+
+                            <!-- ============================================================
+                                             FORMA DE PAGAMENTO
+                                 ============================================================ -->
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label>Forma de Pagamento</label>
 
                                 <select
-                                    id="balcao-cliente-id"
+                                    id="balcao-pagamento"
+                                    class="input-table"
+                                    style="width: 100%; font-weight: bold;"
+                                    onchange="alterarFormaPagamentoBalcaoUI(this.value)"
+                                    >
+                                    <option value="PIX">⚡ PIX</option>
+                                    <option value="DINHEIRO">💵 Dinheiro</option>
+
+                                    <!-- Cartões permanecem disponíveis para futura reativação -->
+                                    <!--
+                                    <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
+                                    <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>
+                                    -->
+
+                                    <option value="FIADO">📒 Fiado</option>
+                                </select>
+                            </div>
+
+
+                            <!-- ============================================================
+                                 CLIENTE
+                            ============================================================ -->
+                            <div class="form-group" id="box-cliente-balcao" style="margin-bottom: 12px;">
+
+                                <label id="label-cliente-balcao">
+                                    Nome do Cliente (Opcional)
+                                </label>
+
+                                <!--
+                                    Campo usado atualmente para vendas normais.
+                                    Será mantido para não quebrar o fluxo existente.
+                                -->
+                                <input
+                                    id="balcao-cliente"
+                                    class="input-table"
+                                    style="width: 100%;"
+                                    onchange="selecionarClienteFiadoUI()"
+                                    >
+
+                                <!--
+                                    Cliente cadastrado usado pelo FIADO.
+                                    Inicialmente oculto.
+                                -->
+                                <div id="box-cliente-fiado" style="display: none; margin-top: 10px;">
+
+                                    <label style="display: block; margin-bottom: 5px;">
+                                        Cliente cadastrado
+                                    </label>
+
+                                    <select
+                                        id="balcao-cliente-id"
+                                        class="input-table"
+                                        style="width: 100%;"
+                                        >
+                                        <option value="">
+                                            Selecione o cliente...
+                                        </option>
+                                    </select>
+
+                                </div>
+                            </div>
+
+
+                            <!-- ============================================================
+                                 VENCIMENTO DO FIADO
+                            ============================================================ -->
+                            <div
+                                class="form-group"
+                                id="box-vencimento-fiado"
+                                style="display: none; margin-bottom: 12px;"
+                                >
+
+                                <label>
+                                    Data de Vencimento
+                                </label>
+
+                                <input
+                                    type="date"
+                                    id="balcao-data-vencimento"
                                     class="input-table"
                                     style="width: 100%;"
                                     >
-                                    <option value="">
-                                        Selecione o cliente...
-                                    </option>
-                                </select>
+
+                                <small style="display: block; margin-top: 5px; color: #aaa;">
+                                    📒 O valor ficará registrado na Conta a Receber até o pagamento.
+                                </small>
 
                             </div>
-                        </div>
 
 
-                        <!-- ============================================================
-                             VENCIMENTO DO FIADO
-                        ============================================================ -->
-                        <div
-                            class="form-group"
-                            id="box-vencimento-fiado"
-                            style="display: none; margin-bottom: 12px;"
-                            >
-
-                            <label>
-                                Data de Vencimento
-                            </label>
-
-                            <input
-                                type="date"
-                                id="balcao-data-vencimento"
-                                class="input-table"
-                                style="width: 100%;"
+                            <!-- ============================================================
+                                 AUTORIZAÇÃO DO FIADO
+                            ============================================================ -->
+                            <div
+                                id="box-autorizacao-fiado"
+                                style="
+                                display: none;
+                                margin-bottom: 12px;
+                                padding: 12px;
+                                background: #2a2a35;
+                                border: 1px solid #4b4b5c;
+                                border-radius: 8px;
+                                "
                                 >
 
-                            <small style="display: block; margin-top: 5px; color: #aaa;">
-                                📒 O valor ficará registrado na Conta a Receber até o pagamento.
-                            </small>
+                                <div style="font-weight: bold; margin-bottom: 6px;">
+                                    🔐 Autorização do Gerente
+                                </div>
 
-                        </div>
+                                <small style="display: block; color: #aaa; margin-bottom: 10px;">
+                                    A venda FIADO precisa ser autorizada por um GERENTE ou ADMIN.
+                                </small>
 
+                                <div style="color: #ffa502; font-size: 0.9rem;">
+                                    🔒 O PIN será solicitado ao finalizar a venda.
+                                </div>
 
-                        <!-- ============================================================
-                             AUTORIZAÇÃO DO FIADO
-                        ============================================================ -->
-                        <div
-                            id="box-autorizacao-fiado"
-                            style="
-                            display: none;
-                            margin-bottom: 12px;
-                            padding: 12px;
-                            background: #2a2a35;
-                            border: 1px solid #4b4b5c;
-                            border-radius: 8px;
-                            "
-                            >
-
-                            <div style="font-weight: bold; margin-bottom: 6px;">
-                                🔐 Autorização do Gerente
                             </div>
 
-                            <small style="display: block; color: #aaa; margin-bottom: 10px;">
-                                A venda FIADO precisa ser autorizada por um GERENTE ou ADMIN.
-                            </small>
-
-                            <div style="color: #ffa502; font-size: 0.9rem;">
-                                🔒 O PIN será solicitado ao finalizar a venda.
-                            </div>
-
+                            <button class="btn-save-prod" id="btn-finalizar-balcao" onclick="finalizarVendaBalcao()" style="width: 100%; padding: 14px; font-size: 1.1rem; background: #2ed573; color: #000; margin-top: 10px;">
+                                ✅ Finalizar e Imprimir
+                            </button>
                         </div>
-
-                        <button class="btn-save-prod" id="btn-finalizar-balcao" onclick="finalizarVendaBalcao()" style="width: 100%; padding: 14px; font-size: 1.1rem; background: #2ed573; color: #000; margin-top: 10px;">
-                            ✅ Finalizar e Imprimir
-                        </button>
                     </div>
-                </div>
 
-            </div>
+                </div>
         </main>
 
         <!-- ABA: Finanças e Lucro -->
@@ -4868,5 +5151,6 @@
         </div>
 
         <script src="js/pdv.js"></script>
+
     </body>
 </html>
