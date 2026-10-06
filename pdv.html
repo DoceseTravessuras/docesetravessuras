@@ -7,19 +7,15 @@
         <link rel="stylesheet" href="css/pdv.css">
 
         <style>
-            /*
-             * Enquanto a sessão e as permissões estão sendo verificadas,
-             * o sistema fica invisível e sem interação.
-             */
+            /* Enquanto a sessão e as permissões estão sendo verificadas,
+             * o sistema fica invisível e sem interação.*/
             body.pdv-carregando > header,
             body.pdv-carregando > main {
                 visibility: hidden;
                 pointer-events: none;
             }
 
-            /*
-             * O login continua disponível durante a inicialização.
-             */
+            /* O login continua disponível durante a inicialização. */
             body.pdv-carregando #login-overlay {
                 visibility: visible;
                 pointer-events: auto;
@@ -43,37 +39,165 @@
     </head>
 
     <body class="pdv-carregando">
-
         <header class="pdv-header">
-            <div class="header-left">
-                <h3>🖥️ Gestor PDV</h3>
-                <!-- Botões das Abas -->
+            <div class="pdv-header-top">
+
+                <div class="pdv-brand">
+                    <h3>🖥️ Gestor PDV</h3>
+                </div>
+
+                <div class="pdv-header-actions">
+
+                    <span
+                        class="status-badge"
+                        id="realtime-status"
+                        >
+                        🔴 Conectando ao Banco...
+                    </span>
+
+                    <button
+                        class="sound-btn"
+                        id="btn-som"
+                        onclick="ativarSom()"
+                        title="Ativar alerta sonoro"
+                        >
+                        🔔 Alerta
+                    </button>
+
+                    <button
+                        class="sound-btn"
+                        id="btn-ajuda-pdv"
+                        onclick="abrirCentralAjuda('completo')"
+                        title="Abrir ajuda do sistema"
+                        style="background:#1565c0;"
+                        >
+                        ❓ Ajuda
+                    </button>
+
+                    <button
+                        class="sound-btn"
+                        id="btn-logout"
+                        onclick="fazerLogout()"
+                        style="
+                        display:none;
+                        background:#dc3545;
+                        "
+                        title="Sair do sistema"
+                        >
+                        🚪 Sair
+                    </button>
+                </div>
+            </div>
+
+            <!-- =========================================================
+                 SEGUNDA LINHA — MENU PRINCIPAL
+                 ========================================================= -->
+            <div class="pdv-menu-row">
+
                 <nav class="nav-tabs">
-                    <button class="tab-btn active" id="btn-tab-pedidos" style="width: 100%;" onclick="alternarAba('pedidos')">📋 Pedidos</button>
-                    <button class="tab-btn" id="btn-tab-balcao" style="width: 100%;" onclick="alternarAba('balcao')">🛒 Venda de Balcão</button>
-                    <button class="tab-btn" id="btn-tab-produtos" style="width: 100%;" onclick="alternarAba('produtos')">📦 Produtos & Estoque</button>
-                    <button class="tab-btn" id="btn-tab-ficha-tecnica" style="width: 100%;" onclick="alternarAba('ficha-tecnica')">📋 Ficha Técnica</button>
-                    <button class="tab-btn" id="btn-tab-cadastros" style="width: 100%;" onclick="alternarAba('cadastros')">📚 Cadastros</button>
-                    <button class="tab-btn" id="btn-tab-compras" style="width: 100%;" onclick="alternarAba('compras')">🛒 Compras</button>
-                    <button class="tab-btn" id="btn-tab-mov-estoque" style="width: 100%;" onclick="alternarAba('mov-estoque')">📦 Mov. Estoque</button>
-                    <button class="tab-btn" id="btn-tab-historico" style="width: 100%;" onclick="alternarAba('historico')">📜 Histórico de Pedidos</button>
-                    <button class="tab-btn" id="btn-tab-pix" style="width: 100%;" onclick="alternarAba('pix')">❖ Pagamento via PIX</button>
-                    <button class="tab-btn" id="btn-tab-financas" style="width: 100%;" onclick="alternarAba('financas')">📊 Finanças</button>
-                    <button class="tab-btn" id="btn-tab-auditoria" style="width: 100%;" onclick="alternarAba('auditoria')">🔎 Auditoria</button>
-                    <button class="tab-btn" id="btn-tab-config" style="width: 100%;" onclick="alternarAba('config')">⚙️ Configurações</button>
+
+                    <button
+                        class="tab-btn active"
+                        id="btn-tab-pedidos"
+                        onclick="alternarAba('pedidos')"
+                        >
+                        📋 Pedidos
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-balcao"
+                        onclick="alternarAba('balcao')"
+                        >
+                        🛒 Venda de Balcão
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-produtos"
+                        onclick="alternarAba('produtos')"
+                        >
+                        📦 Produtos & Estoque
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-ficha-tecnica"
+                        onclick="alternarAba('ficha-tecnica')"
+                        >
+                        📋 Ficha Técnica
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-cadastros"
+                        onclick="alternarAba('cadastros')"
+                        >
+                        📚 Cadastros
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-compras"
+                        onclick="alternarAba('compras')"
+                        >
+                        🛒 Compras
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-mov-estoque"
+                        onclick="alternarAba('mov-estoque')"
+                        >
+                        📦 Mov. Estoque
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-historico"
+                        onclick="alternarAba('historico')"
+                        >
+                        📜 Histórico
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-pix"
+                        onclick="alternarAba('pix')"
+                        >
+                        ❖ PIX
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-financas"
+                        onclick="alternarAba('financas')"
+                        >
+                        📊 Finanças
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-auditoria"
+                        onclick="alternarAba('auditoria')"
+                        >
+                        🔎 Auditoria
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-config"
+                        onclick="alternarAba('config')"
+                        >
+                        ⚙️ Configurações
+                    </button>
                 </nav>
             </div>
-            <div>
-                <span class="status-badge" id="realtime-status" style="width: 100%;">🔴 Conectando ao Banco...</span>
-                <button class="sound-btn" id="btn-som" style="width: 100%;" onclick="ativarSom()">🔔 Ativar Alerta</button>
-            </div>
-
-            <button class="sound-btn" id="btn-logout" onclick="fazerLogout()" style="display: none; background: #dc3545;">🚪 Sair</button> 
         </header>
 
+        <!---------------------------------------------------------------------------------------------------------------- -->
         <!-- ABA 1: Quadro Kanban de Pedidos -->
         <main class="kanban-board" id="aba-pedidos">
-
             <!-- Coluna 1: Novos Pedidos -->
             <div class="kanban-column column-pendente">
                 <div class="column-header">
@@ -122,6 +246,7 @@
             </div>
         </main>
 
+        <!------------------------------------------------------------------------------------------------------------>
         <!-- ABA 2: Gerenciador de Produtos & Estoque (Inicia oculta) -->
         <main class="products-manager" id="aba-produtos" style="display: none;">
             <div class="manager-container">
@@ -837,6 +962,7 @@
             </div>
         </main>
 
+        <!----------------------------------------------------------------------------------------------->
         <!-- =========================================================
                       ABA: CADASTROS
          ========================================================= -->
@@ -2210,10 +2336,10 @@
             </div>
         </main>
 
+        <!-------------------------------------------------------------------------------------------------------->
         <!-- =========================================================
                         MODAL: NOVO INSUMO
         ========================================================= -->
-
         <div
             id="modal-insumo"
             class="login-overlay"
@@ -2560,16 +2686,15 @@
             </div>
         </div>
 
+        <!------------------------------------------------------------------------------------------------>
         <!-- =========================================================
                      ABA: FICHA TÉCNICA
            ========================================================= -->
-
         <main class="products-manager"
               id="aba-ficha-tecnica"
               style="display: none;">
 
             <div class="manager-container">
-
                 <div style="
                      display: flex;
                      justify-content: space-between;
@@ -2591,14 +2716,11 @@
                             rendimento e custo técnico.
                         </p>
                     </div>
-
                 </div>
-
 
                 <!-- ================================================
                      SELEÇÃO DO PRODUTO
                      ================================================ -->
-
                 <div style="
                      background: #2a2a35;
                      border: 1px solid #3d3d4e;
@@ -2625,18 +2747,13 @@
                             <option value="">
                                 Selecione o produto
                             </option>
-
                         </select>
-
                     </div>
-
                 </div>
-
 
                 <!-- ================================================
                      DADOS DA FICHA
                      ================================================ -->
-
                 <div style="
                      background: #2a2a35;
                      border: 1px solid #3d3d4e;
@@ -2672,9 +2789,7 @@
 
                         </div>
 
-
                         <div class="form-group">
-
                             <label>
                                 Unidade *
                             </label>
@@ -2687,14 +2802,10 @@
                                 <option value="">
                                     Selecione
                                 </option>
-
                             </select>
-
                         </div>
 
-
                         <div class="form-group">
-
                             <label>
                                 Observação
                             </label>
@@ -2707,16 +2818,12 @@
                                 style="width: 100%;">
 
                         </div>
-
                     </div>
-
                 </div>
-
 
                 <!-- ================================================
                      INGREDIENTES
                      ================================================ -->
-
                 <div style="
                      background: #2a2a35;
                      border: 1px solid #3d3d4e;
@@ -2742,16 +2849,11 @@
                             onclick="adicionarLinhaIngredienteFicha()">
                             ➕ Adicionar ingrediente
                         </button>
-
                     </div>
 
-
                     <div class="table-responsive">
-
                         <table class="products-table">
-
                             <thead>
-
                                 <tr>
                                     <th>Insumo</th>
                                     <th>Unidade</th>
@@ -2764,7 +2866,6 @@
                             </thead>
 
                             <tbody id="ficha-itens-body">
-
                                 <tr>
                                     <td
                                         colspan="7"
@@ -2775,23 +2876,16 @@
                                         ">
 
                                         Nenhum ingrediente adicionado.
-
                                     </td>
                                 </tr>
-
                             </tbody>
-
                         </table>
-
                     </div>
-
                 </div>
-
 
                 <!-- ================================================
                      RESUMO DO CUSTO
                      ================================================ -->
-
                 <div style="
                      display: grid;
                      grid-template-columns: repeat(3, 1fr);
@@ -2823,9 +2917,7 @@
                             ">
                             R$ 0,00
                         </strong>
-
                     </div>
-
 
                     <div style="
                          background: #2a2a35;
@@ -2851,9 +2943,7 @@
                             ">
                             R$ 0,00
                         </strong>
-
                     </div>
-
 
                     <div style="
                          background: #2a2a35;
@@ -2880,16 +2970,12 @@
                             ">
                             Nenhuma ficha selecionada
                         </strong>
-
                     </div>
-
                 </div>
-
 
                 <!-- ================================================
                      BOTÕES
                      ================================================ -->
-
                 <div style="
                      display: flex;
                      gap: 10px;
@@ -2915,6 +3001,7 @@
             </div>
         </main>
 
+        <!---------------------------------------------------------------------------------------------->
         <!-- ABA: COMPRAS -->
         <main class="products-manager" id="aba-compras" style="display: none;">
             <div class="manager-container">
@@ -2980,7 +3067,6 @@
                                 class="input-table"
                                 style="width: 100%;">
                         </div>
-
                     </div>
 
                     <div class="form-group" style="margin-top: 15px;">
@@ -2993,7 +3079,6 @@
                             style="width: 100%; resize: vertical;"></textarea>
                     </div>
                 </div>
-
 
                 <!-- ADIÇÃO DE ITENS DA COMPRA -->
                 <div style="
@@ -3042,7 +3127,6 @@
                                 <option value="">
                                     Selecione o produto
                                 </option>
-
                             </select>
                         </div>
 
@@ -3062,14 +3146,12 @@
                                 <option value="">
                                     Selecione o insumo
                                 </option>
-
                             </select>
                         </div>
 
                         <!-- QUANTIDADE -->
                         <div class="form-group">
                             <label>Qtd.</label>
-
                             <input
                                 type="number"
                                 id="compra-quantidade"
@@ -3083,7 +3165,6 @@
                         <!-- CUSTO -->
                         <div class="form-group">
                             <label>Custo Unit. (R$)</label>
-
                             <input
                                 type="number"
                                 id="compra-custo"
@@ -3322,7 +3403,6 @@
             <!-- ============================================================
      HISTÓRICO DE COMPRAS
      ============================================================ -->
-
             <div style="
                  margin-top: 30px;
                  background: #2a2a35;
@@ -3355,11 +3435,9 @@
                         onclick="carregarHistoricoComprasUI()">
                         🔄 Atualizar
                     </button>
-
                 </div>
 
                 <!-- FILTROS -->
-
                 <div style="
                      display: grid;
                      grid-template-columns: 180px 180px 1fr;
@@ -3414,7 +3492,6 @@
                         <option value="MES">
                             Este mês
                         </option>
-
                     </select>
 
                     <input
@@ -3428,11 +3505,9 @@
                 </div>
 
                 <!-- TABELA -->
-
                 <div class="table-responsive">
 
                     <table class="products-table">
-
                         <thead>
                             <tr>
                                 <th>Compra</th>
@@ -3465,7 +3540,6 @@
             <!-- ============================================================
                  MODAL DETALHES DA COMPRA
                  ============================================================ -->
-
             <div
                 id="modal-detalhes-compra"
                 class="login-overlay"
@@ -3517,10 +3591,10 @@
             </div>
         </main>
 
+        <!----------------------------------------------------------------------------------------------------------->
         <!-- ABA 3: Histórico de Vendas e Relatórios -->
         <main class="history-manager" id="aba-historico" style="display: none;">
             <div class="manager-container">
-
                 <!-- Cartões de Métricas / Faturamento -->
                 <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px;">
                     <div class="metric-card">
@@ -3595,6 +3669,7 @@
             </div>
         </main>
 
+        <!-------------------------------------------------------------------------------------------------------->
         <!-- ABA: Histórico de Movimentações de Estoque -->
         <main class="history-manager" id="aba-mov-estoque" style="display: none;">
             <div class="manager-container">
@@ -3686,6 +3761,7 @@
             </div>
         </main>
 
+        <!----------------------------------------------------------------------------------------------------------->
         <!-- ABA: Auditoria do Sistema -->
         <main class="audit-manager" id="aba-auditoria" style="display: none;">
             <div class="manager-container">
@@ -3792,10 +3868,10 @@
                 <div id="auditoria-conteudo" class="audit-content">
                     <div class="audit-empty">Carregando auditoria...</div>
                 </div>
-
             </div>
         </main>
 
+        <!------------------------------------------------------------------------------------------------------>
         <!-- ABA 4: Configurações do Sistema e Gestão -->
         <main class="config-manager" id="aba-config" style="display: none; padding: 20px;">
             <div style="max-width: 900px; margin: 0 auto;">
@@ -3957,6 +4033,7 @@
             </div>
         </main>
 
+        <!-------------------------------------------------------------------------------------------------->
         <!-- Área oculta reservada para geração do Cupom Térmico de Impressão -->
         <div id="print-area"></div>
 
@@ -4097,7 +4174,6 @@
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 380px; gap: 20px; max-width: 1200px; margin: 0 auto;">
-
                 <!-- LADO ESQUERDO: Busca + Grade de Produtos Unificada -->
                 <div>
                     <!-- Área de Busca / Leitor de Código -->
@@ -4304,7 +4380,6 @@
                                             >
 
                                     </div>
-
                                 </div>
 
                                 <small style="
@@ -4341,7 +4416,6 @@
                                     <option value="FIADO">📒 Fiado</option>
                                 </select>
                             </div>
-
 
                             <!-- ============================================================
                                  CLIENTE
@@ -4382,10 +4456,8 @@
                                             Selecione o cliente...
                                         </option>
                                     </select>
-
                                 </div>
                             </div>
-
 
                             <!-- ============================================================
                                  VENCIMENTO DO FIADO
@@ -4410,9 +4482,7 @@
                                 <small style="display: block; margin-top: 5px; color: #aaa;">
                                     📒 O valor ficará registrado na Conta a Receber até o pagamento.
                                 </small>
-
                             </div>
-
 
                             <!-- ============================================================
                                  AUTORIZAÇÃO DO FIADO
@@ -4440,7 +4510,6 @@
                                 <div style="color: #ffa502; font-size: 0.9rem;">
                                     🔒 O PIN será solicitado ao finalizar a venda.
                                 </div>
-
                             </div>
 
                             <button class="btn-save-prod" id="btn-finalizar-balcao" onclick="finalizarVendaBalcao()" style="width: 100%; padding: 14px; font-size: 1.1rem; background: #2ed573; color: #000; margin-top: 10px;">
@@ -4448,10 +4517,10 @@
                             </button>
                         </div>
                     </div>
-
                 </div>
         </main>
 
+        <!------------------------------------------------------------------------------------------------>
         <!-- ABA: Finanças e Lucro -->
         <main class="config-manager" id="aba-financas" style="display: none;">
 
@@ -4473,7 +4542,6 @@
                     <option value="7dias">Últimos 7 dias</option>
                     <option value="mes">Este mês</option>
                 </select>
-
             </div>
 
             <div style="max-width: 1200px; margin: 0 auto;">
@@ -4566,7 +4634,6 @@
                             </strong>
                         </div>
                     </div>
-
                 </div>
 
                 <!-- CONTAS A RECEBER -->
@@ -4607,7 +4674,6 @@
                             ">
                             🔄 Atualizar
                         </button>
-
                     </div>
 
                     <!-- FILTROS -->
@@ -4725,12 +4791,10 @@
                                 R$ 0,00
                             </strong>
                         </div>
-
                     </div>
 
                     <!-- TABELA -->
                     <div style="overflow-x:auto;">
-
                         <table
                             class="products-table"
                             style="width:100%;font-size:0.88rem;"
@@ -4765,7 +4829,6 @@
 
                 <!-- FORMULÁRIO DE NOVA DESPESA + TABELA -->
                 <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px;">
-
                     <!-- FORMULÁRIO -->
                     <div style="background: #2a2a35; padding: 20px; border-radius: 8px; border: 1px solid #3d3d4e; height: fit-content;">
                         <h3 style="margin-top: 0; color: #fff; border-bottom: 1px solid #3d3d4e; padding-bottom: 10px;">💸 Lançar Despesa</h3>
@@ -4974,6 +5037,7 @@
             </div>
         </main>
 
+        <!------------------------------------------------------------------------------------------------------->
         <!-- Tela de Login Sobreposta -->
         <div id="login-overlay" class="login-overlay">
             <div class="login-card">
@@ -4997,6 +5061,7 @@
             </div>
         </div>
 
+        <!----------------------------------------------------------------------------------------------------------->
         <!-- Aba / Modal de Pagamento com PIX -->
         <main class="config-manager" id="aba-pix" style="display: none;">
             <div id="modal-pix-impressao" class="login-overlay" style="display: flex;">
@@ -5093,8 +5158,12 @@
             </div>
         </main>
 
+        <!-------------------------------------------------------------------------------------------------------------->
         <!-- Modal de Cadastro de Colaborador -->
-        <div id="modal-usuario" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;">
+        <div id="modal-usuario"
+             style="
+             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;
+             ">
             <div style="background: #2a2a35; padding: 25px; border-radius: 8px; width: 100%; max-width: 420px; border: 1px solid #3d3d4e;">
                 <h3 style="margin-bottom: 15px; color: #fff;">👤 Cadastrar Colaborador</h3>
 
@@ -5145,6 +5214,259 @@
                     <div style="display: flex; gap: 10px; margin-top: 15px;">
                         <button onclick="fecharModalNovoUsuario()" style="flex: 1; padding: 10px; background: #3d3d4e; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
                         <button onclick="salvarNovoUsuario()" style="flex: 1; padding: 10px; background: #2ed573; color: #000; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;">Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     CENTRAL DE AJUDA DO PDV
+     ============================================================ -->
+        <div
+            id="modal-central-ajuda"
+            class="login-overlay no-print"
+            style="display:none; z-index:10050;"
+            >
+            <div
+                class="login-card"
+                style="
+                width:calc(100% - 30px);
+                max-width:820px;
+                max-height:90vh;
+                overflow:hidden;
+                padding:0;
+                background:#1e1e24;
+                border:1px solid #3d3d4e;
+                box-shadow:0 20px 60px rgba(0,0,0,.45);
+                "
+                >
+
+                <div style="
+                     display:flex;
+                     justify-content:space-between;
+                     align-items:center;
+                     gap:15px;
+                     padding:18px 20px;
+                     border-bottom:1px solid #3d3d4e;
+                     background:#252536;
+                     ">
+
+                    <div>
+
+                        <div style="
+                             font-size:1.25rem;
+                             font-weight:bold;
+                             color:#fff;
+                             ">
+                            ❓ Central de Ajuda do PDV
+                        </div>
+
+                        <div
+                            id="ajuda-subtitulo"
+                            style="
+                            color:#aaa;
+                            font-size:.85rem;
+                            margin-top:4px;
+                            "
+                            >
+                            Aprenda a usar o sistema passo a passo.
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        onclick="fecharCentralAjuda()"
+                        style="
+                        width:40px;
+                        min-width:40px;
+                        height:40px;
+                        border:none;
+                        border-radius:8px;
+                        background:#3d3d4e;
+                        color:#fff;
+                        font-size:1.1rem;
+                        cursor:pointer;
+                        "
+                        title="Fechar ajuda"
+                        >
+                        ✕
+                    </button>
+
+                </div>
+
+                <div style="
+                     padding:20px;
+                     overflow-y:auto;
+                     max-height:calc(90vh - 76px);
+                     ">
+
+                    <div style="
+                         display:flex;
+                         gap:8px;
+                         flex-wrap:wrap;
+                         margin-bottom:18px;
+                         ">
+
+                        <button
+                            type="button"
+                            id="btn-ajuda-modo-completo"
+                            onclick="abrirCentralAjuda('completo')"
+                            style="
+                            padding:9px 14px;
+                            border-radius:7px;
+                            border:1px solid #3d3d4e;
+                            background:#2a2a35;
+                            color:#fff;
+                            cursor:pointer;
+                            font-weight:bold;
+                            "
+                            >
+                            🧭 Aprender o sistema
+                        </button>
+
+                        <button
+                            type="button"
+                            id="btn-ajuda-modo-tela"
+                            onclick="abrirCentralAjuda('tela')"
+                            style="
+                            padding:9px 14px;
+                            border-radius:7px;
+                            border:1px solid #3d3d4e;
+                            background:#1e1e24;
+                            color:#aaa;
+                            cursor:pointer;
+                            font-weight:bold;
+                            "
+                            >
+                            💡 Ajuda desta tela
+                        </button>
+
+                    </div>
+
+                    <div
+                        id="ajuda-progresso"
+                        style="margin-bottom:15px;"
+                        >
+
+                        <div style="
+                             display:flex;
+                             justify-content:space-between;
+                             gap:10px;
+                             color:#aaa;
+                             font-size:.82rem;
+                             margin-bottom:6px;
+                             ">
+
+                            <span id="ajuda-progresso-texto">
+                                1 de 18
+                            </span>
+
+                            <span id="ajuda-categoria">
+                                Primeiros passos
+                            </span>
+
+                        </div>
+
+                        <div style="
+                             height:8px;
+                             background:#2a2a35;
+                             border-radius:999px;
+                             overflow:hidden;
+                             ">
+
+                            <div
+                                id="ajuda-progresso-barra"
+                                style="
+                                height:100%;
+                                width:5.5%;
+                                background:#1565c0;
+                                transition:width .2s ease;
+                                "
+                                ></div>
+
+                        </div>
+
+                    </div>
+
+                    <div
+                        id="ajuda-conteudo"
+                        style="
+                        background:#252536;
+                        border:1px solid #3d3d4e;
+                        border-radius:10px;
+                        padding:22px;
+                        min-height:250px;
+                        "
+                        ></div>
+
+                    <div style="
+                         display:flex;
+                         justify-content:space-between;
+                         align-items:center;
+                         gap:10px;
+                         flex-wrap:wrap;
+                         margin-top:18px;
+                         ">
+
+                        <button
+                            type="button"
+                            id="btn-ajuda-anterior"
+                            onclick="navegarAjuda(-1)"
+                            style="
+                            padding:10px 16px;
+                            border-radius:7px;
+                            border:1px solid #3d3d4e;
+                            background:#2a2a35;
+                            color:#fff;
+                            cursor:pointer;
+                            font-weight:bold;
+                            "
+                            >
+                            ← Anterior
+                        </button>
+
+                        <div style="
+                             display:flex;
+                             gap:8px;
+                             flex-wrap:wrap;
+                             justify-content:center;
+                             ">
+
+                            <button
+                                type="button"
+                                id="btn-ajuda-ir-tela"
+                                onclick="irParaTelaDaAjuda()"
+                                style="
+                                padding:10px 16px;
+                                border-radius:7px;
+                                border:1px solid #1565c0;
+                                background:#1565c0;
+                                color:#fff;
+                                cursor:pointer;
+                                font-weight:bold;
+                                "
+                                >
+                                👉 Abrir esta tela
+                            </button>
+
+                            <button
+                                type="button"
+                                id="btn-ajuda-proxima"
+                                onclick="navegarAjuda(1)"
+                                style="
+                                padding:10px 18px;
+                                border:none;
+                                border-radius:7px;
+                                background:#2ed573;
+                                color:#111;
+                                cursor:pointer;
+                                font-weight:bold;
+                                "
+                                >
+                                Próximo →
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

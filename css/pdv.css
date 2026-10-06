@@ -1032,3 +1032,88 @@ body {
         border-color: #bbb !important;
     }
 }
+
+.pdv-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 10px 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pdv-brand {
+    display: flex;
+    align-items: center;
+    min-width: fit-content;
+}
+
+.pdv-brand h3 {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.pdv-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pdv-menu-row {
+    width: 100%;
+    padding: 0 12px 10px;
+    box-sizing: border-box;
+}
+
+.pdv-menu-row .nav-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+    padding: 5px;
+    box-sizing: border-box;
+    justify-content: flex-start;
+}
+
+.pdv-menu-row .tab-btn {
+    width: auto !important;
+    min-width: auto;
+    white-space: nowrap;
+    padding: 8px 12px;
+    flex: 0 0 auto;
+}
+
+/* ============================================================
+   TELAS MENORES
+   ============================================================ */
+
+@media (max-width: 1100px) {
+
+    .pdv-header-top {
+        flex-wrap: wrap;
+    }
+
+    .pdv-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 700px) {
+
+    .pdv-brand {
+        width: 100%;
+    }
+
+    .pdv-header-actions {
+        justify-content: flex-start;
+    }
+
+    .pdv-menu-row .tab-btn {
+        flex: 1 1 auto;
+        text-align: center;
+    }
+}

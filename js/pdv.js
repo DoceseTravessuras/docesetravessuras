@@ -22,7 +22,6 @@ const audioAlerta = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/
 // ============================================================
 // OBTÉM O USUÁRIO AUTENTICADO ATUAL
 // ============================================================
-
 async function obterUsuarioAtual() {
     try {
         // 1. Obtém a identidade real do Supabase Auth
@@ -193,7 +192,6 @@ async function carregarContasReceberUI() {
 // ATUALIZA INDICADORES
 // O RPC retorna uma lista com uma única linha.
 // ----------------------------------------------------
-
         const resumoLinha =
                 Array.isArray(resumo)
                 ? (resumo[0] || {})
@@ -218,7 +216,6 @@ async function carregarContasReceberUI() {
 // TOTAL RECEBIDO
 // Considera também contas parcialmente pagas.
 // ----------------------------------------------------
-
         let valorRecebido = 0;
 
         try {
@@ -515,7 +512,6 @@ async function carregarContasReceberUI() {
                     <td>
                         ${acao}
                     </td>
-
                 </tr>
             `;
 
@@ -926,15 +922,11 @@ async function abrirDetalhesPedidoContaUI(pedidoId) {
                 }
 
                             </tbody>
-
                         </table>
-
                     </div>
-
                 </div>
 
                 <!-- TOTAL -->
-
                 <div
                     style="
                         display:flex;
@@ -961,7 +953,6 @@ async function abrirDetalhesPedidoContaUI(pedidoId) {
                     ">
                         ${dinheiro(pedido.valor_total)}
                     </strong>
-
                 </div>
 
                 <div
@@ -981,13 +972,10 @@ async function abrirDetalhesPedidoContaUI(pedidoId) {
                             border:none;
                             border-radius:6px;
                             cursor:pointer;
-                        "
-                    >
+                        ">
                         Fechar
                     </button>
-
                 </div>
-
             </div>
 
         `;
@@ -1815,6 +1803,807 @@ async function confirmarRecebimentoContaUI(contaId) {
     }
 }
 
+// ============================================================
+// CENTRAL DE AJUDA DO PDV
+// ============================================================
+
+const AJUDA_PDV_ETAPAS = [
+    {
+        categoria: 'Primeiros passos',
+        titulo: 'Faça o login',
+        icone: '🔐',
+        texto: `Informe seu e-mail e sua senha para entrar no PDV.<br><br>
+                Depois do login, o sistema identifica seu usuário, cargo e permissões.<br><br>
+                <strong>Importante:</strong> não compartilhe sua senha ou seu acesso com outra pessoa.`,
+        aba: null
+    },
+    {
+        categoria: 'Primeiros passos',
+        titulo: 'Entenda seu acesso',
+        icone: '👤',
+        texto: `O PDV possui diferentes níveis de acesso.<br><br>
+                <strong>Gerente/Admin:</strong> possui acesso administrativo às áreas protegidas.<br>
+                <strong>Operador/Atendente:</strong> trabalha nas funções liberadas para sua função.<br><br>
+                Algumas operações podem exigir autorização de gerente.`,
+        aba: 'config',
+        subaba: 'sub-permissoes'
+    },
+    {
+        categoria: 'Preparação inicial',
+        titulo: 'Configure o caixa',
+        icone: '💵',
+        texto: `Antes de vender, confira o caixa do dia.<br><br>
+                Em <strong>Configurações → Operação de Caixa</strong>, você encontra o status do caixa, saldo inicial e movimentações.<br><br>
+                No uso diário, a operação começa com a <strong>abertura do caixa</strong>.`,
+        aba: 'config',
+        subaba: 'sub-caixa'
+    },
+    {
+        categoria: 'Preparação inicial',
+        titulo: 'Configure a loja virtual',
+        icone: '🌐',
+        texto: `Em <strong>Configurações → Loja Virtual & Delivery</strong>, o gerente pode ajustar o funcionamento da loja online.<br><br>
+                Confira nome da loja, status aberta/fechada, valor mínimo do pedido e notificações.`,
+        aba: 'config',
+        subaba: 'sub-loja'
+    },
+    {
+        categoria: 'Cadastros',
+        titulo: 'Cadastre os insumos',
+        icone: '🧪',
+        texto: `Insumos são matérias-primas usadas nas fichas técnicas e produções.<br><br>
+                Cadastre os itens com suas unidades e informações de controle antes de montar fichas técnicas.`,
+        aba: 'cadastros',
+        subaba: 'insumos'
+    },
+    {
+        categoria: 'Cadastros',
+        titulo: 'Cadastre os fornecedores',
+        icone: '🏭',
+        texto: `Cadastre os fornecedores que entregam mercadorias e matérias-primas.<br><br>
+                Essas informações facilitam o registro de compras e a organização administrativa.`,
+        aba: 'cadastros',
+        subaba: 'fornecedores'
+    },
+    {
+        categoria: 'Cadastros',
+        titulo: 'Cadastre os clientes',
+        icone: '👤',
+        texto: `Cadastre os clientes para usar identificação nas vendas e, quando necessário, no FIADO e no financeiro.<br><br>
+                Mantenha telefone e dados de contato atualizados.`,
+        aba: 'cadastros',
+        subaba: 'clientes'
+    },
+    {
+        categoria: 'Cadastros',
+        titulo: 'Cadastre as cidades',
+        icone: '🏙️',
+        texto: `As cidades organizam as áreas de entrega e suas taxas.<br><br>
+                Confira o nome, UF, taxa de entrega e se a cidade está ativa.`,
+        aba: 'cadastros',
+        subaba: 'cidades'
+    },
+    {
+        categoria: 'Produtos',
+        titulo: 'Cadastre os produtos',
+        icone: '📦',
+        texto: `Em <strong>Produtos & Estoque → Novo Produto</strong>, cadastre nome, código de barras, descrição, categoria, estoque, custo, margem, preço de venda e imagem.<br><br>
+                <strong>Dica:</strong> o código de barras deve conter somente números e ter no máximo 14 dígitos.`,
+        aba: 'produtos'
+    },
+    {
+        categoria: 'Produtos',
+        titulo: 'Mantenha estoque e preços',
+        icone: '📊',
+        texto: `Na tabela de produtos você pode acompanhar estoque, custo, margem, preço e status.<br><br>
+                Gerente/Admin também pode editar rapidamente os dados do produto e trocar a imagem.`,
+        aba: 'produtos'
+    },
+    {
+        categoria: 'Produção',
+        titulo: 'Monte a Ficha Técnica',
+        icone: '📋',
+        texto: `A Ficha Técnica define quais insumos entram na fabricação de cada produto e em quais quantidades.<br><br>
+                Ela é a base para calcular custos e permitir o consumo automático dos insumos na produção.`,
+        aba: 'ficha-tecnica'
+    },
+    {
+        categoria: 'Compras',
+        titulo: 'Registre as compras',
+        icone: '🛒',
+        texto: `Em <strong>Compras</strong>, registre fornecedor, itens, quantidades e custos.<br><br>
+                Depois, confira os detalhes da compra e registre a <strong>entrada</strong> quando a mercadoria for recebida.`,
+        aba: 'compras'
+    },
+    {
+        categoria: 'Produção',
+        titulo: 'Registre a produção',
+        icone: '🏭',
+        texto: `Em <strong>Produtos & Estoque → Produção</strong>, escolha o produto, informe a quantidade e confirme a produção.<br><br>
+                O sistema usa a ficha técnica para consumir os insumos e registrar a produção e seus custos.`,
+        aba: 'produtos'
+    },
+    {
+        categoria: 'Vendas',
+        titulo: 'Venda no balcão',
+        icone: '🛒',
+        texto: `<strong>Fluxo recomendado:</strong><br><br>
+                1. Confirme que o caixa está aberto.<br>
+                2. Adicione os produtos.<br>
+                3. Ajuste as quantidades.<br>
+                4. Confira o subtotal.<br>
+                5. Informe desconto, quando aplicável.<br>
+                6. Escolha a forma de pagamento.<br>
+                7. No dinheiro, informe o valor recebido e confira o troco.<br>
+                8. Finalize a venda.`,
+        aba: 'balcao'
+    },
+    {
+        categoria: 'Pedidos',
+        titulo: 'Acompanhe os pedidos',
+        icone: '📋',
+        texto: `A aba <strong>Pedidos</strong> usa um quadro de acompanhamento.<br><br>
+                Os pedidos avançam por etapas como <strong>Novos → Em Preparo → A Caminho/Pronto → Concluídos</strong>.<br><br>
+                Use essa tela para acompanhar o que precisa ser preparado e concluído.`,
+        aba: 'pedidos'
+    },
+    {
+        categoria: 'Consulta',
+        titulo: 'Consulte histórico e estoque',
+        icone: '📜',
+        texto: `Use <strong>Histórico de Pedidos</strong> para consultar vendas e reimprimir pedidos.<br><br>
+                Em <strong>Mov. Estoque</strong>, consulte as entradas e saídas registradas no estoque.`,
+        aba: 'historico'
+    },
+    {
+        categoria: 'Financeiro',
+        titulo: 'Acompanhe o financeiro',
+        icone: '📊',
+        texto: `Em <strong>Finanças</strong>, acompanhe faturamento, caixa, despesas e contas a receber.<br><br>
+                Quando uma conta for recebida, use a função de recebimento e confira a forma de pagamento e os valores do caixa.`,
+        aba: 'financas'
+    },
+    {
+        categoria: 'Controle',
+        titulo: 'Feche o dia e confira a auditoria',
+        icone: '🔎',
+        texto: `No fim do dia, confira as vendas, recebimentos, sangrias, suprimentos e o saldo esperado do caixa.<br><br>
+                Depois, use <strong>Auditoria</strong> para conferir vendas, caixa, estoque, despesas e eventos por período, usuário, caixa e cliente.<br><br>
+                <strong>✅ Objetivo:</strong> encerrar o dia sabendo que os valores e movimentações conferem.`,
+        aba: 'auditoria'
+    }
+];
+
+const AJUDA_PDV_TELAS = {
+    pedidos: {
+        titulo: 'Pedidos',
+        icone: '📋',
+        texto: `Use esta tela para acompanhar os pedidos recebidos e o andamento da produção/entrega.<br><br>
+                As colunas indicam em qual etapa cada pedido está.`,
+        passos: ['Novos pedidos', 'Em preparo', 'A caminho/pronto', 'Concluídos']
+    },
+
+    balcao: {
+        titulo: 'Venda de Balcão',
+        icone: '🛒',
+        texto: `Esta é a tela para vendas presenciais.<br><br>
+                Adicione os produtos, ajuste quantidades, confira o total e escolha o pagamento. No dinheiro, informe o valor recebido para calcular o troco.`,
+        passos: ['Adicionar produtos', 'Conferir total', 'Desconto', 'Pagamento e troco', 'Finalizar']
+    },
+
+    produtos: {
+        titulo: 'Produtos & Estoque',
+        icone: '📦',
+        texto: `Aqui você cadastra produtos, controla preços e estoque e acessa produção/histórico de produção.<br><br>
+                Gerente/Admin também pode editar produtos e a imagem.`,
+        passos: ['Novo Produto', 'Produção', 'Histórico de Produções', 'Atualizar Lista']
+    },
+
+    'ficha-tecnica': {
+        titulo: 'Ficha Técnica',
+        icone: '📋',
+        texto: `A Ficha Técnica define os ingredientes/insumos necessários para produzir cada produto e ajuda no controle de custos.`,
+        passos: ['Escolher produto', 'Adicionar insumos', 'Definir quantidades', 'Salvar ficha']
+    },
+
+    cadastros: {
+        titulo: 'Cadastros',
+        icone: '📚',
+        texto: `Central administrativa dos cadastros do sistema. Use as subabas para manter a base de insumos, fornecedores, clientes e cidades.`,
+        passos: ['Insumos', 'Fornecedores', 'Clientes', 'Cidades']
+    },
+
+    compras: {
+        titulo: 'Compras',
+        icone: '🛒',
+        texto: `Use esta tela para registrar compras e depois registrar a entrada da mercadoria recebida.`,
+        passos: ['Criar compra', 'Adicionar itens', 'Conferir custos', 'Receber entrada']
+    },
+
+    historico: {
+        titulo: 'Histórico de Pedidos',
+        icone: '📜',
+        texto: `Consulte vendas realizadas por período, veja os pedidos e use a reimpressão quando necessário.`,
+        passos: ['Escolher período', 'Consultar pedidos', 'Ver detalhes', 'Reimprimir']
+    },
+
+    'mov-estoque': {
+        titulo: 'Movimentações de Estoque',
+        icone: '📦',
+        texto: `Use esta tela para conferir o histórico das movimentações do estoque e investigar entradas e saídas.`,
+        passos: ['Atualizar', 'Consultar movimentos', 'Conferir quantidades']
+    },
+
+    pix: {
+        titulo: 'Pagamento via PIX',
+        icone: '❖',
+        texto: `Use esta área para gerar a placa/QR Code de PIX e imprimir ou salvar o material conforme o fluxo do sistema.`,
+        passos: ['Informar dados', 'Gerar QR Code', 'Conferir valor', 'Imprimir']
+    },
+
+    financas: {
+        titulo: 'Finanças',
+        icone: '📊',
+        texto: `Área para acompanhar faturamento, resultados, despesas, contas a receber e recebimentos.`,
+        passos: ['Escolher período', 'Conferir vendas', 'Conferir despesas', 'Receber contas']
+    },
+
+    auditoria: {
+        titulo: 'Auditoria',
+        icone: '🔎',
+        texto: `A Auditoria consolida informações para conferência administrativa e rastreabilidade.`,
+        passos: ['Período', 'Usuário', 'Caixa', 'Cliente', 'Vendas/caixa/estoque/financeiro/eventos']
+    },
+
+    config: {
+        titulo: 'Configurações',
+        icone: '⚙️',
+        texto: `Aqui ficam as configurações administrativas do caixa, loja virtual/delivery e permissões da equipe.`,
+        passos: ['Operação de Caixa', 'Loja Virtual & Delivery', 'Permissões']
+    }
+};
+
+let ajudaPDVModo = 'completo';
+let ajudaPDVIndice = 0;
+let ajudaPDVAtual = null;
+
+function obterAbaAtualAjuda() {
+
+    const abas = [
+        'pedidos',
+        'balcao',
+        'produtos',
+        'ficha-tecnica',
+        'cadastros',
+        'compras',
+        'historico',
+        'mov-estoque',
+        'pix',
+        'financas',
+        'auditoria',
+        'config'
+    ];
+
+    for (const nome of abas) {
+
+        const el =
+                document.getElementById(`aba-${nome}`);
+        if (!el)
+            continue;
+
+        const estilo =
+                window.getComputedStyle(el);
+
+        if (estilo.display !== 'none') {
+            return nome;
+        }
+    }
+
+    return 'pedidos';
+}
+
+function atualizarBotoesModoAjuda() {
+
+    const completo =
+            document.getElementById(
+                    'btn-ajuda-modo-completo'
+                    );
+
+    const tela =
+            document.getElementById(
+                    'btn-ajuda-modo-tela'
+                    );
+
+    if (completo) {
+
+        completo.style.background =
+                ajudaPDVModo === 'completo'
+                ? '#2a2a35'
+                : '#1e1e24';
+
+        completo.style.color =
+                ajudaPDVModo === 'completo'
+                ? '#fff'
+                : '#aaa';
+    }
+
+    if (tela) {
+
+        tela.style.background =
+                ajudaPDVModo === 'tela'
+                ? '#2a2a35'
+                : '#1e1e24';
+
+        tela.style.color =
+                ajudaPDVModo === 'tela'
+                ? '#fff'
+                : '#aaa';
+    }
+}
+
+function abrirCentralAjuda(modo = 'completo') {
+
+    const modal =
+            document.getElementById(
+                    'modal-central-ajuda'
+                    );
+
+    if (!modal)
+        return;
+
+    ajudaPDVModo =
+            modo === 'tela'
+            ? 'tela'
+            : 'completo';
+
+    if (ajudaPDVModo === 'completo') {
+
+        ajudaPDVIndice = 0;
+        ajudaPDVAtual = null;
+
+    } else {
+
+        ajudaPDVAtual =
+                obterAbaAtualAjuda();
+    }
+
+    modal.style.display = 'flex';
+
+    atualizarBotoesModoAjuda();
+
+    renderizarCentralAjuda();
+}
+
+function fecharCentralAjuda() {
+
+    const modal =
+            document.getElementById(
+                    'modal-central-ajuda'
+                    );
+
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function obterAjudaAtual() {
+
+    if (ajudaPDVModo === 'completo') {
+
+        return AJUDA_PDV_ETAPAS[
+                ajudaPDVIndice
+        ];
+    }
+
+    return AJUDA_PDV_TELAS[
+            ajudaPDVAtual
+    ] || AJUDA_PDV_TELAS.pedidos;
+}
+
+function renderizarCentralAjuda() {
+
+    const subtitulo =
+            document.getElementById('ajuda-subtitulo');
+
+    const conteudo =
+            document.getElementById('ajuda-conteudo');
+
+    const progresso =
+            document.getElementById('ajuda-progresso');
+
+    const progressoTexto =
+            document.getElementById(
+                    'ajuda-progresso-texto'
+                    );
+
+    const categoria =
+            document.getElementById(
+                    'ajuda-categoria'
+                    );
+
+    const barra =
+            document.getElementById(
+                    'ajuda-progresso-barra'
+                    );
+
+    const btnAnterior =
+            document.getElementById(
+                    'btn-ajuda-anterior'
+                    );
+
+    const btnProxima =
+            document.getElementById(
+                    'btn-ajuda-proxima'
+                    );
+
+    const btnAbrirTela =
+            document.getElementById(
+                    'btn-ajuda-ir-tela'
+                    );
+
+    const ajuda =
+            obterAjudaAtual();
+
+    if (!ajuda || !conteudo)
+        return;
+
+    if (ajudaPDVModo === 'completo') {
+
+        const total =
+                AJUDA_PDV_ETAPAS.length;
+
+        const atual =
+                ajudaPDVIndice + 1;
+
+        const percentual =
+                Math.max(
+                        5.5,
+                        (atual / total) * 100
+                        );
+
+        if (progresso) {
+            progresso.style.display = 'block';
+        }
+
+        if (progressoTexto) {
+            progressoTexto.textContent =
+                    `${atual} de ${total}`;
+        }
+
+        if (categoria) {
+            categoria.textContent =
+                    ajuda.categoria;
+        }
+
+        if (barra) {
+            barra.style.width =
+                    `${percentual}%`;
+        }
+
+        if (subtitulo) {
+            subtitulo.textContent =
+                    'Aprenda a usar o sistema do começo ao fim.';
+        }
+
+        if (btnAnterior) {
+
+            btnAnterior.disabled =
+                    ajudaPDVIndice === 0;
+
+            btnAnterior.style.opacity =
+                    ajudaPDVIndice === 0
+                    ? '.45'
+                    : '1';
+
+            btnAnterior.style.cursor =
+                    ajudaPDVIndice === 0
+                    ? 'not-allowed'
+                    : 'pointer';
+        }
+
+        if (btnProxima) {
+
+            btnProxima.textContent =
+                    ajudaPDVIndice === total - 1
+                    ? '✅ Concluir'
+                    : 'Próximo →';
+        }
+
+    } else {
+
+        if (progresso) {
+            progresso.style.display = 'none';
+        }
+
+        if (subtitulo) {
+            subtitulo.textContent =
+                    'Orientações rápidas para a tela que está aberta.';
+        }
+
+        if (btnAnterior) {
+            btnAnterior.style.display = 'none';
+        }
+
+        if (btnProxima) {
+            btnProxima.style.display = 'none';
+        }
+    }
+
+    const listaPassos =
+            ajuda.passos
+            ? `
+                <div style="
+                    margin-top:18px;
+                    padding:14px;
+                    border-radius:8px;
+                    background:#1e1e24;
+                    border:1px solid #3d3d4e;
+                ">
+                    <strong style="color:#fff;">
+                        Passos principais
+                    </strong>
+
+                    <ol style="
+                        margin:10px 0 0 20px;
+                        color:#ccc;
+                        line-height:1.65;
+                    ">
+                        ${ajuda.passos
+            .map(p => `<li>${p}</li>`)
+            .join('')}
+                    </ol>
+                </div>
+            `
+            : '';
+
+    conteudo.innerHTML = `
+        <div style="
+            font-size:2.2rem;
+            line-height:1;
+            margin-bottom:12px;
+        ">
+            ${ajuda.icone || '💡'}
+        </div>
+
+        <h3 style="
+            margin:0 0 10px;
+            color:#fff;
+            font-size:1.35rem;
+        ">
+            ${ajuda.titulo}
+        </h3>
+
+        <div style="
+            color:#ccc;
+            line-height:1.65;
+            font-size:.95rem;
+        ">
+            ${ajuda.texto}
+        </div>
+
+        ${listaPassos}
+    `;
+
+    if (ajuda.aba) {
+
+        if (btnAbrirTela) {
+
+            btnAbrirTela.style.display =
+                    'inline-block';
+
+            btnAbrirTela.textContent =
+                    ajuda.aba === 'config'
+                    ? '👉 Abrir configurações'
+                    : `👉 Abrir ${
+                    AJUDA_PDV_TELAS[
+                            ajuda.aba
+                    ]?.titulo ||
+                    ajuda.aba
+                    }`;
+        }
+
+    } else if (btnAbrirTela) {
+
+        btnAbrirTela.style.display =
+                'none';
+    }
+
+    if (ajudaPDVModo === 'tela') {
+
+        if (btnAnterior) {
+            btnAnterior.style.display = 'none';
+        }
+
+        if (btnProxima) {
+            btnProxima.style.display = 'none';
+        }
+    }
+
+    atualizarBotoesModoAjuda();
+}
+
+function navegarAjuda(direcao) {
+
+    if (ajudaPDVModo !== 'completo') {
+        return;
+    }
+
+    const novoIndice =
+            ajudaPDVIndice + direcao;
+
+    if (novoIndice < 0) {
+        return;
+    }
+
+    if (
+            novoIndice >=
+            AJUDA_PDV_ETAPAS.length
+            ) {
+
+        fecharCentralAjuda();
+
+        localStorage.setItem(
+                'pdv_ajuda_concluida',
+                'true'
+                );
+
+        return;
+    }
+
+    ajudaPDVIndice =
+            novoIndice;
+
+    renderizarCentralAjuda();
+}
+
+function abrirSubAbaPorAjuda(idSubAba) {
+
+    if (
+            !idSubAba ||
+            typeof window.alternarSubAba !== 'function'
+            ) {
+        return;
+    }
+
+    const botao =
+            Array.from(
+                    document.querySelectorAll(
+                            '.btn-sub-tab'
+                            )
+                    )
+            .find(
+                    btn =>
+                btn.getAttribute('onclick')
+                        ?.includes(
+                                `'${idSubAba}'`
+                                )
+            );
+
+    if (botao) {
+        window.alternarSubAba(
+                idSubAba,
+                botao
+                );
+    }
+}
+
+function abrirTelaAjuda(nomeAba, subaba = null) {
+
+    if (!nomeAba) {
+        return;
+    }
+
+    fecharCentralAjuda();
+
+    try {
+
+        if (
+                typeof alternarAba ===
+                'function'
+                ) {
+
+            alternarAba(nomeAba);
+        }
+
+    } catch (err) {
+
+        console.error(
+                'Erro ao abrir tela pela ajuda:',
+                err
+                );
+    }
+
+    if (subaba) {
+
+        setTimeout(() => {
+
+            if (nomeAba === 'cadastros') {
+
+                const mapa = {
+
+                    insumos:
+                            'abrirCadastroInsumosUI',
+
+                    fornecedores:
+                            'abrirCadastroFornecedoresUI',
+
+                    clientes:
+                            'abrirCadastroClientesUI',
+
+                    cidades:
+                            'abrirCadastroCidadesUI'
+                };
+
+                const funcao =
+                        mapa[subaba];
+
+                if (
+                        funcao &&
+                        typeof window[funcao] === 'function'
+                        ) {
+
+                    window[funcao]();
+
+                    return;
+                }
+            }
+
+            abrirSubAbaPorAjuda(
+                    subaba
+                    );
+
+        }, 250);
+}
+}
+
+function irParaTelaDaAjuda() {
+
+    const ajuda =
+            obterAjudaAtual();
+
+    if (!ajuda?.aba) {
+        return;
+    }
+
+    abrirTelaAjuda(
+            ajuda.aba,
+            ajuda.subaba || null
+            );
+}
+
+// Mostra automaticamente o primeiro treinamento somente no primeiro uso
+function verificarPrimeiraAjudaPDV() {
+
+    if (
+            localStorage.getItem(
+                    'pdv_ajuda_concluida'
+                    ) === 'true'
+            ) {
+        return;
+    }
+
+    if (
+            localStorage.getItem(
+                    'pdv_ajuda_apresentada'
+                    ) === 'true'
+            ) {
+        return;
+    }
+
+    localStorage.setItem(
+            'pdv_ajuda_apresentada',
+            'true'
+            );
+
+    setTimeout(() => {
+
+        abrirCentralAjuda(
+                'completo'
+                );
+
+    }, 700);
+}
+
 // Substitua a escuta inicial do DOMContentLoaded no pdv.js
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -1854,6 +2643,7 @@ async function exibirPDV() {
         // Só agora a interface fica disponível
         document.body.classList.remove('pdv-carregando');
 
+        verificarPrimeiraAjudaPDV();
         carregarPedidos();
         iniciarEscutaRealtime();
 
@@ -7447,8 +8237,7 @@ async function carregarProdutosGerenciador() {
                     'produtos-table-body'
                     );
 
-    tbody.innerHTML =
-            '<tr><td colspan="8" style="text-align:center;">Carregando produtos...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando produtos...</td></tr>';
 
     const {
         data: produtos,
@@ -7691,18 +8480,14 @@ async function carregarProdutosGerenciador() {
                     >
                         +5
                     </button>
-
                 </div>
-
             </td>
 
-
             <td>
-
                 <select
                     id="ativo-${p.id}"
                     class="input-table"
-                    style="width:90px;"
+                    style="width:100px;"
                 >
 
                     <option
@@ -7718,14 +8503,10 @@ async function carregarProdutosGerenciador() {
                     >
                         Pausado
                     </option>
-
                 </select>
-
             </td>
 
-
             <td>
-
                 <button
                     class="btn-save-prod"
                     id="btn-save-${p.id}"
@@ -7733,9 +8514,7 @@ async function carregarProdutosGerenciador() {
                 >
                     💾 Salvar
                 </button>
-
             </td>
-
         `;
 
         tbody.appendChild(tr);
@@ -7744,7 +8523,7 @@ async function carregarProdutosGerenciador() {
 
     aplicarPermissoes();
 }
-//
+
 // ============================================================
 // HISTÓRICO DE PRODUÇÕES
 // ============================================================
@@ -7779,7 +8558,6 @@ function alternarHistoricoProducoes() {
 
     carregarHistoricoProducoes();
 }
-
 
 async function carregarHistoricoProducoes() {
 
@@ -13392,7 +14170,7 @@ async function finalizarVendaBalcao() {
         // Atualiza caixa
         // ----------------------------------------------------
         await exibirPainelCaixaAberto();
-        
+
         alert(
                 `✅ Venda #${pedidoId} realizada com sucesso!`
                 );
