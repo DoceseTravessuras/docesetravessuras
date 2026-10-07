@@ -3178,7 +3178,7 @@ async function alternarAba(nomeAba) {
     } else if (nomeAba === 'balcao') {
         document.getElementById('aba-balcao').style.display = 'block';
         document.getElementById('btn-tab-balcao').classList.add('active');
-       
+
         carregarBalcao();
 
         // Mantém o leitor de código pronto para uso
@@ -3896,6 +3896,710 @@ async function carregarCadastroInsumosUI() {
                 </td>
             </tr>
         `;
+    }
+}
+
+// ============================================================
+// CADASTRO DE CATEGORIAS DE PRODUTOS
+// ============================================================
+
+let categoriaEditandoId = null;
+let categoriasCadastroCache = [];
+
+
+// ============================================================
+// ABRIR ABA CATEGORIAS
+// ============================================================
+
+async function abrirCadastroCategoriasUI() {
+
+    const secoes = [
+        'cadastro-insumos',
+        'cadastro-fornecedores',
+        'cadastro-clientes',
+        'cadastro-cidades'
+    ];
+
+    secoes.forEach(id => {
+
+        const elemento = document.getElementById(id);
+
+        if (elemento) {
+            elemento.style.display = 'none';
+        }
+
+    });
+
+
+    const cadastroCategorias =
+            document.getElementById('cadastro-categorias');
+
+    if (!cadastroCategorias) {
+
+        console.error(
+                '⛔ Conteúdo de Categorias não encontrado.'
+                );
+
+        return;
+    }
+
+
+    cadastroCategorias.style.display = 'block';
+
+    atualizarBotoesCadastrosUI('categorias');
+
+    await carregarCadastroCategoriasUI();
+}
+
+
+// ============================================================
+// CARREGAR CATEGORIAS
+// ============================================================
+
+async function carregarCadastroCategoriasUI() {
+
+    const tbody =
+            document.getElementById(
+                    'categorias-table-body'
+                    );
+
+    if (!tbody) {
+        return;
+    }
+
+
+    tbody.innerHTML = `
+        <tr>
+            <td
+                colspan="3"
+                style="
+                    text-align:center;
+                    color:#aaa;
+                    padding:25px;
+                "
+            >
+                ⏳ Carregando categorias...
+            </td>
+        </tr>
+    `;
+
+
+    try {
+
+        const {
+            data: categorias,
+            error
+        } = await _supabase
+                .from('categorias')
+                .select(`
+                id,
+                nome,
+                ativo
+            `)
+                .order('nome', {
+                    ascending: true
+                });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        categoriasCadastroCache =
+                Array.isArray(categorias)
+                ? categorias
+                : [];
+
+
+        renderizarTabelaCategoriasUI(
+                categoriasCadastroCache
+                );
+
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao carregar categorias:',
+                erro
+                );
+
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="3"
+                    style="
+                        text-align:center;
+                        color:#ff6b6b;
+                        padding:25px;
+                    "
+                >
+                    ❌ Não foi possível carregar as categorias.
+                    <br>
+                    <small>
+                        ${erro?.message || ''}
+                    </small>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+
+// ============================================================
+// RENDERIZAR TABELA
+// ============================================================
+
+function renderizarTabelaCategoriasUI(categorias) {
+
+    const tbody =
+            document.getElementById(
+                    'categorias-table-body'
+                    );
+
+    if (!tbody) {
+        return;
+    }
+
+
+    tbody.innerHTML = '';
+
+
+    if (
+            !Array.isArray(categorias) ||
+            categorias.length === 0
+            ) {
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="3"
+                    style="
+                        text-align:center;
+                        color:#aaa;
+                        padding:25px;
+                    "
+                >
+                    Nenhuma categoria cadastrada.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+
+    categorias.forEach(categoria => {
+
+        const tr =
+                document.createElement('tr');
+
+
+        const ativo =
+                categoria.ativo === true ||
+                categoria.ativo === 'true';
+
+
+        tr.innerHTML = `
+
+            <td style="padding:12px;">
+
+                <strong>
+                    ${escaparHTMLCategoriaUI(
+                categoria.nome
+                )}
+                </strong>
+
+            </td>
+
+
+            <td style="
+                padding:12px;
+                text-align:center;
+            ">
+
+                ${
+                ativo
+
+                ? `
+                        <span style="
+                            color:#2e7d32;
+                            font-weight:bold;
+                        ">
+                            🟢 Ativa
+                        </span>
+                    `
+
+                : `
+                        <span style="
+                            color:#c62828;
+                            font-weight:bold;
+                        ">
+                            🔴 Inativa
+                        </span>
+                    `
+                }
+
+            </td>
+
+
+            <td style="
+                padding:12px;
+                text-align:center;
+            ">
+
+                <button
+                    type="button"
+                    class="btn-qty"
+                    onclick="editarCategoriaUI(${categoria.id})"
+                    title="Editar categoria"
+                >
+                    ✏️
+                </button>
+
+                <button
+                    type="button"
+                    class="btn-qty"
+                    onclick="alternarStatusCategoriaUI(
+                        ${categoria.id},
+                        ${ativo}
+                    )"
+                    title="${
+                ativo
+                ? 'Inativar categoria'
+                : 'Ativar categoria'
+                }"
+                >
+                    ${
+                ativo
+                ? '🔴'
+                : '🟢'
+                }
+                </button>
+
+            </td>
+
+        `;
+
+
+        tbody.appendChild(tr);
+
+    });
+}
+
+
+// ============================================================
+// ESCAPAR HTML
+// ============================================================
+
+function escaparHTMLCategoriaUI(valor) {
+
+    return String(valor ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+}
+
+
+// ============================================================
+// NOVA CATEGORIA
+// ============================================================
+
+function abrirModalNovaCategoriaUI() {
+
+    categoriaEditandoId = null;
+
+
+    const titulo =
+            document.getElementById(
+                    'titulo-modal-categoria'
+                    );
+
+    const campo =
+            document.getElementById(
+                    'categoria-nome'
+                    );
+
+
+    if (titulo) {
+        titulo.textContent =
+                '📂 Nova Categoria';
+    }
+
+
+    if (campo) {
+        campo.value = '';
+
+        setTimeout(() => {
+            campo.focus();
+        }, 100);
+    }
+
+
+    const modal =
+            document.getElementById(
+                    'modal-categoria-produto'
+                    );
+
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+
+// ============================================================
+// EDITAR CATEGORIA
+// ============================================================
+
+function editarCategoriaUI(categoriaId) {
+
+    const categoria =
+            categoriasCadastroCache.find(
+                    item =>
+                Number(item.id) ===
+                        Number(categoriaId)
+            );
+
+
+    if (!categoria) {
+        return;
+    }
+
+
+    categoriaEditandoId =
+            Number(categoria.id);
+
+
+    const titulo =
+            document.getElementById(
+                    'titulo-modal-categoria'
+                    );
+
+    const campo =
+            document.getElementById(
+                    'categoria-nome'
+                    );
+
+
+    if (titulo) {
+        titulo.textContent =
+                '✏️ Editar Categoria';
+    }
+
+
+    if (campo) {
+        campo.value =
+                categoria.nome || '';
+
+        setTimeout(() => {
+            campo.focus();
+            campo.select();
+        }, 100);
+    }
+
+
+    const modal =
+            document.getElementById(
+                    'modal-categoria-produto'
+                    );
+
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+// ============================================================
+// SALVAR CATEGORIA
+// ============================================================
+async function salvarCategoriaUI() {
+
+    const campo =
+            document.getElementById(
+                    'categoria-nome'
+                    );
+
+    const btn =
+            document.getElementById(
+                    'btn-salvar-categoria'
+                    );
+
+    const nome =
+            campo?.value
+            ?.trim() || '';
+
+
+    if (!nome) {
+
+        alert(
+                '⚠️ Informe o nome da categoria.'
+                );
+
+        campo?.focus();
+
+        return;
+    }
+
+    if (nome.length < 2) {
+
+        alert(
+                '⚠️ O nome da categoria é muito curto.'
+                );
+
+        campo?.focus();
+
+        return;
+    }
+
+    const textoOriginal =
+            btn?.innerHTML || '💾 Salvar';
+
+    try {
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Salvando...';
+        }
+
+        if (categoriaEditandoId) {
+
+            const {
+                data,
+                error
+            } = await _supabase
+                    .from('categorias')
+                    .update({
+                        nome: nome
+                    })
+                    .eq(
+                            'id',
+                            categoriaEditandoId
+                            )
+                    .select(`
+                    id,
+                    nome,
+                    ativo
+                `)
+                    .single();
+
+            if (error) {
+
+                if (error.code === '23505') {
+
+                    throw new Error(
+                            'Já existe uma categoria com esse nome.'
+                            );
+                }
+
+                throw error;
+            }
+
+            alert(
+                    `✅ Categoria "${data.nome}" atualizada com sucesso!`
+                    );
+
+        } else {
+
+            const {
+                data,
+                error
+            } = await _supabase
+                    .from('categorias')
+                    .insert({
+                        nome: nome,
+                        ativo: true
+                    })
+                    .select(`
+                    id,
+                    nome,
+                    ativo
+                `)
+                    .single();
+
+            if (error) {
+
+                if (error.code === '23505') {
+
+                    throw new Error(
+                            'Já existe uma categoria com esse nome.'
+                            );
+                }
+
+                throw error;
+            }
+
+            alert(
+                    `✅ Categoria "${data.nome}" cadastrada com sucesso!`
+                    );
+        }
+
+        categoriaEditandoId = null;
+
+        fecharModalCategoriaUI();
+
+        await carregarCadastroCategoriasUI();
+
+        // Atualiza as categorias utilizadas
+        // no cadastro de produtos.
+        if (
+                typeof carregarCategoriasModal ===
+                'function'
+                ) {
+            await carregarCategoriasModal();
+        }
+
+        if (
+                typeof carregarCategoriasEdicaoProduto ===
+                'function'
+                ) {
+            await carregarCategoriasEdicaoProduto();
+        }
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao salvar categoria:',
+                erro
+                );
+
+
+        alert(
+                '❌ Não foi possível salvar a categoria:\n\n' +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+
+
+    } finally {
+
+        if (btn) {
+
+            btn.disabled = false;
+            btn.innerHTML = textoOriginal;
+
+        }
+    }
+}
+
+// ============================================================
+// ATIVAR / INATIVAR
+// ============================================================
+async function alternarStatusCategoriaUI(
+        categoriaId,
+        statusAtual
+        ) {
+
+    const novoStatus =
+            !(
+                    statusAtual === true ||
+                    statusAtual === 'true'
+                    );
+
+
+    const categoria =
+            categoriasCadastroCache.find(
+                    item =>
+                Number(item.id) ===
+                        Number(categoriaId)
+            );
+
+    const nome =
+            categoria?.nome ||
+            'esta categoria';
+
+    const mensagem =
+            novoStatus
+            ? `Deseja ativar "${nome}"?`
+            : `Deseja inativar "${nome}"?`;
+
+    if (!confirm(mensagem)) {
+        return;
+    }
+
+    try {
+
+        const {
+            data,
+            error
+        } = await _supabase
+                .from('categorias')
+                .update({
+                    ativo: novoStatus
+                })
+                .eq(
+                        'id',
+                        Number(categoriaId)
+                        )
+                .select(`
+                id,
+                nome,
+                ativo
+            `)
+                .single();
+
+        if (error) {
+            throw error;
+        }
+
+        alert(
+                novoStatus
+                ? `✅ Categoria "${data.nome}" ativada.`
+                : `✅ Categoria "${data.nome}" inativada.`
+                );
+
+        await carregarCadastroCategoriasUI();
+
+        // Atualiza também o cadastro de produtos.
+        if (
+                typeof carregarCategoriasModal ===
+                'function'
+                ) {
+            await carregarCategoriasModal();
+        }
+
+        if (
+                typeof carregarCategoriasEdicaoProduto ===
+                'function'
+                ) {
+            await carregarCategoriasEdicaoProduto();
+        }
+
+    } catch (erro) {
+
+        console.error(
+                '⛔ Erro ao alterar status da categoria:',
+                erro
+                );
+
+        alert(
+                '❌ Não foi possível alterar o status da categoria:\n\n' +
+                (
+                        erro?.message ||
+                        'Erro desconhecido.'
+                        )
+                );
+    }
+}
+
+// ============================================================
+// FECHAR MODAL
+// ============================================================
+function fecharModalCategoriaUI() {
+
+    categoriaEditandoId = null;
+
+
+    const modal =
+            document.getElementById(
+                    'modal-categoria-produto'
+                    );
+
+    if (modal) {
+        modal.style.display = 'none';
     }
 }
 
@@ -18013,13 +18717,8 @@ async function salvarNovoInsumo() {
 }
 
 // ============================================================
-// CADASTROS — ALTERNÂNCIA ENTRE INSUMOS E FORNECEDORES
-// ============================================================
-
-// ============================================================
 // CADASTROS — ALTERNÂNCIA ENTRE ABAS
 // ============================================================
-
 function atualizarBotoesCadastrosUI(abaAtiva) {
 
     const botoes =
@@ -18033,7 +18732,6 @@ function atualizarBotoesCadastrosUI(abaAtiva) {
                 botao.textContent
                 .trim()
                 .toLowerCase();
-
 
         const ativo =
                 (
@@ -18051,6 +18749,10 @@ function atualizarBotoesCadastrosUI(abaAtiva) {
                 (
                         abaAtiva === 'cidades' &&
                         texto.includes('cidades')
+                        ) ||
+                (
+                        abaAtiva === 'categorias' &&
+                        texto.includes('categorias')
                         );
 
 
@@ -18085,6 +18787,8 @@ async function abrirCadastroInsumosUI() {
                     'cadastro-clientes'
                     );
 
+    const secaoCategorias = document.getElementById('cadastro-categorias');
+
     if (!cadastroInsumos) {
         console.error(
                 '⛔ Conteúdo de Insumos não encontrado.'
@@ -18102,6 +18806,10 @@ async function abrirCadastroInsumosUI() {
 
     if (cadastroClientes) {
         cadastroClientes.style.display = 'none';
+    }
+
+    if (secaoCategorias) {
+        secaoCategorias.style.display = 'none';
     }
 
     atualizarBotoesCadastrosUI('insumos');
@@ -18129,6 +18837,8 @@ async function abrirCadastroFornecedoresUI() {
                     'cadastro-clientes'
                     );
 
+    const secaoCategorias = document.getElementById('cadastro-categorias');
+
     if (!cadastroFornecedores) {
         console.error(
                 '⛔ Conteúdo de Fornecedores não encontrado.'
@@ -18143,6 +18853,10 @@ async function abrirCadastroFornecedoresUI() {
 
     if (cadastroClientes) {
         cadastroClientes.style.display = 'none';
+    }
+
+    if (secaoCategorias) {
+        secaoCategorias.style.display = 'none';
     }
 
     // Mostra somente FORNECEDORES
@@ -18981,6 +19695,8 @@ async function abrirCadastroCidadesUI() {
                     'cadastro-cidades'
                     );
 
+    const secaoCategorias = document.getElementById('cadastro-categorias');
+
     if (!cadastroCidades) {
 
         console.error(
@@ -19010,6 +19726,10 @@ async function abrirCadastroCidadesUI() {
         cadastroClientes.style.display =
                 'none';
 
+    }
+
+    if (secaoCategorias) {
+        secaoCategorias.style.display = 'none';
     }
 
     cadastroCidades.style.display =
@@ -20065,6 +20785,8 @@ async function abrirCadastroClientesUI() {
                     'cadastro-cidades'
                     );
 
+    const secaoCategorias = document.getElementById('cadastro-categorias');
+
     if (cadastroInsumos) {
 
         cadastroInsumos.style.display =
@@ -20091,6 +20813,10 @@ async function abrirCadastroClientesUI() {
         cadastroClientes.style.display =
                 'block';
 
+    }
+
+    if (secaoCategorias) {
+        secaoCategorias.style.display = 'none';
     }
 
     atualizarBotoesCadastrosUI(

@@ -1072,6 +1072,22 @@
                         ">
                         🏙️ Cidades
                     </button>
+
+                    <button
+                        class="btn-sub-tab"
+                        type="button"
+                        onclick="abrirCadastroCategoriasUI()"
+                        style="
+                        padding:10px 18px;
+                        background:#2a2a35;
+                        color:#fff;
+                        border:1px solid #3d3d4e;
+                        border-radius:6px;
+                        cursor:pointer;
+                        font-weight:bold;
+                        ">
+                        📂 Categorias
+                    </button>
                 </div>
 
                 <!-- CONTEÚDO: INSUMOS -->
@@ -1291,6 +1307,97 @@
                                         "
                                         >
                                         Nenhuma cidade carregada.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- =========================================================
+     CONTEÚDO: CATEGORIAS
+========================================================= -->
+
+                <div id="cadastro-categorias" style="display:none;">
+
+                    <div style="
+                         display:flex;
+                         justify-content:space-between;
+                         align-items:center;
+                         gap:10px;
+                         flex-wrap:wrap;
+                         margin-bottom:15px;
+                         ">
+
+                        <div>
+                            <h3 style="margin:0;">
+                                📂 Categorias de Produtos
+                            </h3>
+
+                            <div style="
+                                 color:#aaa;
+                                 margin-top:6px;
+                                 font-size:0.9rem;
+                                 ">
+                                Cadastre e organize as categorias utilizadas pelos produtos.
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn-save-prod"
+                            onclick="abrirModalNovaCategoriaUI()"
+                            >
+                            ➕ Nova Categoria
+                        </button>
+
+                    </div>
+
+
+                    <!-- TABELA -->
+
+                    <div style="
+                         overflow-x:auto;
+                         background:#1e1e24;
+                         border-radius:8px;
+                         border:1px solid #3d3d4e;
+                         ">
+
+                        <table style="width:100%; border-collapse:collapse;">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th style="padding:12px; text-align:left;">
+                                        Categoria
+                                    </th>
+
+                                    <th style="padding:12px; text-align:center;">
+                                        Status
+                                    </th>
+
+                                    <th style="padding:12px; text-align:center;">
+                                        Ações
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="categorias-table-body">
+
+                                <tr>
+
+                                    <td
+                                        colspan="3"
+                                        style="
+                                        text-align:center;
+                                        color:#aaa;
+                                        padding:25px;
+                                        "
+                                        >
+                                        Clique em "Categorias" para carregar.
                                     </td>
                                 </tr>
                             </tbody>
@@ -4531,7 +4638,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <button
                     id="btn-ir-comanda-balcao"
                     class="no-print"
@@ -5490,6 +5597,82 @@
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================
+     MODAL: CATEGORIA
+========================================================= -->
+
+        <div
+            id="modal-categoria-produto"
+            style="
+            display:none;
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,0.75);
+            z-index:9999;
+            justify-content:center;
+            align-items:center;
+            padding:20px;
+            "
+            >
+
+            <div style="
+                 width:100%;
+                 max-width:450px;
+                 background:#1e1e24;
+                 border:1px solid #3d3d4e;
+                 border-radius:10px;
+                 padding:22px;
+                 box-shadow:0 10px 40px rgba(0,0,0,.5);
+                 ">
+
+                <h3
+                    id="titulo-modal-categoria"
+                    style="margin-top:0;"
+                    >
+                    📂 Nova Categoria
+                </h3>
+
+                <div style="margin-bottom:15px;">
+
+                    <label>
+                        Nome da categoria
+                    </label>
+
+                    <input
+                        type="text"
+                        id="categoria-nome"
+                        class="input-table"
+                        maxlength="100"
+                        placeholder="Ex.: Sorvetes"
+                        autocomplete="off"
+                        >
+
+                </div>
+
+                <div style="
+                     display:flex;
+                     justify-content:flex-end;
+                     gap:10px;
+                     ">
+
+                    <button type="button"
+                            onclick="fecharModalCategoriaUI()"
+                            style="padding:10px 18px; background:#555; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:inline-flex; align-items:center; justify-content:center; line-height:1; white-space:nowrap;">
+                       ❌ Cancelar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-save-prod"
+                        id="btn-salvar-categoria"
+                        onclick="salvarCategoriaUI()"
+                        >
+                        💾 Salvar
+                    </button>
                 </div>
             </div>
         </div>
