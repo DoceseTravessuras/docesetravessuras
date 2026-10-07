@@ -23,6 +23,8 @@ const CHAVE_TOKEN_ACOMPANHAMENTO_ANTIGA =
 
 let cidadesEntregaList = [];
 let cidadeEntregaSelecionada = null;
+let ultimoCEPEntregaConsultado = '';
+let consultaCEPEntregaEmAndamento = false;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
@@ -348,23 +350,147 @@ function filtrarCategoria(catId, event) {
 
 // Gerenciamento do Carrinho
 function adicionarAoCarrinho(produtoId) {
-    const prod = produtosList.find(p => p.id === produtoId);
-    const itemExistente = carrinho.find(i => i.id === produtoId);
 
-    const qtdAtualNoCarrinho = itemExistente ? itemExistente.qtd : 0;
+    const prod =
+            produtosList.find(
+                    p => p.id === produtoId
+            );
 
-    // Validação de Limite de Estoque
-    if (qtdAtualNoCarrinho + 1 > prod.estoque) {
-        alert(`Ops! Só temos ${prod.estoque} unidades de "${prod.nome}" em estoque.`);
+    if (!prod) {
         return;
     }
 
-    if (itemExistente) {
-        itemExistente.qtd++;
-    } else {
-        carrinho.push({...prod, qtd: 1});
+    const itemExistente =
+            carrinho.find(
+                    i => i.id === produtoId
+            );
+
+    const qtdAtualNoCarrinho =
+            itemExistente
+            ? itemExistente.qtd
+            : 0;
+
+    // Verifica estoque
+    if (
+            qtdAtualNoCarrinho + 1 >
+            prod.estoque
+            ) {
+
+        alert(
+                `Ops! Só temos ${prod.estoque} unidades de "${prod.nome}" em estoque.`
+                );
+
+        return;
     }
+
+    // Adiciona ao carrinho
+    if (itemExistente) {
+
+        itemExistente.qtd++;
+
+    } else {
+
+        carrinho.push({
+            ...prod,
+            qtd: 1
+        });
+    }
+
+    // Atualiza o carrinho normalmente
     atualizarCarrinho();
+
+    // Feedback visual
+    mostrarProdutoAdicionado(prod.nome);
+}
+
+function mostrarProdutoAdicionado(nomeProduto) {
+
+    let aviso =
+            document.getElementById(
+                    'aviso-produto-adicionado'
+                    );
+
+    if (!aviso) {
+
+        aviso =
+                document.createElement('div');
+
+        aviso.id =
+                'aviso-produto-adicionado';
+
+        aviso.style.position =
+                'fixed';
+
+        aviso.style.left =
+                '50%';
+
+        aviso.style.bottom =
+                '25px';
+
+        aviso.style.transform =
+                'translateX(-50%) translateY(20px)';
+
+        aviso.style.background =
+                '#2e7d32';
+
+        aviso.style.color =
+                '#fff';
+
+        aviso.style.padding =
+                '12px 20px';
+
+        aviso.style.borderRadius =
+                '10px';
+
+        aviso.style.boxShadow =
+                '0 6px 20px rgba(0,0,0,0.22)';
+
+        aviso.style.fontSize =
+                '0.92rem';
+
+        aviso.style.fontWeight =
+                '600';
+
+        aviso.style.zIndex =
+                '99999';
+
+        aviso.style.opacity =
+                '0';
+
+        aviso.style.transition =
+                'opacity 0.2s ease, transform 0.2s ease';
+
+        aviso.style.pointerEvents =
+                'none';
+
+        document.body.appendChild(
+                aviso
+                );
+    }
+
+    aviso.innerHTML =
+            `✓ <strong>${nomeProduto}</strong> adicionado ao seu pedido`;
+
+    aviso.style.opacity =
+            '1';
+
+    aviso.style.transform =
+            'translateX(-50%) translateY(0)';
+
+    clearTimeout(
+            aviso._timer
+            );
+
+    aviso._timer =
+            setTimeout(() => {
+
+                aviso.style.opacity =
+                        '0';
+
+                aviso.style.transform =
+                        'translateX(-50%) translateY(20px)';
+
+            }, 1400);
 }
 
 function alterarQtd(produtoId, delta) {
@@ -437,19 +563,54 @@ function toggleCarrinho() {
 }
 
 function atualizarTaxa() {
+
     atualizarCarrinho();
-    const tipo = document.getElementById('tipo_pedido').value;
-    const endSection = document.getElementById('endereco-section');
-    const inputs = endSection.querySelectorAll('input, select');
+
+    const tipo =
+            document.getElementById('tipo_pedido').value;
+
+    const endSection =
+            document.getElementById('endereco-section');
+
+    const inputs =
+            endSection.querySelectorAll('input, select');
+
+    const selectCidade =
+            document.getElementById('cli_cidade');
 
     if (tipo === 'RETIRADA') {
+
         endSection.style.display = 'none';
-        inputs.forEach(i => i.removeAttribute('required'));
+
+        inputs.forEach(i =>
+            i.removeAttribute('required')
+        );
+
+        if (selectCidade) {
+            selectCidade.disabled = true;
+        }
+
     } else {
+
         endSection.style.display = 'block';
-        inputs.forEach(i => i.setAttribute('required', 'true'));
-        document.getElementById('cli_complemento').removeAttribute('required');
-        document.getElementById('cli_referencia').removeAttribute('required');
+
+        inputs.forEach(i =>
+            i.setAttribute('required', 'true')
+        );
+
+        document
+                .getElementById('cli_complemento')
+                .removeAttribute('required');
+
+        document
+                .getElementById('cli_referencia')
+                .removeAttribute('required');
+
+        if (selectCidade) {
+
+            selectCidade.disabled =
+                    selectCidade.dataset.fixadoPorCep === 'true';
+        }
     }
 }
 
@@ -888,6 +1049,25 @@ async function finalizarPedido(event) {
     let cidadeId = null;
 
     if (tipo === 'DELIVERY') {
+        const cep =
+                (
+                        document.getElementById('cli_cep')?.value ||
+                        ''
+                        )
+                .replace(/\D/g, '');
+
+        if (!/^\d{8}$/.test(cep)) {
+
+            alert(
+                    '⚠️ Informe um CEP válido com 8 dígitos.'
+                    );
+
+            document
+                    .getElementById('cli_cep')
+                    ?.focus();
+
+            return;
+        }
 
         if (!rua) {
             alert('⚠️ Informe a rua.');
@@ -1393,6 +1573,445 @@ async function carregarCidadesEntrega() {
     cidadeEntregaSelecionada = null;
 
     atualizarCarrinho();
+}
+
+function normalizarTextoCidadeEntrega(valor) {
+
+    return String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase()
+            .trim()
+            .replace(/\s+/g, ' ');
+}
+
+
+function formatarCEPEntrega(input) {
+
+    if (!input) {
+        return;
+    }
+
+    let cep =
+            String(input.value || '')
+            .replace(/\D/g, '')
+            .substring(0, 8);
+
+    if (cep.length > 5) {
+
+        input.value =
+                cep.substring(0, 5) +
+                '-' +
+                cep.substring(5);
+
+    } else {
+
+        input.value = cep;
+    }
+
+    if (cep.length < 8) {
+
+        ultimoCEPEntregaConsultado = '';
+
+        const status =
+                document.getElementById(
+                        'cep-status-entrega'
+                        );
+
+        if (status) {
+            status.textContent = '';
+            status.style.color = '#777';
+        }
+
+        const cidade =
+                document.getElementById(
+                        'cli_cidade'
+                        );
+
+        if (cidade) {
+            cidade.disabled = false;
+            cidade.dataset.fixadoPorCep = 'false';
+        }
+
+        const cidadeStatus =
+                document.getElementById(
+                        'cidade-status-entrega'
+                        );
+
+        if (cidadeStatus) {
+            cidadeStatus.textContent = '';
+        }
+
+        cidadeEntregaSelecionada = null;
+        taxaEntrega = 0;
+
+        atualizarCarrinho();
+
+        return;
+    }
+
+    if (
+            cep.length === 8 &&
+            cep !== ultimoCEPEntregaConsultado
+            ) {
+
+        buscarCEPEntrega(cep);
+    }
+}
+
+
+async function buscarCEPEntrega(cepInformado) {
+
+    const cep =
+            String(cepInformado || '')
+            .replace(/\D/g, '');
+
+    if (
+            !/^\d{8}$/.test(cep) ||
+            consultaCEPEntregaEmAndamento
+            ) {
+        return;
+    }
+
+    ultimoCEPEntregaConsultado = cep;
+    consultaCEPEntregaEmAndamento = true;
+
+    const status =
+            document.getElementById(
+                    'cep-status-entrega'
+                    );
+
+    const cidadeStatus =
+            document.getElementById(
+                    'cidade-status-entrega'
+                    );
+
+    const selectCidade =
+            document.getElementById(
+                    'cli_cidade'
+                    );
+
+    try {
+
+        if (status) {
+
+            status.textContent =
+                    '🔎 Consultando CEP...';
+
+            status.style.color = '#777';
+        }
+
+        const resposta =
+                await fetch(
+                        `https://viacep.com.br/ws/${cep}/json/`
+                        );
+
+        if (!resposta.ok) {
+
+            throw new Error(
+                    'Não foi possível consultar o CEP.'
+                    );
+        }
+
+        const dados =
+                await resposta.json();
+
+        if (dados.erro) {
+
+            throw new Error(
+                    'CEP não encontrado.'
+                    );
+        }
+
+        /* =====================================================
+         PREENCHE RUA
+         ===================================================== */
+
+        const campoRua =
+                document.getElementById(
+                        'cli_rua'
+                        );
+
+        if (campoRua) {
+
+            campoRua.value =
+                    dados.logradouro || '';
+        }
+
+        /* =====================================================
+         PREENCHE BAIRRO
+         ===================================================== */
+
+        const campoBairro =
+                document.getElementById(
+                        'cli_bairro'
+                        );
+
+        if (campoBairro) {
+
+            campoBairro.value =
+                    dados.bairro || '';
+        }
+
+        /* =====================================================
+         DADOS DA CIDADE VINDOS DO VIACEP
+         ===================================================== */
+
+        const nomeCidadeCEP =
+                String(
+                        dados.localidade || ''
+                        )
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase()
+                .trim();
+
+        const ufCEP =
+                String(
+                        dados.uf || ''
+                        )
+                .toUpperCase()
+                .trim();
+
+        /* =====================================================
+         PROCURA A CIDADE NA LISTA JÁ CARREGADA
+         ===================================================== */
+
+        let cidadeEncontrada = null;
+
+        if (
+                Array.isArray(cidadesEntregaList) &&
+                cidadesEntregaList.length > 0
+                ) {
+
+            cidadeEncontrada =
+                    cidadesEntregaList.find(item => {
+
+                        const nomeBanco =
+                                String(
+                                        item.nome || ''
+                                        )
+                                .normalize('NFD')
+                                .replace(
+                                        /[\u0300-\u036f]/g,
+                                        ''
+                                        )
+                                .toUpperCase()
+                                .trim();
+
+                        const ufBanco =
+                                String(
+                                        item.uf || ''
+                                        )
+                                .toUpperCase()
+                                .trim();
+
+                        return (
+                                nomeBanco === nomeCidadeCEP &&
+                                ufBanco === ufCEP &&
+                                (
+                                        item.ativa === true ||
+                                        item.ativa === 'true'
+                                        )
+                                );
+                    });
+        }
+
+        /* =====================================================
+         TENTATIVA EXTRA:
+         PROCURA DIRETAMENTE NO SELECT
+         ===================================================== */
+
+        if (
+                !cidadeEncontrada &&
+                selectCidade
+                ) {
+
+            const opcoes =
+                    Array.from(
+                            selectCidade.options
+                            );
+
+            const opcaoEncontrada =
+                    opcoes.find(option => {
+
+                        const texto =
+                                String(
+                                        option.textContent || ''
+                                        )
+                                .normalize('NFD')
+                                .replace(
+                                        /[\u0300-\u036f]/g,
+                                        ''
+                                        )
+                                .toUpperCase()
+                                .trim();
+
+                        const nomeEsperado =
+                                `${nomeCidadeCEP} - ${ufCEP}`;
+
+                        return (
+                                texto === nomeEsperado
+                                );
+                    });
+
+            if (opcaoEncontrada) {
+
+                cidadeEncontrada =
+                        cidadesEntregaList.find(
+                                item =>
+                            String(item.id) ===
+                                    String(
+                                            opcaoEncontrada.value
+                                            )
+                        );
+            }
+        }
+
+        /* =====================================================
+         CIDADE NÃO ENCONTRADA
+         ===================================================== */
+
+        if (!cidadeEncontrada) {
+
+            cidadeEntregaSelecionada = null;
+            taxaEntrega = 0;
+
+            if (selectCidade) {
+
+                selectCidade.value = '';
+                selectCidade.disabled = false;
+                selectCidade.dataset.fixadoPorCep =
+                        'false';
+            }
+
+            if (status) {
+
+                status.textContent =
+                        `✅ Endereço encontrado: ` +
+                        `${dados.localidade}/${dados.uf}`;
+
+                status.style.color =
+                        '#2e7d32';
+            }
+
+            if (cidadeStatus) {
+
+                cidadeStatus.textContent =
+                        '⚠️ Esta cidade ainda não está cadastrada para entrega.';
+
+                cidadeStatus.style.color =
+                        '#c62828';
+            }
+
+            atualizarCarrinho();
+
+            return;
+        }
+
+        /* =====================================================
+         CIDADE ENCONTRADA
+         ===================================================== */
+
+        cidadeEntregaSelecionada =
+                cidadeEncontrada;
+
+        taxaEntrega =
+                Number(
+                        cidadeEncontrada.taxa_entrega || 0
+                        );
+
+        /* =====================================================
+         SELECIONA AUTOMATICAMENTE NO CAMPO
+         ===================================================== */
+
+        if (selectCidade) {
+
+            selectCidade.value =
+                    String(
+                            cidadeEncontrada.id
+                            );
+
+            selectCidade.disabled =
+                    true;
+
+            selectCidade.dataset.fixadoPorCep =
+                    'true';
+        }
+
+        /* =====================================================
+         MENSAGENS
+         ===================================================== */
+
+        if (status) {
+
+            status.textContent =
+                    `✅ ${dados.logradouro || 'Endereço'} localizado.`;
+
+            status.style.color =
+                    '#2e7d32';
+        }
+
+        if (cidadeStatus) {
+
+            cidadeStatus.textContent =
+                    `✅ ${cidadeEncontrada.nome} - ` +
+                    `${cidadeEncontrada.uf}` +
+                    ` | Entrega: R$ ` +
+                    `${taxaEntrega.toFixed(2).replace('.', ',')}`;
+
+            cidadeStatus.style.color =
+                    '#2e7d32';
+        }
+
+        /* =====================================================
+         ATUALIZA FRETE / TOTAL
+         ===================================================== */
+
+        atualizarCarrinho();
+
+    } catch (erro) {
+
+        console.error(
+                '❌ Erro ao consultar CEP:',
+                erro
+                );
+
+        cidadeEntregaSelecionada = null;
+        taxaEntrega = 0;
+
+        if (status) {
+
+            status.textContent =
+                    `❌ ${
+                    erro?.message ||
+                    'Erro ao consultar CEP.'
+                    }`;
+
+            status.style.color =
+                    '#c62828';
+        }
+
+        if (cidadeStatus) {
+
+            cidadeStatus.textContent = '';
+        }
+
+        if (selectCidade) {
+
+            selectCidade.value = '';
+            selectCidade.disabled = false;
+            selectCidade.dataset.fixadoPorCep =
+                    'false';
+        }
+
+        atualizarCarrinho();
+
+    } finally {
+
+        consultaCEPEntregaEmAndamento =
+                false;
+    }
 }
 
 function selecionarCidadeEntrega() {

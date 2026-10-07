@@ -3178,7 +3178,17 @@ async function alternarAba(nomeAba) {
     } else if (nomeAba === 'balcao') {
         document.getElementById('aba-balcao').style.display = 'block';
         document.getElementById('btn-tab-balcao').classList.add('active');
+       
         carregarBalcao();
+
+        // Mantém o leitor de código pronto para uso
+        setTimeout(() => {
+            const campoCodigo = document.getElementById('balcao-input-codigo');
+            if (campoCodigo) {
+                campoCodigo.focus();
+                campoCodigo.select();
+            }
+        }, 250);
     } else if (nomeAba === 'produtos') {
         abaProdutos.style.display = 'block';
         btnProdutos.classList.add('active');
@@ -12910,6 +12920,44 @@ function filtrarProdutosBalcao(termo) {
     renderizarProdutosBalcao(
             filtrados
             );
+}
+
+// ============================================================
+// ATALHO PARA CENTRALIZAR A COMANDA DO BALCÃO
+// ============================================================
+
+function irParaComandaBalcao() {
+
+    const comanda =
+            document.getElementById(
+                    'balcao-comanda'
+                    );
+
+    if (!comanda) {
+        return;
+    }
+
+    comanda.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+    });
+
+    // Retorna o foco para o leitor/campo de código
+    setTimeout(() => {
+
+        const campoCodigo =
+                document.getElementById(
+                        'balcao-input-codigo'
+                        );
+
+        if (campoCodigo) {
+
+            campoCodigo.focus();
+
+            campoCodigo.select();
+        }
+
+    }, 450);
 }
 
 // ============================================================

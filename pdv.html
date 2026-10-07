@@ -43,50 +43,10 @@
             <div class="pdv-header-top">
 
                 <div class="pdv-brand">
-                    <h3>🖥️ Gestor PDV</h3>
+                    <h1>🖥️ Gestor PDV</h1>
                 </div>
 
-                <div class="pdv-header-actions">
 
-                    <span
-                        class="status-badge"
-                        id="realtime-status"
-                        >
-                        🔴 Conectando ao Banco...
-                    </span>
-
-                    <button
-                        class="sound-btn"
-                        id="btn-som"
-                        onclick="ativarSom()"
-                        title="Ativar alerta sonoro"
-                        >
-                        🔔 Alerta
-                    </button>
-
-                    <button
-                        class="sound-btn"
-                        id="btn-ajuda-pdv"
-                        onclick="abrirCentralAjuda('completo')"
-                        title="Abrir ajuda do sistema"
-                        style="background:#1565c0;"
-                        >
-                        ❓ Ajuda
-                    </button>
-
-                    <button
-                        class="sound-btn"
-                        id="btn-logout"
-                        onclick="fazerLogout()"
-                        style="
-                        display:none;
-                        background:#dc3545;
-                        "
-                        title="Sair do sistema"
-                        >
-                        🚪 Sair
-                    </button>
-                </div>
             </div>
 
             <!-- =========================================================
@@ -192,6 +152,48 @@
                         ⚙️ Configurações
                     </button>
                 </nav>
+            </div>
+
+            <div class="pdv-header-actions">
+
+                <span
+                    class="status-badge"
+                    id="realtime-status"
+                    >
+                    🔴 Conectando ao Banco...
+                </span>
+
+                <button
+                    class="sound-btn"
+                    id="btn-som"
+                    onclick="ativarSom()"
+                    title="Ativar alerta sonoro"
+                    >
+                    🔔 Alerta
+                </button>
+
+                <button
+                    class="sound-btn"
+                    id="btn-ajuda-pdv"
+                    onclick="abrirCentralAjuda('completo')"
+                    title="Abrir ajuda do sistema"
+                    style="background:#1565c0;"
+                    >
+                    ❓ Ajuda
+                </button>
+
+                <button
+                    class="sound-btn"
+                    id="btn-logout"
+                    onclick="fazerLogout()"
+                    style="
+                    display:none;
+                    background:#dc3545;
+                    "
+                    title="Sair do sistema"
+                    >
+                    🚪 Sair
+                </button>
             </div>
         </header>
 
@@ -4207,8 +4209,19 @@
                 </div>
 
                 <!-- LADO DIREITO: Caixa & Resumo da Venda -->
-                <div style="background: #1e1e24; padding: 20px; border-radius: 12px; border: 1px solid #333; display: flex; flex-direction: column;">
-                    <h3 style="margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">🛍️ Comanda do Balcão</h3>
+                <div
+                    id="balcao-comanda"
+                    class="balcao-comanda-sticky"
+                    style="
+                    background:#1e1e24;
+                    padding:20px;
+                    border-radius:12px;
+                    border:1px solid #333;
+                    display:flex;
+                    flex-direction:column;
+                    "
+                    >
+                    <h3 style="margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">🛒️ Comanda do Balcão</h3>
 
                     <div id="lista-carrinho-balcao" style="flex: 1; overflow-y: auto; max-height: 280px; margin-bottom: 15px;">
                         <!-- Itens do carrinho -->
@@ -4518,6 +4531,15 @@
                         </div>
                     </div>
                 </div>
+                
+                <button
+                    id="btn-ir-comanda-balcao"
+                    class="no-print"
+                    onclick="irParaComandaBalcao()"
+                    title="Ir para a Comanda do Balcão"
+                    >
+                    🛒 Comanda
+                </button>
         </main>
 
         <!------------------------------------------------------------------------------------------------>

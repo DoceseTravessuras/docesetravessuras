@@ -1039,7 +1039,7 @@ body {
     justify-content: space-between;
     gap: 15px;
     padding: 10px 15px;
-    width: 100%;
+    width: 20%;
     box-sizing: border-box;
 }
 
@@ -1115,5 +1115,70 @@ body {
     .pdv-menu-row .tab-btn {
         flex: 1 1 auto;
         text-align: center;
+    }
+}
+
+/* ============================================================
+   COMANDA DO BALCÃO - SEMPRE VISÍVEL
+   ============================================================ */
+
+.balcao-comanda-sticky {
+    position: sticky;
+    top: 15px;
+    align-self: flex-start;
+    max-height: calc(100vh - 30px);
+    overflow-y: auto;
+}
+
+/* Barra de rolagem discreta dentro da comanda */
+.balcao-comanda-sticky::-webkit-scrollbar {
+    width: 6px;
+}
+
+.balcao-comanda-sticky::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+}
+
+/* ============================================================
+   BOTÃO FLUTUANTE - IR PARA COMANDA
+   ============================================================ */
+
+#btn-ir-comanda-balcao {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 9000;
+
+    border: none;
+    border-radius: 999px;
+
+    background: #2ed573;
+    color: #111;
+
+    font-weight: bold;
+    font-size: 0.95rem;
+
+    padding: 12px 18px;
+
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+
+    cursor: pointer;
+
+    transition: transform .15s ease,
+                box-shadow .15s ease;
+}
+
+#btn-ir-comanda-balcao:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0,0,0,.4);
+}
+
+/* Em telas menores */
+@media (max-width: 700px) {
+    #btn-ir-comanda-balcao {
+        right: 12px;
+        bottom: 12px;
+        padding: 10px 14px;
+        font-size: .85rem;
     }
 }
