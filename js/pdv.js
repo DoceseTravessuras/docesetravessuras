@@ -1809,6 +1809,7 @@ async function confirmarRecebimentoContaUI(contaId) {
 
 const AJUDA_PDV_ETAPAS = [
     {
+        id: 1,
         categoria: 'Primeiros passos',
         titulo: 'Faça o login',
         icone: '🔐',
@@ -1818,6 +1819,7 @@ const AJUDA_PDV_ETAPAS = [
         aba: null
     },
     {
+        id: 2,
         categoria: 'Primeiros passos',
         titulo: 'Entenda seu acesso',
         icone: '👤',
@@ -1829,6 +1831,7 @@ const AJUDA_PDV_ETAPAS = [
         subaba: 'sub-permissoes'
     },
     {
+        id: 3,
         categoria: 'Preparação inicial',
         titulo: 'Configure o caixa',
         icone: '💵',
@@ -1839,6 +1842,7 @@ const AJUDA_PDV_ETAPAS = [
         subaba: 'sub-caixa'
     },
     {
+        id: 4,
         categoria: 'Preparação inicial',
         titulo: 'Configure a loja virtual',
         icone: '🌐',
@@ -1848,6 +1852,7 @@ const AJUDA_PDV_ETAPAS = [
         subaba: 'sub-loja'
     },
     {
+        id: 5,
         categoria: 'Cadastros',
         titulo: 'Cadastre os insumos',
         icone: '🧪',
@@ -1857,6 +1862,7 @@ const AJUDA_PDV_ETAPAS = [
         subaba: 'insumos'
     },
     {
+        id: 6,
         categoria: 'Cadastros',
         titulo: 'Cadastre os fornecedores',
         icone: '🏭',
@@ -1866,6 +1872,7 @@ const AJUDA_PDV_ETAPAS = [
         subaba: 'fornecedores'
     },
     {
+        id: 7,
         categoria: 'Cadastros',
         titulo: 'Cadastre os clientes',
         icone: '👤',
@@ -1875,6 +1882,7 @@ const AJUDA_PDV_ETAPAS = [
         subaba: 'clientes'
     },
     {
+        id: 8,
         categoria: 'Cadastros',
         titulo: 'Cadastre as cidades',
         icone: '🏙️',
@@ -1884,6 +1892,18 @@ const AJUDA_PDV_ETAPAS = [
         subaba: 'cidades'
     },
     {
+        id: 9,
+        categoria: 'Cadastros',
+        titulo: 'Cadastre as categorias',
+        icone: '📂',
+        texto: `Antes de cadastrar os produtos, organize-os por categorias.<br><br>
+                Acesse <strong>Cadastros → Categorias</strong> para criar, editar, ativar ou inativar categorias.<br><br>
+                Use nomes claros e padronizados, como Bebidas, Lanches, Pizzas e Doces. Categorias inativas não devem ser usadas em novos cadastros.`,
+        aba: 'cadastros',
+        subaba: 'categorias'
+    },
+    {
+        id: 10,
         categoria: 'Produtos',
         titulo: 'Cadastre os produtos',
         icone: '📦',
@@ -1892,14 +1912,17 @@ const AJUDA_PDV_ETAPAS = [
         aba: 'produtos'
     },
     {
+        id: 11,
         categoria: 'Produtos',
         titulo: 'Mantenha estoque e preços',
         icone: '📊',
-        texto: `Na tabela de produtos você pode acompanhar estoque, custo, margem, preço e status.<br><br>
-                Gerente/Admin também pode editar rapidamente os dados do produto e trocar a imagem.`,
+        texto: `Na tabela de produtos você acompanha o estoque, custo, margem, preço e status. O estoque fica somente para consulta; não há mais botões rápidos +/−.<br><br>
+                Para corrigir uma quantidade ou registrar perda, use <strong>Ajustar Estoque / Registrar Perda</strong>. Se o produto tiver lotes, escolha o lote correto; se não tiver lotes, o ajuste será no estoque geral. Use <strong>Histórico de Ajustes de Estoque</strong> para conferir quem ajustou, quando e por qual motivo.<br><br>
+                Para adicionar unidades fabricadas, use sempre <strong>Produção</strong>, não a entrada manual de correção. Gerente/Admin também pode editar dados comerciais do produto e trocar a imagem.`,
         aba: 'produtos'
     },
     {
+        id: 12,
         categoria: 'Produção',
         titulo: 'Monte a Ficha Técnica',
         icone: '📋',
@@ -1908,6 +1931,7 @@ const AJUDA_PDV_ETAPAS = [
         aba: 'ficha-tecnica'
     },
     {
+        id: 13,
         categoria: 'Compras',
         titulo: 'Registre as compras',
         icone: '🛒',
@@ -1916,6 +1940,7 @@ const AJUDA_PDV_ETAPAS = [
         aba: 'compras'
     },
     {
+        id: 14,
         categoria: 'Produção',
         titulo: 'Registre a produção',
         icone: '🏭',
@@ -1924,6 +1949,7 @@ const AJUDA_PDV_ETAPAS = [
         aba: 'produtos'
     },
     {
+        id: 15,
         categoria: 'Vendas',
         titulo: 'Venda no balcão',
         icone: '🛒',
@@ -1939,6 +1965,7 @@ const AJUDA_PDV_ETAPAS = [
         aba: 'balcao'
     },
     {
+        id: 16,
         categoria: 'Pedidos',
         titulo: 'Acompanhe os pedidos',
         icone: '📋',
@@ -1948,6 +1975,7 @@ const AJUDA_PDV_ETAPAS = [
         aba: 'pedidos'
     },
     {
+        id: 17,
         categoria: 'Consulta',
         titulo: 'Consulte histórico e estoque',
         icone: '📜',
@@ -1956,6 +1984,7 @@ const AJUDA_PDV_ETAPAS = [
         aba: 'historico'
     },
     {
+        id: 18,
         categoria: 'Financeiro',
         titulo: 'Acompanhe o financeiro',
         icone: '📊',
@@ -1964,6 +1993,7 @@ const AJUDA_PDV_ETAPAS = [
         aba: 'financas'
     },
     {
+        id: 19,
         categoria: 'Controle',
         titulo: 'Feche o dia e confira a auditoria',
         icone: '🔎',
@@ -1994,9 +2024,9 @@ const AJUDA_PDV_TELAS = {
     produtos: {
         titulo: 'Produtos & Estoque',
         icone: '📦',
-        texto: `Aqui você cadastra produtos, controla preços e estoque e acessa produção/histórico de produção.<br><br>
-                Gerente/Admin também pode editar produtos e a imagem.`,
-        passos: ['Novo Produto', 'Produção', 'Histórico de Produções', 'Atualizar Lista']
+        texto: `Aqui você cadastra produtos, acompanha preços e estoque, acessa a Produção e consulta os históricos.<br><br>
+                O estoque não é mais alterado por botões rápidos +/−. Para ajuste manual, use <strong>Ajustar Estoque / Registrar Perda</strong>: escolha um lote para produto com controle por lote ou o estoque geral para produto sem lote. O registro aparece no histórico de ajustes e na Auditoria. Para novas unidades fabricadas, utilize Produção.`,
+        passos: ['Novo Produto', 'Produção', 'Ajustar Estoque / Registrar Perda', 'Histórico de Ajustes de Estoque', 'Histórico de Produções', 'Atualizar Lista']
     },
 
     'ficha-tecnica': {
@@ -2009,8 +2039,43 @@ const AJUDA_PDV_TELAS = {
     cadastros: {
         titulo: 'Cadastros',
         icone: '📚',
-        texto: `Central administrativa dos cadastros do sistema. Use as subabas para manter a base de insumos, fornecedores, clientes e cidades.`,
-        passos: ['Insumos', 'Fornecedores', 'Clientes', 'Cidades']
+        texto: `Central administrativa dos cadastros do sistema. Use as subabas para manter insumos, fornecedores, clientes, cidades de entrega e categorias de produtos.`,
+        passos: ['Insumos', 'Fornecedores', 'Clientes', 'Cidades', 'Categorias']
+    },
+
+    'cadastros-insumos': {
+        titulo: 'Cadastro de Insumos',
+        icone: '🧪',
+        texto: `Cadastre matérias-primas e itens usados na produção. Confira nome, produto relacionado, unidades de medida, fator de conversão e estoque mínimo.`,
+        passos: ['Cadastrar o insumo', 'Conferir unidades', 'Definir estoque mínimo', 'Atualizar a lista']
+    },
+
+    'cadastros-fornecedores': {
+        titulo: 'Cadastro de Fornecedores',
+        icone: '🏭',
+        texto: `Mantenha os dados de empresas e pessoas que fornecem produtos ou matérias-primas para a loja.`,
+        passos: ['Cadastrar fornecedor', 'Conferir documento e contato', 'Manter status atualizado']
+    },
+
+    'cadastros-clientes': {
+        titulo: 'Cadastro de Clientes',
+        icone: '👤',
+        texto: `Registre e mantenha atualizados os dados dos clientes para facilitar o atendimento, a identificação das vendas e o controle de contas a receber.`,
+        passos: ['Cadastrar cliente', 'Conferir telefone e documento', 'Atualizar endereço quando necessário']
+    },
+
+    'cadastros-cidades': {
+        titulo: 'Cadastro de Cidades de Entrega',
+        icone: '🏙️',
+        texto: `Configure as cidades atendidas pela entrega, incluindo UF, taxa e situação ativa. O CEP do cliente pode ser usado para identificar a cidade cadastrada.`,
+        passos: ['Cadastrar cidade e UF', 'Definir taxa de entrega', 'Ativar ou inativar a cidade']
+    },
+
+    'cadastros-categorias': {
+        titulo: 'Cadastro de Categorias',
+        icone: '📂',
+        texto: `Organize os produtos por categorias para facilitar o cadastro e a gestão. Crie nomes padronizados e use a opção de inativar quando não quiser mais utilizar uma categoria em novos produtos.`,
+        passos: ['Criar categoria', 'Editar nome', 'Ativar ou inativar', 'Atualizar a lista']
     },
 
     compras: {
@@ -2067,39 +2132,103 @@ let ajudaPDVModo = 'completo';
 let ajudaPDVIndice = 0;
 let ajudaPDVAtual = null;
 
-function obterAbaAtualAjuda() {
+function elementoVisivelParaAjuda(elemento) {
+    if (!elemento) {
+        return false;
+    }
 
-    const abas = [
-        'pedidos',
-        'balcao',
-        'produtos',
-        'ficha-tecnica',
-        'cadastros',
-        'compras',
-        'historico',
-        'mov-estoque',
-        'pix',
-        'financas',
-        'auditoria',
-        'config'
+    let atual = elemento;
+
+    while (atual && atual.nodeType === 1) {
+        const estilo = window.getComputedStyle(atual);
+
+        if (
+            estilo.display === 'none' ||
+            estilo.visibility === 'hidden' ||
+            estilo.visibility === 'collapse'
+        ) {
+            return false;
+        }
+
+        atual = atual.parentElement;
+    }
+
+    return true;
+}
+
+function obterAbaAtualAjuda() {
+    const mapaAbas = [
+        ['pedidos', 'aba-pedidos'],
+        ['balcao', 'aba-balcao'],
+        ['produtos', 'aba-produtos'],
+        ['ficha-tecnica', 'aba-ficha-tecnica'],
+        ['cadastros', 'aba-cadastros'],
+        ['compras', 'aba-compras'],
+        ['historico', 'aba-historico'],
+        ['mov-estoque', 'aba-mov-estoque'],
+        ['pix', 'aba-pix'],
+        ['financas', 'aba-financas'],
+        ['auditoria', 'aba-auditoria'],
+        ['config', 'aba-config']
     ];
 
-    for (const nome of abas) {
+    let aba = null;
 
-        const el =
-                document.getElementById(`aba-${nome}`);
-        if (!el)
-            continue;
+    for (const [nome, id] of mapaAbas) {
+        const elemento = document.getElementById(id);
 
-        const estilo =
-                window.getComputedStyle(el);
-
-        if (estilo.display !== 'none') {
-            return nome;
+        if (elementoVisivelParaAjuda(elemento)) {
+            aba = nome;
+            break;
         }
     }
 
-    return 'pedidos';
+    // Como respaldo, identifica a aba pelo botão de navegação marcado como ativo.
+    if (!aba) {
+        const mapaBotoes = [
+            ['pedidos', 'btn-tab-pedidos'],
+            ['balcao', 'btn-tab-balcao'],
+            ['produtos', 'btn-tab-produtos'],
+            ['ficha-tecnica', 'btn-tab-ficha-tecnica'],
+            ['cadastros', 'btn-tab-cadastros'],
+            ['compras', 'btn-tab-compras'],
+            ['historico', 'btn-tab-historico'],
+            ['mov-estoque', 'btn-tab-mov-estoque'],
+            ['pix', 'btn-tab-pix'],
+            ['financas', 'btn-tab-financas'],
+            ['auditoria', 'btn-tab-auditoria'],
+            ['config', 'btn-tab-config']
+        ];
+
+        const botaoAtivo = mapaBotoes.find(([_, id]) =>
+            document.getElementById(id)?.classList.contains('active')
+        );
+
+        aba = botaoAtivo?.[0] || 'pedidos';
+    }
+
+    let subAba = null;
+
+    if (aba === 'cadastros') {
+        const subAbas = [
+            ['insumos', 'cadastro-insumos'],
+            ['fornecedores', 'cadastro-fornecedores'],
+            ['clientes', 'cadastro-clientes'],
+            ['cidades', 'cadastro-cidades'],
+            ['categorias', 'cadastro-categorias']
+        ];
+
+        for (const [nome, id] of subAbas) {
+            const elemento = document.getElementById(id);
+
+            if (elementoVisivelParaAjuda(elemento)) {
+                subAba = nome;
+                break;
+            }
+        }
+    }
+
+    return {aba, subAba};
 }
 
 function atualizarBotoesModoAjuda() {
@@ -2142,35 +2271,42 @@ function atualizarBotoesModoAjuda() {
 }
 
 function abrirCentralAjuda(modo = 'completo') {
+    const modal = document.getElementById('modal-central-ajuda');
 
-    const modal =
-            document.getElementById(
-                    'modal-central-ajuda'
-                    );
-
-    if (!modal)
+    if (!modal) {
         return;
+    }
 
-    ajudaPDVModo =
-            modo === 'tela'
-            ? 'tela'
-            : 'completo';
+    ajudaPDVModo = modo === 'tela' ? 'tela' : 'completo';
 
     if (ajudaPDVModo === 'completo') {
-
         ajudaPDVIndice = 0;
         ajudaPDVAtual = null;
-
     } else {
+        const telaAtual = obterAbaAtualAjuda();
 
-        ajudaPDVAtual =
-                obterAbaAtualAjuda();
+        // As telas rápidas são indexadas por chaves string em AJUDA_PDV_TELAS.
+        // Para Cadastros, diferencia cada subaba.
+        let chaveAjuda = telaAtual.aba;
+
+        if (telaAtual.aba === 'cadastros' && telaAtual.subAba) {
+            chaveAjuda = `cadastros-${telaAtual.subAba}`;
+        }
+
+        if (!AJUDA_PDV_TELAS[chaveAjuda]) {
+            chaveAjuda = AJUDA_PDV_TELAS[telaAtual.aba]
+                ? telaAtual.aba
+                : 'pedidos';
+        }
+
+        ajudaPDVAtual = chaveAjuda;
+
+        console.log('💡 Tela identificada para ajuda:', telaAtual);
+        console.log('💡 Conteúdo selecionado para ajuda:', ajudaPDVAtual);
     }
 
     modal.style.display = 'flex';
-
     atualizarBotoesModoAjuda();
-
     renderizarCentralAjuda();
 }
 
@@ -2287,6 +2423,11 @@ function renderizarCentralAjuda() {
 
         if (btnAnterior) {
 
+            // O modo "Ajuda desta tela" esconde estes botões.
+            // Ao voltar ao treinamento, remova o display:none anterior.
+            btnAnterior.style.removeProperty('display');
+            btnAnterior.textContent = '← Anterior';
+
             btnAnterior.disabled =
                     ajudaPDVIndice === 0;
 
@@ -2303,6 +2444,8 @@ function renderizarCentralAjuda() {
 
         if (btnProxima) {
 
+            // Garante que o botão Próximo volte a aparecer após a ajuda rápida.
+            btnProxima.style.removeProperty('display');
             btnProxima.textContent =
                     ajudaPDVIndice === total - 1
                     ? '✅ Concluir'
@@ -2458,10 +2601,18 @@ function navegarAjuda(direcao) {
 
 function abrirSubAbaPorAjuda(idSubAba) {
 
-    if (
-            !idSubAba ||
-            typeof window.alternarSubAba !== 'function'
-            ) {
+    if (!idSubAba) {
+        return;
+    }
+
+    if (idSubAba === 'categorias') {
+        if (typeof abrirCadastroCategoriasUI === 'function') {
+            abrirCadastroCategoriasUI();
+            return;
+        }
+    }
+
+    if (typeof window.alternarSubAba !== 'function') {
         return;
     }
 
@@ -2531,7 +2682,10 @@ function abrirTelaAjuda(nomeAba, subaba = null) {
                             'abrirCadastroClientesUI',
 
                     cidades:
-                            'abrirCadastroCidadesUI'
+                            'abrirCadastroCidadesUI',
+
+                    categorias:
+                            'abrirCadastroCategoriasUI'
                 };
 
                 const funcao =
@@ -3085,6 +3239,9 @@ function iniciarEscutaRealtime() {
             });
 }
 
+let abaAtualAjudaPDV = 'pedidos';
+let subAbaAtualAjudaPDV = null;
+
 async function alternarAba(nomeAba) {
     // ========================================================
     // PROTEÇÃO DA ABA FINANÇAS
@@ -3114,6 +3271,9 @@ async function alternarAba(nomeAba) {
             return;
         }
     }
+
+    abaAtualAjudaPDV = nomeAba;
+    subAbaAtualAjudaPDV = null;
 
     const abaPedidos = document.getElementById('aba-pedidos');
     const abaBalcao = document.getElementById('aba-balcao');
@@ -8951,7 +9111,7 @@ async function carregarProdutosGerenciador() {
                     'produtos-table-body'
                     );
 
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando produtos...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando produtos...</td></tr>';
 
     const {
         data: produtos,
@@ -9157,45 +9317,11 @@ async function carregarProdutosGerenciador() {
                     class="input-table"
                     style="width:70px;"
                     readonly
-                    title="Use os botões para movimentar o estoque."
+                    title="O estoque é atualizado pela Produção ou pela tela Ajustar Estoque / Registrar Perda."
                 >
 
             </td>
 
-
-            <td>
-
-                <div class="qty-controls">
-
-                    <button
-                        class="btn-qty"
-                        onclick="ajustarEstoqueInput(${p.id}, -5)"
-                    >
-                        -5
-                    </button>
-
-                    <button
-                        class="btn-qty"
-                        onclick="ajustarEstoqueInput(${p.id}, -1)"
-                    >
-                        -1
-                    </button>
-
-                    <button
-                        class="btn-qty"
-                        onclick="ajustarEstoqueInput(${p.id}, 1)"
-                    >
-                        +1
-                    </button>
-
-                    <button
-                        class="btn-qty"
-                        onclick="ajustarEstoqueInput(${p.id}, 5)"
-                    >
-                        +5
-                    </button>
-                </div>
-            </td>
 
             <td>
                 <select
@@ -11256,99 +11382,522 @@ async function salvarProduto(id) {
     }
 }
 
-// Ajusta o valor do campo de estoque na tela antes de salvar
-const movimentacoesEstoqueEmAndamento = new Set();
+// ============================================================
+// AJUSTE DE ESTOQUE: produtos comuns x produtos controlados por lote
+// ============================================================
+let lotesAjusteUI = [];
+let ajusteLoteProdutoFixadoId = null;
+let ajusteLoteSalvando = false;
 
-async function ajustarEstoqueInput(produtoId, delta) {
-    const cargo = String(
-            window.usuarioAtual?.cargo || ''
-            ).toUpperCase();
+function usuarioPodeAjustarLoteUI() {
+    const cargo = String(window.usuarioAtual?.cargo || '').toUpperCase().trim();
+    return cargo === 'GERENTE' || cargo === 'ADMIN';
+}
 
-    const ehGerente =
-            cargo === 'GERENTE' ||
-            cargo === 'ADMIN';
+function escaparHTMLAjusteLoteUI(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[caractere]));
+}
 
-    if (
-            !ehGerente &&
-            permissoesAtuais.bloquearProdutos
-            ) {
-        alert('⛔ Você não tem permissão para alterar o estoque.');
+function dataBRAjusteLoteUI(valor) {
+    if (!valor) return '—';
+    const texto = String(valor).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
+    return texto.split('-').reverse().join('/');
+}
+
+function motivoAjusteLoteRotuloUI(motivo) {
+    const motivos = {
+        PERDA: 'Perda / produto estragado',
+        VENCIMENTO: 'Produto vencido',
+        DANIFICADO: 'Produto danificado',
+        CONTAGEM_FISICA: 'Diferença na contagem física',
+        CONSUMO_INTERNO: 'Consumo interno',
+        CORRECAO_LANCAMENTO: 'Correção de lançamento',
+        OUTRO: 'Outro motivo'
+    };
+    return motivos[String(motivo || '').toUpperCase()] || String(motivo || '—');
+}
+
+function atualizarMotivosAjusteLoteUI() {
+    const direcao = document.getElementById('ajuste-lote-direcao')?.value || 'SAIDA';
+    const select = document.getElementById('ajuste-lote-motivo');
+    if (!select) return;
+
+    const anterior = select.value;
+    const opcoes = direcao === 'SAIDA'
+        ? [
+            ['PERDA', 'Perda / produto estragado'],
+            ['VENCIMENTO', 'Produto vencido'],
+            ['DANIFICADO', 'Produto danificado'],
+            ['CONTAGEM_FISICA', 'Diferença na contagem física'],
+            ['CONSUMO_INTERNO', 'Consumo interno'],
+            ['OUTRO', 'Outro motivo']
+        ]
+        : [
+            ['CONTAGEM_FISICA', 'Diferença na contagem física'],
+            ['CORRECAO_LANCAMENTO', 'Correção de lançamento'],
+            ['OUTRO', 'Outro motivo']
+        ];
+
+    select.innerHTML = opcoes.map(([valor, rotulo]) =>
+        `<option value="${valor}">${rotulo}</option>`
+    ).join('');
+
+    select.value = opcoes.some(([valor]) => valor === anterior)
+        ? anterior
+        : 'CONTAGEM_FISICA';
+
+    atualizarObservacaoAjusteLoteUI();
+}
+
+function atualizarObservacaoAjusteLoteUI() {
+    const motivo = document.getElementById('ajuste-lote-motivo')?.value || '';
+    const campo = document.getElementById('ajuste-lote-observacao');
+    if (!campo) return;
+    campo.required = motivo === 'OUTRO';
+    campo.placeholder = motivo === 'OUTRO'
+        ? 'Descreva o motivo do ajuste (obrigatório).'
+        : 'Ex.: 3 unidades estragaram durante o armazenamento.';
+}
+
+function obterLotesVisiveisAjusteLoteUI() {
+    return ajusteLoteProdutoFixadoId
+        ? lotesAjusteUI.filter(item => Number(item.produto_id) === Number(ajusteLoteProdutoFixadoId))
+        : lotesAjusteUI;
+}
+
+async function carregarLotesAjusteLoteUI() {
+    const select = document.getElementById('ajuste-lote-select');
+    const detalhes = document.getElementById('ajuste-lote-detalhes');
+    if (select) select.innerHTML = '<option value="">Carregando produtos e lotes...</option>';
+    if (detalhes) detalhes.textContent = 'Carregando estoques e lotes...';
+
+    const [resProdutos, resLotes] = await Promise.all([
+        _supabase.from('produtos').select('id, nome, estoque, ativo').order('nome', { ascending: true }).limit(5000),
+        _supabase.from('lotes_producao')
+            .select('id, produto_id, numero_lote, data_fabricacao, data_validade, quantidade_inicial, quantidade_disponivel, status')
+            .order('id', { ascending: false }).limit(5000)
+    ]);
+    if (resProdutos.error) throw new Error('Não foi possível carregar os produtos: ' + resProdutos.error.message);
+    if (resLotes.error) throw new Error('Não foi possível carregar os lotes: ' + resLotes.error.message);
+
+    const produtos = resProdutos.data || [];
+    const lotes = resLotes.data || [];
+    const mapaProdutos = new Map(produtos.map(p => [Number(p.id), p]));
+    const produtosComLotes = new Set(lotes.map(l => Number(l.produto_id)));
+
+    const itensLote = lotes.map(lote => {
+        const produto = mapaProdutos.get(Number(lote.produto_id)) || {};
+        return {
+            ...lote,
+            chave: 'LOTE:' + lote.id,
+            controle: 'LOTE',
+            lote_id: Number(lote.id),
+            produto_id: Number(lote.produto_id),
+            produto_nome: produto.nome || `Produto #${lote.produto_id}`,
+            produto_estoque: Number(produto.estoque || 0)
+        };
+    });
+
+    const itensSemLote = produtos
+        .filter(p => !produtosComLotes.has(Number(p.id)))
+        .map(p => ({
+            chave: 'PRODUTO:' + p.id,
+            controle: 'PRODUTO',
+            id: null,
+            lote_id: null,
+            produto_id: Number(p.id),
+            produto_nome: p.nome || `Produto #${p.id}`,
+            produto_estoque: Number(p.estoque || 0),
+            quantidade_disponivel: Number(p.estoque || 0),
+            quantidade_inicial: Number(p.estoque || 0),
+            numero_lote: null,
+            data_fabricacao: null,
+            data_validade: null,
+            status: 'SEM LOTE'
+        }));
+
+    lotesAjusteUI = [...itensLote, ...itensSemLote].sort((a, b) => {
+        const nome = String(a.produto_nome).localeCompare(String(b.produto_nome), 'pt-BR');
+        if (nome) return nome;
+        if (a.controle !== b.controle) return a.controle === 'LOTE' ? -1 : 1;
+        return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+    preencherSelectLotesAjusteLoteUI();
+}
+
+function preencherSelectLotesAjusteLoteUI() {
+    const select = document.getElementById('ajuste-lote-select');
+    if (!select) return;
+    const selecionadoAntes = select.value;
+    const itens = obterLotesVisiveisAjusteLoteUI();
+
+    select.innerHTML = '<option value="">Selecione o produto ou lote...</option>';
+    itens.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.chave;
+        if (item.controle === 'LOTE') {
+            const disponivel = Number(item.quantidade_disponivel || 0);
+            option.textContent = `${item.produto_nome} · Lote ${item.numero_lote || '#' + item.id} · disponível: ${disponivel} · validade: ${dataBRAjusteLoteUI(item.data_validade)}`;
+        } else {
+            option.textContent = `${item.produto_nome} · estoque geral (sem lote): ${Number(item.produto_estoque || 0)}`;
+        }
+        select.appendChild(option);
+    });
+
+    if (!itens.length) {
+        select.innerHTML = '<option value="">Nenhum produto ou lote disponível</option>';
+    } else if (itens.some(item => item.chave === selecionadoAntes)) {
+        select.value = selecionadoAntes;
+    } else if (ajusteLoteProdutoFixadoId) {
+        const direcao = document.getElementById('ajuste-lote-direcao')?.value || 'SAIDA';
+        const lotes = itens.filter(item => item.controle === 'LOTE');
+        if (lotes.length) {
+            const ordenados = [...lotes].sort((a, b) => {
+                if (direcao === 'SAIDA') {
+                    const da = a.data_validade || '9999-12-31';
+                    const db = b.data_validade || '9999-12-31';
+                    if (da !== db) return da.localeCompare(db);
+                }
+                return Number(b.id) - Number(a.id);
+            });
+            select.value = ordenados[0].chave;
+        } else {
+            select.value = itens[0].chave;
+        }
+    }
+    atualizarResumoAjusteLoteUI();
+}
+
+async function abrirModalAjusteLoteUI(opcoes = {}) {
+    if (!usuarioPodeAjustarLoteUI()) {
+        alert('⛔ Somente GERENTE ou ADMIN pode ajustar estoque ou registrar perdas.');
         return;
     }
 
-    if (!Number.isInteger(delta) || delta === 0) {
-        console.error('Delta de estoque inválido:', delta);
+    const modal = document.getElementById('modal-ajuste-lote');
+    if (!modal) {
+        alert('❌ A janela Ajustar Estoque / Registrar Perda não foi encontrada no HTML atualizado.');
         return;
     }
 
-    if (movimentacoesEstoqueEmAndamento.has(produtoId)) {
-        return;
-    }
+    ajusteLoteProdutoFixadoId = Number(opcoes.produtoId) > 0 ? Number(opcoes.produtoId) : null;
+    const direcao = opcoes.direcao === 'ENTRADA' ? 'ENTRADA' : 'SAIDA';
+    const campoDirecao = document.getElementById('ajuste-lote-direcao');
+    const campoQuantidade = document.getElementById('ajuste-lote-quantidade');
+    const campoMotivo = document.getElementById('ajuste-lote-motivo');
+    const campoObservacao = document.getElementById('ajuste-lote-observacao');
+    if (campoDirecao) campoDirecao.value = direcao;
+    if (campoQuantidade) campoQuantidade.value = String(Math.max(1, Math.abs(Number(opcoes.quantidade) || 1)));
+    if (campoObservacao) campoObservacao.value = '';
+    if (campoMotivo) campoMotivo.value = '';
+    atualizarMotivosAjusteLoteUI();
 
-    const inputEstoque = document.getElementById(
-            `estoque-${produtoId}`
-            );
-
-    if (!inputEstoque) {
-        console.error(
-                `Campo de estoque do produto ${produtoId} não encontrado.`
-                );
-        return;
-    }
-
-    const tipo = delta > 0
-            ? 'ENTRADA'
-            : 'AJUSTE';
-
-    const motivo = delta > 0
-            ? `Entrada manual pelo PDV (+${delta})`
-            : `Ajuste manual pelo PDV (${delta})`;
-
-    movimentacoesEstoqueEmAndamento.add(produtoId);
+    const status = document.getElementById('ajuste-lote-status');
+    const botaoConfirmar = document.getElementById('btn-confirmar-ajuste-lote');
+    if (status) status.textContent = '';
+    if (botaoConfirmar) botaoConfirmar.disabled = true;
+    modal.style.display = 'flex';
 
     try {
-        const {data, error} = await _supabase.rpc(
-                'movimentar_estoque_manual',
-                {
-                    p_produto_id: Number(produtoId),
-                    p_tipo: tipo,
-                    p_quantidade: delta,
-                    p_motivo: motivo
-                }
-        );
-
-        if (error) {
-            throw new Error(error.message);
+        await carregarLotesAjusteLoteUI();
+        if (ajusteLoteProdutoFixadoId && !obterLotesVisiveisAjusteLoteUI().length) {
+            throw new Error('Este produto não está disponível para ajuste. Atualize a lista e confira as permissões.');
         }
+        atualizarResumoAjusteLoteUI();
+    } catch (erro) {
+        console.error('Erro ao abrir ajuste de estoque:', erro);
+        if (status) status.textContent = erro.message || String(erro);
+        alert('❌ Não foi possível abrir o ajuste de estoque:\n\n' + (erro.message || erro));
+    }
+}
 
-        if (!data) {
-            throw new Error(
-                    'O banco não retornou os dados da movimentação.'
-                    );
-        }
+function fecharModalAjusteLoteUI() {
+    const modal = document.getElementById('modal-ajuste-lote');
+    if (modal) modal.style.display = 'none';
+    ajusteLoteProdutoFixadoId = null;
+    ajusteLoteSalvando = false;
+}
 
-        inputEstoque.value = Number(
-                data.estoque_posterior
-                );
+function atualizarResumoAjusteLoteUI() {
+    const select = document.getElementById('ajuste-lote-select');
+    const detalhes = document.getElementById('ajuste-lote-detalhes');
+    const status = document.getElementById('ajuste-lote-status');
+    const btn = document.getElementById('btn-confirmar-ajuste-lote');
+    const quantidade = Number(document.getElementById('ajuste-lote-quantidade')?.value || 0);
+    const direcao = document.getElementById('ajuste-lote-direcao')?.value || 'SAIDA';
+    const motivo = document.getElementById('ajuste-lote-motivo')?.value || '';
+    const observacao = document.getElementById('ajuste-lote-observacao')?.value?.trim() || '';
+    const item = lotesAjusteUI.find(i => i.chave === String(select?.value || ''));
 
-        console.log(
-                '✅ Movimentação de estoque:',
-                data
-                );
+    if (!item) {
+        if (detalhes) detalhes.innerHTML = 'Selecione um produto ou lote para conferir as quantidades.';
+        if (status) status.textContent = '';
+        if (btn) btn.disabled = true;
+        return;
+    }
 
-    } catch (err) {
-        console.error(
-                'Erro na movimentação de estoque:',
-                err
-                );
+    const usaLote = item.controle === 'LOTE';
+    const saldoAntes = usaLote ? Number(item.quantidade_disponivel || 0) : Number(item.produto_estoque || 0);
+    const estoqueAntes = Number(item.produto_estoque || 0);
+    const delta = direcao === 'ENTRADA' ? quantidade : -quantidade;
+    const saldoDepois = saldoAntes + delta;
+    const estoqueDepois = estoqueAntes + delta;
+    const statusLote = String(item.status || '').toUpperCase();
+    let problema = '';
+    if (!Number.isInteger(quantidade) || quantidade <= 0) problema = 'Informe uma quantidade inteira maior que zero.';
+    else if (direcao === 'SAIDA' && quantidade > saldoAntes) problema = usaLote ? 'A quantidade informada é maior que o disponível neste lote.' : 'A quantidade informada é maior que o estoque disponível.';
+    else if (usaLote && direcao === 'ENTRADA' && statusLote !== 'ATIVO') problema = 'Só é permitido acrescentar quantidade a um lote com status ATIVO.';
+    else if (estoqueDepois < 0) problema = 'O estoque consolidado do produto ficaria negativo.';
+    else if (motivo === 'OUTRO' && !observacao) problema = 'Descreva o motivo no campo de observação.';
 
+    if (detalhes) {
+        const nomeControle = usaLote
+            ? `Lote ${escaparHTMLAjusteLoteUI(item.numero_lote || '#' + item.id)}`
+            : 'Estoque geral — produto sem lote';
+        const saldoRotulo = usaLote ? 'Disponível no lote' : 'Estoque geral';
+        const saldoDepoisRotulo = usaLote ? 'Saldo do lote após ajuste' : 'Estoque após ajuste';
+        detalhes.innerHTML = `
+            <div style="font-weight:bold; font-size:1.02rem; margin-bottom:8px;">${escaparHTMLAjusteLoteUI(item.produto_nome)} — ${nomeControle}</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:9px;">
+                <div style="background:#1e1e24; border-radius:6px; padding:10px;"><small style="color:#9ca3af;">${saldoRotulo} antes</small><div style="font-size:1.2rem; font-weight:bold;">${saldoAntes}</div></div>
+                <div style="background:#1e1e24; border-radius:6px; padding:10px;"><small style="color:#9ca3af;">${saldoDepoisRotulo}</small><div style="font-size:1.2rem; font-weight:bold; color:${saldoDepois < 0 ? '#f87171' : '#86efac'};">${Number.isFinite(saldoDepois) ? saldoDepois : '—'}</div></div>
+                <div style="background:#1e1e24; border-radius:6px; padding:10px;"><small style="color:#9ca3af;">Estoque consolidado antes → depois</small><div style="font-size:1.05rem; font-weight:bold;">${estoqueAntes} → ${Number.isFinite(estoqueDepois) ? estoqueDepois : '—'}</div></div>
+            </div>
+            ${usaLote ? `<div style="margin-top:9px; color:#9ca3af; font-size:.86rem;">Fabricação: ${dataBRAjusteLoteUI(item.data_fabricacao)} · Validade: ${dataBRAjusteLoteUI(item.data_validade)} · Status: ${escaparHTMLAjusteLoteUI(item.status || '—')}</div>` : '<div style="margin-top:9px; color:#9ca3af; font-size:.86rem;">Este produto não possui lotes cadastrados. O ajuste será feito diretamente no estoque geral.</div>'}
+        `;
+    }
+    if (status) {
+        status.textContent = problema ? '⚠️ ' + problema : 'Confira o saldo, o motivo e a observação antes de confirmar.';
+        status.style.color = problema ? '#fca5a5' : '#cbd5e1';
+    }
+    if (btn) btn.disabled = !!problema || ajusteLoteSalvando;
+}
+
+async function salvarAjusteLoteUI() {
+    if (ajusteLoteSalvando) return;
+    if (!usuarioPodeAjustarLoteUI()) {
+        alert('⛔ Somente GERENTE ou ADMIN pode ajustar estoque.');
+        return;
+    }
+
+    const chave = String(document.getElementById('ajuste-lote-select')?.value || '');
+    const item = lotesAjusteUI.find(i => i.chave === chave);
+    const direcao = document.getElementById('ajuste-lote-direcao')?.value || 'SAIDA';
+    const quantidade = Number(document.getElementById('ajuste-lote-quantidade')?.value || 0);
+    const motivo = document.getElementById('ajuste-lote-motivo')?.value || '';
+    const observacao = document.getElementById('ajuste-lote-observacao')?.value?.trim() || '';
+
+    if (!item) {
+        alert('Selecione o produto ou lote que será ajustado.');
+        return;
+    }
+    const usaLote = item.controle === 'LOTE';
+    const saldoAtual = usaLote ? Number(item.quantidade_disponivel || 0) : Number(item.produto_estoque || 0);
+    if (!Number.isInteger(quantidade) || quantidade <= 0) {
+        alert('Informe uma quantidade inteira maior que zero.');
+        return;
+    }
+    if (direcao === 'SAIDA' && quantidade > saldoAtual) {
+        alert(usaLote ? 'A quantidade informada é maior que a disponível neste lote.' : 'A quantidade informada é maior que o estoque disponível.');
+        return;
+    }
+    if (usaLote && direcao === 'ENTRADA' && String(item.status || '').toUpperCase() !== 'ATIVO') {
+        alert('Só é permitido acrescentar quantidade a um lote com status ATIVO.');
+        return;
+    }
+    if (motivo === 'OUTRO' && !observacao) {
+        alert('Descreva o motivo da correção no campo de observação.');
+        document.getElementById('ajuste-lote-observacao')?.focus();
+        return;
+    }
+
+    const loteId = usaLote ? Number(item.lote_id) : null;
+    const rotuloDirecao = direcao === 'SAIDA' ? 'REDUÇÃO' : 'ENTRADA DE CORREÇÃO';
+    const confirmar = confirm(
+        `Confirmar ${rotuloDirecao} no estoque?\n\n` +
+        `Produto: ${item.produto_nome}\n` +
+        (usaLote ? `Lote: ${item.numero_lote || '#' + item.id}\n` : 'Controle: estoque geral (sem lote)\n') +
+        `Quantidade: ${quantidade}\n` +
+        `Motivo: ${motivoAjusteLoteRotuloUI(motivo)}\n` +
+        (observacao ? `Observação: ${observacao}\n` : '') +
+        '\nO saldo escolhido e o estoque consolidado serão atualizados juntos.'
+    );
+    if (!confirmar) return;
+
+    ajusteLoteSalvando = true;
+    const btn = document.getElementById('btn-confirmar-ajuste-lote');
+    const status = document.getElementById('ajuste-lote-status');
+    const textoOriginal = btn?.textContent || '✅ Confirmar Ajuste';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Registrando...'; }
+    if (status) status.textContent = 'Registrando ajuste e históricos...';
+
+    try {
+        const { data, error } = await _supabase.rpc('ajustar_lote_producao', {
+            p_lote_id: loteId,
+            p_produto_id: Number(item.produto_id),
+            p_direcao: direcao,
+            p_quantidade: quantidade,
+            p_motivo: motivo,
+            p_observacao: observacao || null
+        });
+        if (error) throw new Error(error.message || 'Erro desconhecido no banco de dados.');
+        const resultado = Array.isArray(data) ? data[0] : data;
+        if (!resultado || resultado.sucesso !== true) throw new Error(resultado?.mensagem || 'O banco não confirmou o ajuste.');
+
+        fecharModalAjusteLoteUI();
         alert(
-                '❌ Não foi possível movimentar o estoque: ' +
-                err.message
-                );
-
+            '✅ Ajuste de estoque registrado!\n\n' +
+            `Produto: ${resultado.produto_nome || item.produto_nome}\n` +
+            (usaLote ? `Lote: ${resultado.numero_lote || item.numero_lote || '#' + item.id}\n` : 'Controle: estoque geral (sem lote)\n') +
+            `Saldo do controle: ${resultado.quantidade_lote_anterior == null ? resultado.estoque_anterior : resultado.quantidade_lote_anterior} → ${resultado.quantidade_lote_posterior == null ? resultado.estoque_posterior : resultado.quantidade_lote_posterior}\n` +
+            `Estoque consolidado: ${resultado.estoque_anterior} → ${resultado.estoque_posterior}\n` +
+            `Motivo: ${motivoAjusteLoteRotuloUI(motivo)}\n` +
+            'O ajuste também foi enviado para a auditoria.'
+        );
+        await carregarProdutosGerenciador();
+        if (document.getElementById('modal-historico-ajustes-lote')?.style.display === 'flex') await carregarHistoricoAjustesLoteUI();
+        if (typeof carregarBalcao === 'function') await carregarBalcao();
+    } catch (erro) {
+        console.error('Erro ao ajustar estoque:', erro);
+        const mensagem = String(erro?.message || erro);
+        let explicacao = mensagem;
+        if (mensagem.includes('USUARIO_NAO_AUTORIZADO')) explicacao = 'Somente um usuário ativo com cargo GERENTE ou ADMIN pode ajustar estoque.';
+        else if (mensagem.includes('QUANTIDADE_MAIOR_QUE_LOTE')) explicacao = 'A quantidade supera o saldo disponível deste lote. Atualize a lista e tente novamente.';
+        else if (mensagem.includes('ESTOQUE_GERAL_INSUFICIENTE')) explicacao = 'A quantidade supera o estoque geral disponível.';
+        else if (mensagem.includes('LOTE_NAO_ATIVO_PARA_ENTRADA')) explicacao = 'Só é possível acrescentar quantidade a um lote com status ATIVO.';
+        else if (mensagem.includes('PRODUTO_CONTROLADO_POR_LOTE')) explicacao = 'Este produto possui lotes; selecione um lote específico para fazer o ajuste.';
+        else if (mensagem.includes('OBSERVACAO_OBRIGATORIA')) explicacao = 'Informe a observação quando o motivo for Outro.';
+        else if (mensagem.includes('function ajustar_lote_producao') || mensagem.includes('Could not find the function')) explicacao = 'Execute o SQL atualizado ajuste_lotes_producao.sql no Supabase e tente novamente.';
+        alert('❌ Não foi possível registrar o ajuste:\n\n' + explicacao);
+        if (status) status.textContent = explicacao;
     } finally {
-        movimentacoesEstoqueEmAndamento.delete(produtoId);
+        ajusteLoteSalvando = false;
+        if (btn) { btn.disabled = false; btn.textContent = textoOriginal; }
+        if (document.getElementById('modal-ajuste-lote')?.style.display === 'flex') atualizarResumoAjusteLoteUI();
+    }
+}
+
+function abrirAjudaAjusteLoteUI(modo = 'ajuste') {
+    const modal = document.getElementById('modal-ajuda-ajuste-estoque');
+    const titulo = document.getElementById('ajuda-ajuste-estoque-titulo');
+    const conteudo = document.getElementById('ajuda-ajuste-estoque-conteudo');
+    if (!modal || !titulo || !conteudo) {
+        alert('Ajuda contextual não encontrada. Atualize o pdv.html para a versão mais recente.');
+        return;
+    }
+    if (modo === 'historico') {
+        titulo.textContent = '❓ Ajuda — Histórico de Ajustes de Estoque';
+        conteudo.innerHTML = `
+            <p>Esta tabela mostra os ajustes manuais feitos em produtos com lote e sem lote.</p>
+            <ul>
+                <li><strong>Produto / controle:</strong> informa o produto e o lote específico, quando houver; em produtos sem lote aparece “Estoque geral (sem lote)”.</li>
+                <li><strong>Ação e quantidade:</strong> mostra se houve redução ou entrada de correção e quantas unidades foram alteradas.</li>
+                <li><strong>Saldo antes → depois:</strong> exibe a mudança no lote selecionado ou no estoque geral.</li>
+                <li><strong>Motivo / observação:</strong> explica perda, vencimento, dano, consumo interno, diferença de contagem ou correção.</li>
+                <li><strong>Usuário:</strong> indica quem registrou a operação.</li>
+            </ul>
+            <p>Os mesmos movimentos ficam disponíveis em <strong>Auditoria → Estoque</strong> e em <strong>Auditoria → Eventos de auditoria</strong>.</p>`;
+    } else {
+        titulo.textContent = '❓ Ajuda — Ajustar Estoque / Registrar Perda';
+        conteudo.innerHTML = `
+            <ol>
+                <li>Selecione o produto. Se ele tiver lotes, escolha o lote correto (observe número e validade). Se não tiver lotes, a opção será “Estoque geral (sem lote)”.</li>
+                <li>Escolha <strong>Reduzir</strong> para perda, produto vencido, dano, consumo interno ou redução encontrada na contagem. Escolha <strong>Aumentar</strong> somente para corrigir contagem ou lançamento.</li>
+                <li>Informe a quantidade inteira, selecione o motivo e preencha a observação se o motivo for “Outro”.</li>
+                <li>Confira os saldos antes/depois e confirme. O sistema registra a operação no histórico de ajustes e nas auditorias.</li>
+            </ol>
+            <p><strong>Importante:</strong> esta janela não substitui a Produção. Para adicionar unidades fabricadas, registre uma nova produção. Ajustes manuais ficam restritos a GERENTE/ADMIN.</p>`;
+    }
+    modal.style.display = 'flex';
+}
+
+function fecharAjudaAjusteLoteUI() {
+    const modal = document.getElementById('modal-ajuda-ajuste-estoque');
+    if (modal) modal.style.display = 'none';
+}
+
+async function abrirHistoricoAjustesLoteUI() {
+    if (!usuarioPodeAjustarLoteUI()) {
+        alert('⛔ Somente GERENTE ou ADMIN pode consultar o histórico detalhado de ajustes de estoque.');
+        return;
+    }
+    const modal = document.getElementById('modal-historico-ajustes-lote');
+    if (modal) modal.style.display = 'flex';
+    await carregarHistoricoAjustesLoteUI();
+}
+
+function fecharHistoricoAjustesLoteUI() {
+    const modal = document.getElementById('modal-historico-ajustes-lote');
+    if (modal) modal.style.display = 'none';
+}
+
+async function carregarHistoricoAjustesLoteUI() {
+    const tbody = document.getElementById('historico-ajustes-lote-body');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">Carregando histórico...</td></tr>';
+
+    try {
+        const { data: ajustes, error } = await _supabase
+            .from('ajustes_lotes_producao')
+            .select('id, lote_id, produto_id, direcao, quantidade, quantidade_anterior, quantidade_posterior, estoque_anterior, estoque_posterior, motivo, observacao, usuario_auth_id, usuario_nome, criado_em')
+            .order('criado_em', { ascending: false })
+            .limit(200);
+        if (error) throw new Error(error.message);
+
+        if (!ajustes?.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">Nenhum ajuste de estoque registrado ainda.</td></tr>';
+            return;
+        }
+
+        const produtoIds = [...new Set(ajustes.map(a => Number(a.produto_id)).filter(Number.isFinite))];
+        const loteIds = [...new Set(ajustes.map(a => Number(a.lote_id)).filter(id => Number.isFinite(id) && id > 0))];
+        const [resProdutos, resLotes] = await Promise.all([
+            produtoIds.length ? _supabase.from('produtos').select('id, nome').in('id', produtoIds) : Promise.resolve({ data: [], error: null }),
+            loteIds.length ? _supabase.from('lotes_producao').select('id, numero_lote').in('id', loteIds) : Promise.resolve({ data: [], error: null })
+        ]);
+        if (resProdutos.error) throw new Error(resProdutos.error.message);
+        if (resLotes.error) throw new Error(resLotes.error.message);
+        const mapaProdutos = new Map((resProdutos.data || []).map(p => [Number(p.id), p.nome]));
+        const mapaLotes = new Map((resLotes.data || []).map(l => [Number(l.id), l.numero_lote]));
+
+        tbody.innerHTML = '';
+        ajustes.forEach(ajuste => {
+            const dataHora = ajuste.criado_em ? new Date(ajuste.criado_em).toLocaleString('pt-BR') : '—';
+            const produtoNome = mapaProdutos.get(Number(ajuste.produto_id)) || `Produto #${ajuste.produto_id}`;
+            const temLote = Number(ajuste.lote_id || 0) > 0;
+            const numeroLote = temLote ? (mapaLotes.get(Number(ajuste.lote_id)) || `#${ajuste.lote_id}`) : '';
+            const saida = String(ajuste.direcao).toUpperCase() === 'SAIDA';
+            const quantidade = Number(ajuste.quantidade || 0);
+            const motivo = motivoAjusteLoteRotuloUI(ajuste.motivo);
+            const descricao = `${motivo}${ajuste.observacao ? ' — ' + ajuste.observacao : ''}`;
+            const antes = temLote ? ajuste.quantidade_anterior : ajuste.estoque_anterior;
+            const depois = temLote ? ajuste.quantidade_posterior : ajuste.estoque_posterior;
+            const controleHTML = temLote
+                ? `<strong>${escaparHTMLAjusteLoteUI(produtoNome)}</strong><br><small>Lote ${escaparHTMLAjusteLoteUI(numeroLote)}</small>`
+                : `<strong>${escaparHTMLAjusteLoteUI(produtoNome)}</strong><br><small>Estoque geral (sem lote)</small>`;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${escaparHTMLAjusteLoteUI(dataHora)}</td>
+                <td>${controleHTML}</td>
+                <td style="color:${saida ? '#fca5a5' : '#86efac'}; font-weight:bold;">${saida ? '− Redução' : '+ Entrada de correção'}</td>
+                <td style="font-weight:bold;">${saida ? '−' : '+'}${quantidade}</td>
+                <td>${antes == null ? '—' : Number(antes)} → ${depois == null ? '—' : Number(depois)}</td>
+                <td>${escaparHTMLAjusteLoteUI(descricao)}</td>
+                <td>${escaparHTMLAjusteLoteUI(ajuste.usuario_nome || 'Sistema')}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (erro) {
+        console.error('Erro ao carregar histórico de ajustes de estoque:', erro);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#fca5a5; padding:20px;">Não foi possível carregar o histórico: ${escaparHTMLAjusteLoteUI(erro.message || erro)}<br><small>Confira se o SQL ajuste_lotes_producao.sql já foi executado no Supabase.</small></td></tr>`;
     }
 }
 
@@ -12208,16 +12757,6 @@ function aplicarPermissoes() {
             '#produtos-table-body select[id^="ativo-"]'
             ).forEach(select => {
         select.disabled = bloquearProdutosParaOperador;
-    });
-
-    document.querySelectorAll(
-            '#produtos-table-body .btn-qty'
-            ).forEach(btn => {
-        btn.disabled = bloquearProdutosParaOperador;
-
-        btn.title = bloquearProdutosParaOperador
-                ? 'Você não tem permissão para alterar o estoque.'
-                : '';
     });
 
     document.querySelectorAll(
@@ -18721,6 +19260,8 @@ async function salvarNovoInsumo() {
 // ============================================================
 function atualizarBotoesCadastrosUI(abaAtiva) {
 
+    subAbaAtualAjudaPDV = abaAtiva;
+
     const botoes =
             document.querySelectorAll(
                     '#aba-cadastros .sub-tabs-nav .btn-sub-tab'
@@ -23217,6 +23758,33 @@ function renderizarAuditoriaAtual() {
             </tr>
         `);
         return conteudo.innerHTML = tabelaAuditoria('Movimentações de estoque', ['Data / Hora', 'Produto', 'Tipo', 'Qtd.', 'Anterior', 'Posterior', 'Motivo', 'Pedido', 'Usuário'], linhas);
+    }
+
+    if (tipo === 'AJUSTES_ESTOQUE') {
+        const ajustes = auditoriaDados.estoque.filter(m => {
+            const tipoMovimento = String(m.tipo || '').toUpperCase();
+            const motivoMovimento = String(m.motivo || '').toLowerCase();
+            return tipoMovimento === 'AJUSTE' ||
+                motivoMovimento.includes('ajuste de lote') ||
+                motivoMovimento.includes('ajuste de estoque geral');
+        });
+        const linhas = ajustes.map(m => `
+            <tr>
+                <td>${dataHoraAuditoria(m.criado_em)}</td>
+                <td>${escaparAuditoria(m.produto_nome || '-')}</td>
+                <td style="color:${Number(m.quantidade || 0) < 0 ? '#fca5a5' : '#86efac'}; font-weight:bold;">${Number(m.quantidade || 0) > 0 ? '+' : ''}${Number(m.quantidade || 0)}</td>
+                <td>${m.estoque_anterior ?? '-'}</td>
+                <td>${m.estoque_posterior ?? '-'}</td>
+                <td>${escaparAuditoria(m.motivo || '-')}</td>
+                <td>${escaparAuditoria(m.usuario_nome || '-')}</td>
+            </tr>
+        `);
+        return conteudo.innerHTML = tabelaAuditoria(
+            'Ajustes manuais de estoque',
+            ['Data / Hora', 'Produto', 'Quantidade', 'Estoque anterior', 'Estoque posterior', 'Motivo / observação', 'Usuário'],
+            linhas,
+            'Nenhum ajuste manual de estoque encontrado no período selecionado.'
+        );
     }
 
     if (tipo === 'FINANCEIRO') {

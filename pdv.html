@@ -252,7 +252,7 @@
         <!-- ABA 2: Gerenciador de Produtos & Estoque (Inicia oculta) -->
         <main class="products-manager" id="aba-produtos" style="display: none;">
             <div class="manager-container">
-                <h2>📦 Controle Rápido de Estoque e Preços</h2>
+                <h2>📦 Controle de Estoque e Preços</h2>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button
                         class="btn-refresh"
@@ -276,6 +276,26 @@
                         onclick="alternarHistoricoProducoes()"
                         >
                         📜 Histórico de Produções
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-refresh"
+                        style="background: #b45309;"
+                        onclick="abrirModalAjusteLoteUI()"
+                        title="Corrigir quantidade de um lote ou registrar perdas"
+                        >
+                        🧾 Ajustar Estoque / Registrar Perda
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-refresh"
+                        style="background: #475569;"
+                        onclick="abrirHistoricoAjustesLoteUI()"
+                        title="Consultar ajustes, perdas e correções anteriores"
+                        >
+                        📜 Histórico de Ajustes de Estoque
                     </button>
 
                     <button
@@ -304,8 +324,7 @@
                                 <th>Margem (%)</th>
                                 <th>Venda (R$)</th>
                                 <th>Estoque</th>
-                                <th>Ajuste Rápido</th>
-                                <th>Status</th>
+                                                                <th>Status</th>
                                 <th>Ação</th>
                             </tr>
                         </thead>
@@ -3945,6 +3964,7 @@
                             <option value="CAIXAS">Caixas</option>
                             <option value="CANCELAMENTOS">Cancelamentos</option>
                             <option value="ESTOQUE">Estoque</option>
+                            <option value="AJUSTES_ESTOQUE">Ajustes de estoque</option>
                             <option value="FINANCEIRO">Financeiro</option>
                             <option value="CONTAS_RECEBER">Contas a Receber</option>
                             <option value="EVENTOS">Eventos de auditoria</option>
@@ -4330,7 +4350,7 @@
                     >
                     <h3 style="margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">🛒️ Comanda do Balcão</h3>
 
-                    <div id="lista-carrinho-balcao" style="flex: 1; overflow-y: auto; max-height: 280px; margin-bottom: 15px;">
+                    <div id="lista-carrinho-balcao" style="display:block; flex:0 0 auto; flex-shrink:0; min-height:140px; height:auto; width:100%; box-sizing:border-box; overflow-y:auto; max-height:280px; margin-bottom:15px; visibility:visible; opacity:1;">
                         <!-- Itens do carrinho -->
                     </div>
 
@@ -5488,7 +5508,7 @@
                              ">
 
                             <span id="ajuda-progresso-texto">
-                                1 de 18
+                                1 de 19
                             </span>
 
                             <span id="ajuda-categoria">
@@ -5604,7 +5624,6 @@
         <!-- =========================================================
      MODAL: CATEGORIA
 ========================================================= -->
-
         <div
             id="modal-categoria-produto"
             style="
@@ -5674,6 +5693,125 @@
                         💾 Salvar
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- =========================================================
+             MODAL: AJUSTE MANUAL DE LOTE / REGISTRO DE PERDAS
+        ========================================================= -->
+        <div
+            id="modal-ajuste-lote"
+            style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.78); z-index:10020; justify-content:center; align-items:center; padding:16px; overflow:auto;"
+            >
+            <div style="width:100%; max-width:700px; max-height:92vh; overflow:auto; background:#1e1e24; border:1px solid #4b5563; border-radius:12px; padding:22px; box-shadow:0 12px 44px rgba(0,0,0,.55);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px;">
+                    <div>
+                        <h2 style="margin:0 0 6px; color:#fff;">🧾 Ajustar Estoque / Registrar Perda</h2>
+                        <p style="margin:0; color:#b8bdc7; font-size:.92rem;">Selecione o lote quando o produto tiver controle por lote. Se não houver lotes, o ajuste será feito no estoque geral. Produções novas devem ser lançadas em <strong>Produção</strong>.</p>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:flex-start; flex-shrink:0;">
+                        <button type="button" onclick="abrirAjudaAjusteLoteUI('ajuste')" style="background:#1565c0; color:#fff; border:0; border-radius:6px; padding:8px 10px; cursor:pointer; white-space:nowrap;">❓ Ajuda</button>
+                        <button type="button" onclick="fecharModalAjusteLoteUI()" aria-label="Fechar" style="background:#4b5563; color:#fff; border:0; border-radius:6px; padding:8px 12px; cursor:pointer;">✕</button>
+                    </div>
+                </div>
+
+                <div style="border:1px solid #92400e; background:#422006; color:#fde68a; border-radius:8px; padding:11px 13px; margin-bottom:16px; font-size:.9rem;">
+                    ⚠️ Perda, vencimento ou dano reduzem o estoque do lote. A entrada manual deve ser usada apenas para corrigir uma contagem ou lançamento — nunca para substituir o registro de produção.
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                    <div style="grid-column:1/-1;">
+                        <label for="ajuste-lote-select" style="display:block; margin-bottom:6px; color:#e5e7eb;">Produto ou lote a ajustar</label>
+                        <select id="ajuste-lote-select" class="input-table" style="width:100%; min-height:42px;" onchange="atualizarResumoAjusteLoteUI()">
+                            <option value="">Carregando produtos e lotes...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="ajuste-lote-direcao" style="display:block; margin-bottom:6px; color:#e5e7eb;">Tipo de ajuste</label>
+                        <select id="ajuste-lote-direcao" class="input-table" style="width:100%; min-height:42px;" onchange="atualizarMotivosAjusteLoteUI(); atualizarResumoAjusteLoteUI();">
+                            <option value="SAIDA">− Reduzir estoque (perda / correção)</option>
+                            <option value="ENTRADA">+ Aumentar estoque (correção)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="ajuste-lote-quantidade" style="display:block; margin-bottom:6px; color:#e5e7eb;">Quantidade</label>
+                        <input id="ajuste-lote-quantidade" class="input-table" type="number" min="1" step="1" value="1" inputmode="numeric" style="width:100%; min-height:42px; box-sizing:border-box;" oninput="atualizarResumoAjusteLoteUI()">
+                    </div>
+
+                    <div style="grid-column:1/-1;">
+                        <label for="ajuste-lote-motivo" style="display:block; margin-bottom:6px; color:#e5e7eb;">Motivo</label>
+                        <select id="ajuste-lote-motivo" class="input-table" style="width:100%; min-height:42px;" onchange="atualizarObservacaoAjusteLoteUI(); atualizarResumoAjusteLoteUI();"></select>
+                    </div>
+
+                    <div style="grid-column:1/-1;">
+                        <label for="ajuste-lote-observacao" style="display:block; margin-bottom:6px; color:#e5e7eb;">Observação (opcional; obrigatória para “Outro”)</label>
+                        <textarea id="ajuste-lote-observacao" class="input-table" rows="2" maxlength="500" placeholder="Ex.: 3 unidades estragaram durante o armazenamento." style="width:100%; box-sizing:border-box; resize:vertical;" oninput="atualizarResumoAjusteLoteUI()"></textarea>
+                    </div>
+                </div>
+
+                <div id="ajuste-lote-detalhes" style="margin-top:16px; padding:14px; background:#292932; border:1px solid #3d3d4e; border-radius:8px; color:#e5e7eb;">
+                    Selecione um lote para conferir as quantidades.
+                </div>
+                <div id="ajuste-lote-status" role="status" aria-live="polite" style="margin-top:10px; min-height:20px; font-size:.9rem; color:#cbd5e1;"></div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:18px;">
+                    <button type="button" onclick="fecharModalAjusteLoteUI()" style="padding:11px 17px; background:#4b5563; color:#fff; border:0; border-radius:7px; cursor:pointer;">Cancelar</button>
+                    <button type="button" id="btn-confirmar-ajuste-lote" onclick="salvarAjusteLoteUI()" style="padding:11px 19px; background:#b45309; color:#fff; border:0; border-radius:7px; cursor:pointer; font-weight:bold;">✅ Confirmar Ajuste</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================
+             MODAL: HISTÓRICO DE AJUSTES DE LOTE
+        ========================================================= -->
+        <div
+            id="modal-historico-ajustes-lote"
+            style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:10021; justify-content:center; align-items:center; padding:14px; overflow:auto;"
+            >
+            <div style="width:100%; max-width:1200px; max-height:92vh; overflow:auto; background:#1e1e24; border:1px solid #4b5563; border-radius:12px; padding:20px; box-shadow:0 12px 44px rgba(0,0,0,.55);">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+                    <div>
+                        <h2 style="margin:0 0 5px; color:#fff;">📜 Histórico de Ajustes de Estoque</h2>
+                        <p style="margin:0; color:#b8bdc7;">Registra ajustes em lotes e em produtos sem lote. Os eventos também aparecem em Auditoria → Estoque e Eventos de auditoria.</p>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" class="btn-refresh" onclick="abrirAjudaAjusteLoteUI('historico')" style="background:#1565c0;">❓ Ajuda</button>
+                        <button type="button" class="btn-refresh" onclick="carregarHistoricoAjustesLoteUI()">🔄 Atualizar</button>
+                        <button type="button" onclick="fecharHistoricoAjustesLoteUI()" style="padding:9px 13px; background:#4b5563; color:#fff; border:0; border-radius:6px; cursor:pointer;">✕ Fechar</button>
+                    </div>
+                </div>
+                <div class="table-responsive" style="overflow:auto; max-height:72vh;">
+                    <table class="products-table" style="min-width:1000px; width:100%;">
+                        <thead>
+                            <tr>
+                                <th>Data / hora</th>
+                                <th>Produto / controle</th>
+                                <th>Ação</th>
+                                <th>Quantidade</th>
+                                <th>Saldo antes → depois</th>
+                                <th>Motivo / observação</th>
+                                <th>Usuário</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historico-ajustes-lote-body">
+                            <tr><td colspan="7" style="text-align:center; padding:20px;">Abra o histórico para carregar os ajustes.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- AJUDA CONTEXTUAL: AJUSTE DE ESTOQUE -->
+        <div id="modal-ajuda-ajuste-estoque" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.82); z-index:10050; justify-content:center; align-items:center; padding:16px; overflow:auto;">
+            <div style="width:100%; max-width:680px; max-height:90vh; overflow:auto; background:#1e1e24; border:1px solid #4b5563; border-radius:12px; padding:22px; box-shadow:0 12px 44px rgba(0,0,0,.55);">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px;">
+                    <h2 id="ajuda-ajuste-estoque-titulo" style="margin:0; color:#fff;">❓ Ajuda — Ajuste de Estoque</h2>
+                    <button type="button" onclick="fecharAjudaAjusteLoteUI()" style="background:#4b5563; color:#fff; border:0; border-radius:6px; padding:8px 12px; cursor:pointer;">✕ Fechar</button>
+                </div>
+                <div id="ajuda-ajuste-estoque-conteudo" style="color:#e5e7eb; line-height:1.6;"></div>
             </div>
         </div>
 
