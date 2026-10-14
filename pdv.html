@@ -66,10 +66,28 @@
 
                     <button
                         class="tab-btn"
+                        id="btn-tab-encomendas"
+                        onclick="alternarAba('encomendas')"
+                        >
+                        📅 Encomendas
+                    </button>
+
+                    <button
+                        class="tab-btn"
                         id="btn-tab-balcao"
                         onclick="alternarAba('balcao')"
                         >
                         🛒 Venda de Balcão
+                    </button>
+
+                    <button
+                        class="tab-btn"
+                        id="btn-tab-salao"
+                        onclick="alternarAba('salao')"
+                        style="display:none;"
+                        title="Atendimento presencial com mesas e comandas"
+                        >
+                        🍽️ Salão / Mesas
                     </button>
 
                     <button
@@ -249,6 +267,82 @@
         </main>
 
         <!------------------------------------------------------------------------------------------------------------>
+        <!-- MÓDULO OPCIONAL: SALÃO / MESAS -->
+        <main id="aba-salao" style="display:none; padding:20px; color:#f3f4f6;">
+            <div style="max-width:1500px; margin:0 auto;">
+                <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px;">
+                    <div>
+                        <h2 style="margin:0 0 5px;">🍽️ Salão / Mesas</h2>
+                        <p style="margin:0; color:#a1a1aa;">Abra comandas, envie rodadas à cozinha e feche a conta pelo caixa do PDV.</p>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                        <button type="button" onclick="salaoAlternarVisaoUI('mesas')" id="btn-salao-visao-mesas" class="btn-refresh" style="background:#2563eb;">🪑 Mapa de mesas</button>
+                        <button type="button" onclick="salaoAlternarVisaoUI('cozinha')" id="btn-salao-visao-cozinha" class="btn-refresh" style="background:#7c3aed;">👨‍🍳 Fila da cozinha</button>
+                        <button type="button" onclick="salaoCarregarDadosUI()" class="btn-refresh">🔄 Atualizar</button>
+                        <button type="button" id="btn-salao-nova-mesa" onclick="salaoCriarMesaUI()" class="btn-refresh" style="background:#15803d;">➕ Nova mesa</button>
+                    </div>
+                </div>
+
+                <div id="salao-alerta-status" style="display:none; padding:12px 14px; border-radius:8px; margin-bottom:14px; background:#422006; border:1px solid #b45309; color:#fde68a;"></div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:18px;">
+                    <div style="background:#202029;border:1px solid #353543;border-left:4px solid #22c55e;border-radius:9px;padding:14px;"><small style="color:#a1a1aa;">Mesas livres</small><div id="salao-contador-livres" style="font-size:1.8rem;font-weight:800;">0</div></div>
+                    <div style="background:#202029;border:1px solid #353543;border-left:4px solid #f59e0b;border-radius:9px;padding:14px;"><small style="color:#a1a1aa;">Mesas ocupadas</small><div id="salao-contador-ocupadas" style="font-size:1.8rem;font-weight:800;">0</div></div>
+                    <div style="background:#202029;border:1px solid #353543;border-left:4px solid #60a5fa;border-radius:9px;padding:14px;"><small style="color:#a1a1aa;">Aguardando conta</small><div id="salao-contador-contas" style="font-size:1.8rem;font-weight:800;">0</div></div>
+                    <div style="background:#202029;border:1px solid #353543;border-left:4px solid #a78bfa;border-radius:9px;padding:14px;"><small style="color:#a1a1aa;">Comandas abertas</small><div id="salao-contador-comandas" style="font-size:1.8rem;font-weight:800;">0</div></div>
+                </div>
+
+                <section id="salao-visao-mesas">
+                    <div id="salao-mesas-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:14px;">
+                        <div style="padding:28px;text-align:center;color:#a1a1aa;">Carregando mesas...</div>
+                    </div>
+                    <div style="margin-top:18px;padding:12px 14px;background:#202029;border:1px solid #353543;border-radius:8px;color:#a1a1aa;font-size:.9rem;line-height:1.5;">
+                        ℹ️ Mesas e encomendas usam a Produção oficial. Ao produzir uma encomenda, os insumos são consumidos e as unidades acabadas ficam reservadas para o cliente, sem ficarem disponíveis para pronta entrega. A encomenda é finalizada no caixa somente depois que todos os itens estiverem prontos.
+                    </div>
+                </section>
+
+                <section id="salao-visao-cozinha" style="display:none;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+                        <h3 style="margin:0;">👨‍🍳 Fila da cozinha · Mesas e Encomendas</h3>
+                        <span style="color:#a1a1aa;font-size:.88rem;">Fluxo por item: conferir insumos → produzir pela ficha técnica → marcar pronto. Produtos acabados de encomendas ficam reservados.</span>
+                    </div>
+                    <div id="salao-cozinha-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;"><div style="padding:24px;text-align:center;color:#a1a1aa;">Carregando fila da cozinha...</div></div>
+                </section>
+            </div>
+        </main>
+
+        <!-- ABA: ENCOMENDAS AGENDADAS -->
+        <main class="products-manager" id="aba-encomendas" style="display:none;">
+            <div class="manager-container">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <h2 style="margin-bottom:5px;">📅 Encomendas agendadas</h2>
+                        <p style="margin:0;color:#aaa;">Solicitações futuras. Aceitar ou recusar aqui não desconta estoque nem registra uma venda.</p>
+                    </div>
+                    <button type="button" class="btn-refresh" onclick="carregarEncomendas()">🔄 Atualizar</button>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0;">
+                    <label for="filtro-encomendas-status">Mostrar:</label>
+                    <select id="filtro-encomendas-status" class="input-table" onchange="renderizarEncomendas(encomendasGlobal)" style="max-width:260px;">
+                        <option value="TODAS" selected>Todas as encomendas</option>
+                        <option value="AGUARDANDO">Aguardando confirmação</option>
+                        <option value="ACEITA">Aceitas · aguardando produção</option>
+                        <option value="EM_PRODUCAO">Em produção</option>
+                        <option value="PRONTA">Prontas para retirada/entrega</option>
+                        <option value="CONCLUIDA">Concluídas</option>
+                        <option value="RECUSADA">Recusadas</option>
+                        <option value="CANCELADA">Canceladas</option>
+                    </select>
+                    <span id="contador-encomendas-pendentes" style="color:#f0c674;font-weight:700;"></span>
+                </div>
+                <div id="lista-encomendas-pdv" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px;">
+                    <p style="color:#aaa;">Clique em Atualizar para carregar as encomendas.</p>
+                </div>
+            </div>
+        </main>
+
+        <!------------------------------------------------------------------------------------------------------------>
+
         <!-- ABA 2: Gerenciador de Produtos & Estoque (Inicia oculta) -->
         <main class="products-manager" id="aba-produtos" style="display: none;">
             <div class="manager-container">
@@ -324,7 +418,7 @@
                                 <th>Margem (%)</th>
                                 <th>Venda (R$)</th>
                                 <th>Estoque</th>
-                                                                <th>Status</th>
+                                <th>Status</th>
                                 <th>Ação</th>
                             </tr>
                         </thead>
@@ -646,6 +740,24 @@
                             </div>
                         </div>
 
+                        <div style="border:1px solid #4a4a5c;border-radius:8px;padding:12px;margin:12px 0;background:#272733;">
+                            <label style="display:flex;gap:8px;align-items:center;font-weight:700;">
+                                <input type="checkbox" id="np-aceita-encomenda" style="width:18px;height:18px;">
+                                Este produto aceita encomendas
+                            </label>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label for="np-antecedencia">Antecedência mínima (horas)</label>
+                                    <input type="number" id="np-antecedencia" class="input-table" min="0" max="720" step="1" value="24" style="width:100%;">
+                                </div>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label for="np-max-encomenda">Máximo por encomenda (opcional)</label>
+                                    <input type="number" id="np-max-encomenda" class="input-table" min="1" step="1" placeholder="Sem limite" style="width:100%;">
+                                </div>
+                            </div>
+                            <small style="display:block;color:#aaa;margin-top:6px;">O estoque atual não impede a solicitação de encomenda. A loja confirma a capacidade antes de aceitar.</small>
+                        </div>
+
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
                             <div class="form-group">
                                 <label>Custo (R$)</label>
@@ -942,6 +1054,24 @@
                                 Selecione
                             </option>
                         </select>
+                    </div>
+
+                    <!-- CONFIGURAÇÃO DE ENCOMENDAS -->
+                    <div style="border:1px solid #4a4a5c;border-radius:8px;padding:12px;margin-top:12px;background:#272733;">
+                        <label style="display:flex;gap:8px;align-items:center;font-weight:700;">
+                            <input type="checkbox" id="edit-produto-aceita-encomenda" style="width:18px;height:18px;">
+                            Este produto aceita encomendas
+                        </label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label for="edit-produto-antecedencia">Antecedência mínima (horas)</label>
+                                <input type="number" id="edit-produto-antecedencia" class="input-table" min="0" max="720" step="1" value="24" style="width:100%;">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label for="edit-produto-max-encomenda">Máximo por encomenda (opcional)</label>
+                                <input type="number" id="edit-produto-max-encomenda" class="input-table" min="1" step="1" placeholder="Sem limite" style="width:100%;">
+                            </div>
+                        </div>
                     </div>
 
                     <!-- BOTÕES -->
@@ -4016,6 +4146,9 @@
                     <button class="btn-sub-tab" onclick="alternarSubAba('sub-permissoes', this)" style="padding: 10px 18px; background: #1e1e24; color: #aaa; border: 1px solid #3d3d4e; border-radius: 6px; cursor: pointer; font-weight: bold;">
                         👥 Permissões
                     </button>
+                    <button class="btn-sub-tab" onclick="alternarSubAba('sub-modulos', this)" style="padding: 10px 18px; background: #1e1e24; color: #aaa; border: 1px solid #3d3d4e; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                        🧩 Módulos de atendimento
+                    </button>
                 </div>
 
                 <!-- CONTEÚDO SUB-ABA 1: OPERAÇÃO DE CAIXA -->
@@ -4069,6 +4202,16 @@
                                     <option value="true">🟢 Loja Aberta (Recebendo Pedidos)</option>
                                     <option value="false">🔴 Loja Fechada (Bloquear Pedidos no Site)</option>
                                 </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                    <input type="checkbox" id="cfg-encomendas-ativas" style="width: 18px; height: 18px; cursor: pointer;">
+                                    <span>📅 Ativar encomendas no catálogo online</span>
+                                </label>
+                                <small style="display: block; margin-top: 6px; color: #aaa;">
+                                    Quando desativada, a opção Encomendas desaparece do catálogo e novas solicitações são bloqueadas. Os produtos continuam cadastrados para quando a opção for reativada.
+                                </small>
                             </div>
 
                             <div class="form-group">
@@ -4157,6 +4300,29 @@
                                 💾 Salvar Permissões
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- CONTEÚDO SUB-ABA 4: MÓDULOS OPCIONAIS -->
+                <div id="sub-modulos" class="sub-aba-content" style="display:none;">
+                    <div style="background:#2a2a35;padding:20px;border-radius:8px;border:1px solid #3d3d4e;">
+                        <h3 style="margin-top:0;">🧩 Módulos de atendimento</h3>
+                        <p style="color:#aaa;line-height:1.6;">Ative somente os recursos que a loja utiliza. A opção é salva no Supabase e vale para todos os computadores e dispositivos conectados.</p>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;background:#1e1e24;border:1px solid #3d3d4e;border-radius:9px;padding:16px;">
+                            <div style="flex:1;min-width:220px;">
+                                <strong style="display:block;color:#fff;font-size:1.05rem;margin-bottom:5px;">🍽️ Atendimento no salão (mesas e garçons)</strong>
+                                <span style="display:block;color:#aaa;font-size:.9rem;line-height:1.5;">Habilita mapa de mesas, abertura de comandas, envio de rodadas para cozinha e fechamento da conta integrado ao caixa.</span>
+                                <small id="cfg-salao-status-texto" style="display:block;color:#aaa;margin-top:8px;">Status: carregando...</small>
+                            </div>
+                            <label for="cfg-modulo-salao-ativo" style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:bold;">
+                                <input type="checkbox" id="cfg-modulo-salao-ativo" style="width:22px;height:22px;cursor:pointer;">
+                                <span>Ativar módulo</span>
+                            </label>
+                        </div>
+                        <div style="margin-top:14px;padding:12px;background:#1e1e24;border-left:4px solid #f59e0b;border-radius:5px;color:#d4d4d8;font-size:.9rem;line-height:1.55;">
+                            ⚠️ Para desativar, todas as comandas precisam estar fechadas. Desativar o módulo não apaga mesas nem o histórico.
+                        </div>
+                        <button type="button" id="btn-salvar-modulo-salao" onclick="salvarConfiguracaoModuloSalaoUI()" class="btn-save-prod" style="padding:12px;margin-top:14px;">💾 Salvar módulo</button>
                     </div>
                 </div>
             </div>
@@ -5681,7 +5847,7 @@
                     <button type="button"
                             onclick="fecharModalCategoriaUI()"
                             style="padding:10px 18px; background:#555; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:inline-flex; align-items:center; justify-content:center; line-height:1; white-space:nowrap;">
-                       ❌ Cancelar
+                        ❌ Cancelar
                     </button>
 
                     <button
@@ -5815,7 +5981,83 @@
             </div>
         </div>
 
-        <script src="js/pdv.js"></script>
+        <!-- MODAL: COMANDA DO SALÃO -->
+        <div id="modal-comanda-salao" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:10020;align-items:center;justify-content:center;padding:14px;overflow:auto;">
+            <div style="width:100%;max-width:980px;max-height:94vh;overflow:auto;background:#1e1e24;color:#f3f4f6;border:1px solid #444454;border-radius:12px;padding:20px;box-shadow:0 18px 55px rgba(0,0,0,.5);">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                    <div><h2 id="salao-comanda-titulo" style="margin:0 0 6px;">Comanda</h2><p id="salao-comanda-subtitulo" style="margin:0;color:#a1a1aa;"></p></div>
+                    <button type="button" onclick="salaoFecharModalComandaUI()" style="background:#4b5563;color:#fff;border:0;border-radius:6px;padding:9px 12px;cursor:pointer;">✕ Fechar</button>
+                </div>
+                <div id="salao-comanda-alerta" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:6px;background:#422006;border:1px solid #b45309;color:#fde68a;"></div>
+                <section id="salao-mesa-aguardando-liberacao" style="display:none;margin-bottom:15px;background:#422006;border:1px solid #b45309;border-radius:9px;padding:16px;color:#fef3c7;">
+                    <h3 style="margin:0 0 8px;">✅ Conta paga — mesa ainda ocupada</h3>
+                    <p style="margin:0 0 12px;line-height:1.5;">A conta já foi paga, mas a mesa só ficará livre quando a equipe confirmar que os clientes saíram.</p>
+                    <button type="button" id="btn-salao-liberar-mesa" onclick="salaoLiberarMesaUI()" class="btn-save-prod" style="background:#15803d;color:#fff;padding:12px 16px;">✅ Confirmar saída e liberar mesa</button>
+                </section>
+                <section id="salao-comanda-adicionar" style="background:#292934;border:1px solid #3d3d4e;border-radius:9px;padding:14px;margin-bottom:15px;">
+                    <h3 style="margin:0 0 12px;">➕ Adicionar itens</h3>
+                    <div style="display:grid;grid-template-columns:minmax(220px,2fr) minmax(90px,.5fr) minmax(180px,1.5fr);gap:10px;align-items:end;">
+                        <label style="display:block;color:#d4d4d8;font-size:.85rem;">Produto<select id="salao-produto-select" class="input-table" style="width:100%;margin-top:5px;"><option value="">Carregando produtos...</option></select></label>
+                        <label style="display:block;color:#d4d4d8;font-size:.85rem;">Quantidade<input id="salao-item-quantidade" class="input-table" type="number" min="1" max="999" step="1" value="1" style="width:100%;margin-top:5px;"></label>
+                        <label style="display:block;color:#d4d4d8;font-size:.85rem;">Observação do item<input id="salao-item-observacao" class="input-table" maxlength="500" placeholder="Ex.: sem cebola" style="width:100%;margin-top:5px;"></label>
+                    </div>
+                    <button type="button" onclick="salaoAdicionarItemUI()" id="btn-salao-adicionar-item" class="btn-save-prod" style="background:#2563eb;margin-top:12px;padding:10px 14px;">Adicionar à comanda</button>
+                </section>
+                <section style="margin-bottom:15px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;"><h3 style="margin:0;">📋 Itens da comanda</h3><strong id="salao-comanda-total" style="font-size:1.25rem;color:#86efac;">Total: R$ 0,00</strong></div>
+                    <div style="overflow:auto;border:1px solid #3d3d4e;border-radius:8px;">
+                        <table style="width:100%;border-collapse:collapse;min-width:660px;color:#f3f4f6;">
+                            <thead style="background:#292934;color:#cbd5e1;"><tr><th style="padding:10px;text-align:left;">Produto / observação</th><th style="padding:10px;text-align:right;">Qtd.</th><th style="padding:10px;text-align:right;">Unitário</th><th style="padding:10px;text-align:right;">Subtotal</th><th style="padding:10px;text-align:left;">Status</th><th style="padding:10px;">Ação</th></tr></thead>
+                            <tbody id="salao-comanda-itens-body"><tr><td colspan="6" style="padding:20px;text-align:center;color:#a1a1aa;">Nenhum item.</td></tr></tbody>
+                        </table>
+                    </div>
+                </section>
+                <div id="salao-comanda-acoes" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                    <button type="button" onclick="salaoEnviarCozinhaUI()" id="btn-salao-enviar-cozinha" class="btn-refresh" style="background:#7c3aed;">👨‍🍳 Enviar itens à cozinha</button>
+                    <button type="button" onclick="salaoSolicitarContaUI()" id="btn-salao-solicitar-conta" class="btn-refresh" style="background:#2563eb;">🧾 Solicitar conta</button>
+                </div>
+                <div id="salao-v2-ferramentas" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;margin-bottom:15px;background:#202029;border:1px solid #3d3d4e;border-radius:9px;">
+                    <button type="button" onclick="salaoTransferirMesaUI()" id="btn-salao-transferir-mesa" class="btn-refresh" style="background:#7c3aed;">⇄ Transferir mesa</button>
+                    <button type="button" onclick="salaoImprimirPreContaUI()" id="btn-salao-preconta" class="btn-refresh" style="background:#475569;">🖨️ Imprimir pré-conta</button>
+                    <span style="width:1px;height:28px;background:#3d3d4e;margin:0 3px;"></span>
+                    <label style="display:flex;align-items:center;gap:7px;color:#e5e7eb;font-size:.88rem;cursor:pointer;">
+                        <input id="salao-aplicar-taxa-servico" type="checkbox" onchange="salaoAtualizarResumoPagamentoUI()" style="width:17px;height:17px;">
+                        Aplicar taxa de serviço
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;color:#d4d4d8;font-size:.85rem;">Taxa %
+                        <input id="salao-taxa-servico-percentual" class="input-table" type="number" min="0" max="20" step="0.5" value="10" oninput="salaoAtualizarResumoPagamentoUI()" style="width:78px;padding:6px;">
+                    </label>
+                    <strong id="salao-taxa-servico-valor" style="color:#fde68a;font-size:.88rem;">Taxa: R$ 0,00</strong>
+                </div>
+                <section id="salao-fechamento-conta" style="display:none;background:#292934;border:1px solid #3d3d4e;border-radius:9px;padding:15px;">
+                    <h3 style="margin:0 0 12px;">💳 Fechar conta no caixa</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px;">
+                        <div style="background:#202029;border:1px solid #3d3d4e;border-radius:8px;padding:12px;"><span style="display:block;color:#a1a1aa;font-size:.8rem;">Subtotal</span><strong id="salao-fechamento-subtotal" style="display:block;margin-top:5px;font-size:1.05rem;">R$ 0,00</strong></div>
+                        <div style="background:#202029;border:1px solid #3d3d4e;border-radius:8px;padding:12px;"><span style="display:block;color:#a1a1aa;font-size:.8rem;">Taxa de serviço</span><strong id="salao-fechamento-taxa" style="display:block;margin-top:5px;font-size:1.05rem;color:#fde68a;">R$ 0,00</strong></div>
+                        <div style="background:#202029;border:1px solid #3d3d4e;border-radius:8px;padding:12px;"><span style="display:block;color:#a1a1aa;font-size:.8rem;">Desconto</span><strong id="salao-fechamento-desconto" style="display:block;margin-top:5px;font-size:1.05rem;color:#86efac;">R$ 0,00</strong></div>
+                        <div style="background:#172b21;border:1px solid #166534;border-radius:8px;padding:12px;"><span style="display:block;color:#bbf7d0;font-size:.8rem;">TOTAL A PAGAR</span><strong id="salao-fechamento-total" style="display:block;margin-top:5px;font-size:1.3rem;color:#86efac;">R$ 0,00</strong></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px;">
+                        <label style="color:#d4d4d8;font-size:.85rem;">Desconto (R$)<input id="salao-desconto" class="input-table" type="number" min="0" step="0.01" value="0.00" oninput="salaoAtualizarResumoPagamentoUI()" style="width:100%;margin-top:5px;"></label>
+                        <div style="color:#d4d4d8;font-size:.85rem;align-self:end;padding:8px 0;">Divida o valor entre pessoas/formas de pagamento. Não separa itens individualmente nesta versão.</div>
+                    </div>
+                    <section style="background:#202029;border:1px solid #3d3d4e;border-radius:8px;padding:12px;margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><h4 style="margin:0;">💳 Pagamentos da conta</h4><div style="display:flex;gap:7px;flex-wrap:wrap;"><button type="button" onclick="salaoAdicionarPagamentoUI()" class="btn-refresh" style="background:#2563eb;padding:7px 10px;">＋ Adicionar pagamento/pessoa</button><button type="button" onclick="salaoRedistribuirPagamentosUI()" class="btn-refresh" style="background:#475569;padding:7px 10px;">Dividir igualmente</button></div></div>
+                        <div id="salao-pagamentos-lista"></div>
+                        <p id="salao-pagamentos-soma" style="margin:10px 0 0;color:#a1a1aa;font-size:.86rem;" aria-live="polite">Distribua o total entre os pagamentos.</p>
+                    </section>
+                    <div id="salao-troco-grupo" style="margin-top:12px;background:#202029;border:1px solid #166534;border-radius:8px;padding:12px;">
+                        <span style="display:block;color:#bbf7d0;font-size:.85rem;">💵 Troco total a devolver (pagamentos em dinheiro)</span>
+                        <strong id="salao-troco-valor" style="display:block;margin-top:4px;font-size:1.25rem;color:#86efac;">R$ 0,00</strong>
+                    </div>
+                    <p id="salao-resumo-validacao" aria-live="polite" style="color:#a1a1aa;font-size:.82rem;line-height:1.5;margin:10px 0;">Confira subtotal, taxa, desconto e pagamentos antes de confirmar.</p>
+                    <p style="color:#a1a1aa;font-size:.86rem;line-height:1.5;">A taxa de serviço é opcional e é calculada sobre o subtotal. Os pagamentos são registrados por forma; o caixa e o histórico continuam ligados à venda oficial. A divisão exata de itens por pessoa não está incluída.</p>
+                    <button type="button" onclick="salaoFecharComandaUI()" id="btn-salao-fechar-conta" class="btn-save-prod" style="background:#15803d;color:#fff;padding:12px 16px;">✅ Confirmar pagamento</button>
+                </section>
+            </div>
+        </div>
+
+        <script src="js/pdv.js?v=encomendas-v2-producao-integrada-20261014"></script>
 
     </body>
 </html>

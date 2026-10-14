@@ -3,12 +3,47 @@ const SUPABASE_URL = 'https://pznuqeqtytyjtupxnzqk.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6bnVxZXF0eXR5anR1cHhuenFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MDIyMTAsImV4cCI6MjEwMzk3ODIxMH0.ZadwdTr-pERj7mBYQGnIRpg7M4RhN9K3xNCpcG_GOqQ'; // Insira sua chave anon publica aqui
 
 const _supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+// QR Code do Salão: catálogo somente para consulta, sem envio de pedido público.
+const PARAMS_CARDAPIO = new URLSearchParams(window.location.search);
+const MODO_CONSULTA_SALAO = PARAMS_CARDAPIO.get('salao_consulta') === '1';
+const MESA_CONSULTA_SALAO = PARAMS_CARDAPIO.get('mesa') || '';
+
+function prepararModoConsultaSalao() {
+    if (!MODO_CONSULTA_SALAO || !document.body)
+        return;
+    document.body.classList.add('modo-consulta-salao');
+    document.title = MESA_CONSULTA_SALAO ? `Cardápio — Mesa ${MESA_CONSULTA_SALAO}` : 'Cardápio — Consulta';
+    const header = document.querySelector('header.header') || document.querySelector('header');
+    const aviso = document.createElement('div');
+    aviso.style.cssText = 'max-width:1180px;margin:12px auto;padding:12px 16px;border:1px solid #d6d3d1;border-radius:10px;background:#fffaf7;color:#5b4646;font:600 14px/1.5 Arial,sans-serif;';
+    aviso.textContent = MESA_CONSULTA_SALAO
+            ? `Cardápio para consulta — Mesa ${MESA_CONSULTA_SALAO}. Para fazer o pedido, chame o garçom.`
+            : 'Cardápio em modo de consulta. Para fazer o pedido, chame a equipe.';
+    if (header && header.parentNode)
+        header.insertAdjacentElement('afterend', aviso);
+    const estilo = document.createElement('style');
+    estilo.textContent = '.modo-consulta-salao .cart-btn,.modo-consulta-salao .add-btn,.modo-consulta-salao #cart-modal,.modo-consulta-salao [aria-label="Modalidade de compra"]{display:none!important}body.modo-consulta-salao{padding-bottom:12px}.modo-consulta-salao .product-card{cursor:default}';
+    document.head.appendChild(estilo);
+    const carrinho = document.getElementById('cart-modal');
+    if (carrinho) {
+        carrinho.style.display = 'none';
+        carrinho.setAttribute('aria-hidden', 'true');
+    }
+}
+
 
 // Estado Global da Aplicação
 let produtosList = [];
 let categoriasList = [];
-let carrinho = [];
+let carrinho = []; // carrinho exclusivo de pronta entrega
+let carrinhoEncomenda = []; // carrinho separado para data futura
+let modoCardapioAtual = 'PRONTA_ENTREGA';
+let categoriaAtualFiltro = 'todas';
+let chaveIdempotenciaEncomenda = null;
 let taxaEntrega = 0.00;
+
+const CHAVE_TOKENS_ENCOMENDAS = 'encomendas_tokens_acompanhamento';
+let acompanhamentosEncomendasCliente = [];
 let pedidoAcompanhamentoAtual = null;
 let statusAcompanhamentoAtual = 'PENDENTE';
 
@@ -26,12 +61,43 @@ let cidadeEntregaSelecionada = null;
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
+    prepararModoConsultaSalao();
     await carregarCategorias();
     await carregarProdutos();
+    selecionarModoCardapio('PRONTA_ENTREGA');
     await carregarConfiguracoesLoja();
     await carregarCidadesEntrega();
     await escutarConfiguracoesRealtime();
+
+    // Atualiza a disponibilidade de encomendas quando o cliente volta ao catálogo
+    // e periodicamente, mesmo que não receba um evento em tempo real.
+    const atualizarConfigAoRetornar = () => {
+        if (!document.hidden)
+            carregarConfiguracoesLoja();
+    };
+    window.addEventListener('focus', atualizarConfigAoRetornar);
+    document.addEventListener('visibilitychange', atualizarConfigAoRetornar);
+    window.setInterval(() => {
+        if (!document.hidden)
+            carregarConfiguracoesLoja();
+    }, 30000);
+
     await recuperarAcompanhamentoPedido();
+    await recuperarAcompanhamentoEncomendas();
+
+    const formularioCheckout = document.getElementById('checkout-form');
+    if (formularioCheckout) {
+        ['input', 'change'].forEach(evento => formularioCheckout.addEventListener(evento, () => {
+                const botaoEnvio = document.getElementById('btn-submit');
+                if (!botaoEnvio?.disabled)
+                    chaveIdempotenciaEncomenda = null;
+            }));
+    }
+
+    // Atualiza o acompanhamento quando o cliente mantém o cardápio aberto.
+    if (!MODO_CONSULTA_SALAO) {
+        window.setInterval(() => atualizarAcompanhamentosEncomendas(), 45000);
+    }
 });
 
 function salvarAcompanhamentosPedidos() {
@@ -282,11 +348,12 @@ async function carregarProdutos() {
         return;
     }
 
-    produtosList = data;
-    renderizarProdutos(produtosList);
+    produtosList = data || [];
+    renderizarCatalogo();
 }
 
 // --- ATUALIZAÇÃO EM TEMPO REAL NO CARDÁPIO DO CLIENTE ---
+
 function escutarProdutosRealtime() {
     _supabase
             .channel('mudancas-produtos-catalogo')
@@ -306,35 +373,126 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function renderizarCategorias() {
     const nav = document.getElementById('categories-container');
+    if (!nav)
+        return;
+    nav.innerHTML = '';
+
+    const btnTodas = document.createElement('button');
+    btnTodas.type = 'button';
+    btnTodas.className = 'cat-btn active';
+    btnTodas.textContent = 'Todas';
+    btnTodas.onclick = (event) => filtrarCategoria('todas', event);
+    nav.appendChild(btnTodas);
+
     categoriasList.forEach(cat => {
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'cat-btn';
         btn.textContent = cat.nome;
-        btn.onclick = (e) => filtrarCategoria(cat.id, e);
+        btn.onclick = (event) => filtrarCategoria(cat.id, event);
         nav.appendChild(btn);
     });
 }
 
+function selecionarModoCardapio(modo) {
+    if (MODO_CONSULTA_SALAO)
+        return;
+    if (modo === 'ENCOMENDA' && configLoja.encomendas_ativas === false) {
+        alert('A loja não está aceitando encomendas no momento.');
+        return;
+    }
+    modoCardapioAtual = modo === 'ENCOMENDA' ? 'ENCOMENDA' : 'PRONTA_ENTREGA';
+
+    const btnPronta = document.getElementById('btn-modo-pronta-entrega');
+    const btnEncomenda = document.getElementById('btn-modo-encomenda');
+    const aviso = document.getElementById('aviso-modo-cardapio');
+
+    if (btnPronta) {
+        const ativo = modoCardapioAtual === 'PRONTA_ENTREGA';
+        btnPronta.setAttribute('aria-pressed', String(ativo));
+        btnPronta.style.background = ativo ? '#176b45' : '#fff';
+        btnPronta.style.color = ativo ? '#fff' : '#4a3e3d';
+        btnPronta.style.borderColor = ativo ? '#176b45' : '#ead7e0';
+    }
+    if (btnEncomenda) {
+        const ativo = modoCardapioAtual === 'ENCOMENDA';
+        btnEncomenda.setAttribute('aria-pressed', String(ativo));
+        btnEncomenda.style.background = ativo ? '#176b45' : '#fff';
+        btnEncomenda.style.color = ativo ? '#fff' : '#4a3e3d';
+        btnEncomenda.style.borderColor = ativo ? '#176b45' : '#ead7e0';
+    }
+
+    if (aviso) {
+        aviso.textContent = modoCardapioAtual === 'ENCOMENDA'
+                ? 'Escolha produtos que aceitam encomenda. A data e o horário serão solicitados no carrinho; a loja precisa confirmar antes da encomenda ficar aceita.'
+                : 'Os produtos são exibidos conforme o estoque disponível. Produtos esgotados não podem ser adicionados.';
+    }
+
+    renderizarCatalogo();
+    atualizarCarrinho();
+}
+
+function renderizarCatalogo() {
+    let lista = [...produtosList];
+
+    if (modoCardapioAtual === 'ENCOMENDA') {
+        lista = lista.filter(p => p.aceita_encomenda === true);
+    }
+
+    if (categoriaAtualFiltro !== 'todas') {
+        lista = lista.filter(p => String(p.categoria_id) === String(categoriaAtualFiltro));
+    }
+
+    renderizarProdutos(lista);
+}
+
+function estoqueDisponivelCatalogo(produto) {
+    return Math.max(0, Number(produto?.estoque || 0) - Number(produto?.estoque_reservado_encomendas || 0));
+}
+
 function renderizarProdutos(lista) {
     const grid = document.getElementById('products-container');
+    if (!grid)
+        return;
     grid.innerHTML = '';
 
+    if (!Array.isArray(lista) || lista.length === 0) {
+        const mensagem = modoCardapioAtual === 'ENCOMENDA'
+                ? 'Nenhum produto está habilitado para encomenda no momento.'
+                : 'Nenhum produto encontrado nesta categoria.';
+        grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;padding:24px;color:#76656b;">${mensagem}</p>`;
+        return;
+    }
+
     lista.forEach(p => {
-        const img = p.imagem_url || 'https://via.placeholder.com/300?text=Sem+Foto';
-        const semEstoque = p.estoque <= 0;
+        const imagemInformada = String(p.imagem_url || '');
+        const imagemValida = /^https?:\/\//i.test(imagemInformada);
+        const img = escaparHTMLCardapio(imagemValida ? imagemInformada : 'https://via.placeholder.com/300?text=Sem+Foto');
+        const nomeSeguro = escaparHTMLCardapio(p.nome || 'Produto');
+        const descricaoSegura = escaparHTMLCardapio(p.descricao || '');
+        const estoque = estoqueDisponivelCatalogo(p);
+        const semEstoque = estoque <= 0;
+        const preco = Number(p.preco || 0);
+        const limite = p.quantidade_max_encomenda ? Number(p.quantidade_max_encomenda) : null;
+        const disabledPronta = modoCardapioAtual === 'PRONTA_ENTREGA' && semEstoque;
+        const etiqueta = modoCardapioAtual === 'ENCOMENDA'
+                ? `Encomenda${limite ? ` • máximo ${limite}` : ''}`
+                : (semEstoque ? 'Esgotado' : `${estoque} em estoque`);
+        const textoBotao = disabledPronta
+                ? 'Esgotado'
+                : (modoCardapioAtual === 'ENCOMENDA' ? 'Adicionar à encomenda' : `Adicionar (${estoque} em estoque)`);
 
         grid.innerHTML += `
-            <div class="product-card" style="${semEstoque ? 'opacity: 0.6;' : ''}">
-                <img src="${img}" class="product-img" alt="${p.nome}">
+            <div class="product-card" style="${disabledPronta ? 'opacity: 0.6;' : ''}">
+                <img src="${img}" class="product-img" alt="${nomeSeguro}">
                 <div class="product-info">
-                    <h3 class="product-title">${p.nome}</h3>
-                    <p class="product-desc">${p.descricao || ''}</p>
-                    <div class="product-price">R$ ${p.preco.toFixed(2).replace('.', ',')}</div>
-                    
-                    ${semEstoque ?
-                `<button class="add-btn" disabled style="background:#888; cursor:not-allowed;">Esgotado</button>` :
-                `<button class="add-btn" onclick="adicionarAoCarrinho(${p.id})">Adicionar (${p.estoque} em estoque)</button>`
-                }
+                    <h3 class="product-title">${nomeSeguro}</h3>
+                    <p class="product-desc">${descricaoSegura}</p>
+                    <div class="product-price">R$ ${preco.toFixed(2).replace('.', ',')}</div>
+                    <small style="display:block;margin:4px 0 10px;color:#76656b;">${etiqueta}</small>
+                    ${disabledPronta
+                ? `<button class="add-btn" disabled style="background:#888;cursor:not-allowed;">${textoBotao}</button>`
+                : `<button class="add-btn" onclick="adicionarAoCarrinho(${Number(p.id)})">${textoBotao}</button>`}
                 </div>
             </div>
         `;
@@ -342,108 +500,215 @@ function renderizarProdutos(lista) {
 }
 
 function filtrarCategoria(catId, event) {
+    categoriaAtualFiltro = catId === 'todas' ? 'todas' : String(catId);
     const btns = document.querySelectorAll('.cat-btn');
     btns.forEach(b => b.classList.remove('active'));
-    if (event && event.target) {
-        event.target.classList.add('active');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
     }
-
-    if (catId === 'todas') {
-        renderizarProdutos(produtosList);
-    } else {
-        const filtrados = produtosList.filter(p => p.categoria_id === catId);
-        renderizarProdutos(filtrados);
-    }
+    renderizarCatalogo();
 }
 
-// Gerenciamento do Carrinho
+function obterCarrinhoAtivo() {
+    return modoCardapioAtual === 'ENCOMENDA' ? carrinhoEncomenda : carrinho;
+}
+
+function atualizarContadorCarrinho() {
+    const totalPronta = carrinho.reduce((sum, item) => sum + Number(item.qtd || 0), 0);
+    const totalEncomenda = carrinhoEncomenda.reduce((sum, item) => sum + Number(item.qtd || 0), 0);
+    const el = document.getElementById('cart-count');
+    const elPronta = document.getElementById('cart-count-pronta');
+    const elEncomenda = document.getElementById('cart-count-encomenda');
+    const label = document.getElementById('cart-button-label');
+
+    // O botão principal mostra somente a modalidade selecionada.
+    if (el)
+        el.textContent = modoCardapioAtual === 'ENCOMENDA' ? totalEncomenda : totalPronta;
+    if (elPronta)
+        elPronta.textContent = totalPronta;
+    if (elEncomenda)
+        elEncomenda.textContent = totalEncomenda;
+    if (label)
+        label.textContent = modoCardapioAtual === 'ENCOMENDA' ? 'Minhas Encomendas' : 'Meu Pedido';
+}
+
+// Gerenciamento de carrinhos separados: estoque atual x encomenda futura.
 function adicionarAoCarrinho(produtoId) {
-    const prod = produtosList.find(p => p.id === produtoId);
-    const itemExistente = carrinho.find(i => i.id === produtoId);
-
-    const qtdAtualNoCarrinho = itemExistente ? itemExistente.qtd : 0;
-
-    // Validação de Limite de Estoque
-    if (qtdAtualNoCarrinho + 1 > prod.estoque) {
-        alert(`Ops! Só temos ${prod.estoque} unidades de "${prod.nome}" em estoque.`);
+    if (MODO_CONSULTA_SALAO) {
+        alert('Este QR Code está em modo de consulta. Chame o garçom para registrar o pedido na comanda.');
         return;
+    }
+    const prod = produtosList.find(p => Number(p.id) === Number(produtoId));
+    if (!prod) {
+        alert('Este produto não está mais disponível. Atualize o cardápio.');
+        return;
+    }
+
+    const carrinhoAtivo = obterCarrinhoAtivo();
+    const itemExistente = carrinhoAtivo.find(i => Number(i.id) === Number(produtoId));
+    const qtdAtual = itemExistente ? Number(itemExistente.qtd) : 0;
+    const limite = prod.quantidade_max_encomenda ? Number(prod.quantidade_max_encomenda) : null;
+
+    if (modoCardapioAtual === 'PRONTA_ENTREGA') {
+        const estoque = modoCardapioAtual === 'ENCOMENDA' ? Math.max(0, Number(prod.estoque || 0)) : estoqueDisponivelCatalogo(prod);
+        if (qtdAtual + 1 > estoque) {
+            alert(`Ops! Só temos ${estoque} unidades de "${prod.nome}" em estoque.`);
+            return;
+        }
+    } else {
+        if (prod.aceita_encomenda !== true) {
+            alert(`O produto "${prod.nome}" não está habilitado para encomenda.`);
+            return;
+        }
+        if (limite && qtdAtual + 1 > limite) {
+            alert(`A quantidade máxima para "${prod.nome}" é ${limite}.`);
+            return;
+        }
     }
 
     if (itemExistente) {
         itemExistente.qtd++;
     } else {
-        carrinho.push({...prod, qtd: 1});
+        carrinhoAtivo.push({...prod, id: Number(prod.id), qtd: 1});
     }
+    if (modoCardapioAtual === 'ENCOMENDA')
+        chaveIdempotenciaEncomenda = null;
     atualizarCarrinho();
 }
 
 function alterarQtd(produtoId, delta) {
-    const item = carrinho.find(i => i.id === produtoId);
-    const prod = produtosList.find(p => p.id === produtoId);
-    if (!item)
+    const carrinhoAtivo = obterCarrinhoAtivo();
+    const item = carrinhoAtivo.find(i => Number(i.id) === Number(produtoId));
+    const prod = produtosList.find(p => Number(p.id) === Number(produtoId));
+    if (!item || !prod)
         return;
 
-    // Validação de estoque ao aumentar a quantidade dentro do carrinho
-    if (delta > 0 && item.qtd + delta > prod.estoque) {
-        alert(`Ops! Só temos ${prod.estoque} unidades de "${prod.nome}" em estoque.`);
-        return;
+    if (delta > 0 && modoCardapioAtual === 'PRONTA_ENTREGA') {
+        const estoque = modoCardapioAtual === 'ENCOMENDA' ? Math.max(0, Number(prod.estoque || 0)) : estoqueDisponivelCatalogo(prod);
+        if (item.qtd + delta > estoque) {
+            alert(`Ops! Só temos ${estoque} unidades de "${prod.nome}" em estoque.`);
+            return;
+        }
+    }
+
+    if (delta > 0 && modoCardapioAtual === 'ENCOMENDA') {
+        const limite = prod.quantidade_max_encomenda ? Number(prod.quantidade_max_encomenda) : null;
+        if (prod.aceita_encomenda !== true || (limite && item.qtd + delta > limite)) {
+            alert(limite ? `A quantidade máxima para "${prod.nome}" é ${limite}.` : 'Este produto não aceita encomendas.');
+            return;
+        }
     }
 
     item.qtd += delta;
     if (item.qtd <= 0) {
-        carrinho = carrinho.filter(i => i.id !== produtoId);
+        const idx = carrinhoAtivo.findIndex(i => Number(i.id) === Number(produtoId));
+        if (idx >= 0)
+            carrinhoAtivo.splice(idx, 1);
     }
+    if (modoCardapioAtual === 'ENCOMENDA')
+        chaveIdempotenciaEncomenda = null;
     atualizarCarrinho();
 }
 
-function atualizarCarrinho() {
-    const totalItens = carrinho.reduce((sum, item) => sum + item.qtd, 0);
-    document.getElementById('cart-count').textContent = totalItens;
+function atualizarInterfaceCarrinho() {
+    const ehEncomenda = modoCardapioAtual === 'ENCOMENDA';
+    const titulo = document.getElementById('cart-title');
+    const subtitulo = document.getElementById('cart-subtitle');
+    const agendamento = document.getElementById('encomenda-agendamento');
+    const data = document.getElementById('data_encomenda');
+    const hora = document.getElementById('hora_encomenda');
+    const btn = document.getElementById('btn-submit');
+    const nota = document.getElementById('checkout-mode-note');
+    const rotuloPagamento = document.getElementById('checkout-payment-title');
 
+    if (titulo)
+        titulo.textContent = ehEncomenda ? '📅 Sua encomenda' : '🛒 Seu Pedido';
+    if (subtitulo)
+        subtitulo.textContent = ehEncomenda
+                ? 'Confira os itens e solicite a data e o horário desejados.'
+                : 'Confira os itens antes de finalizar.';
+    if (agendamento)
+        agendamento.style.display = ehEncomenda ? 'block' : 'none';
+    [data, hora].forEach(campo => {
+        if (!campo)
+            return;
+        campo.disabled = !ehEncomenda;
+        campo.required = ehEncomenda;
+    });
+    if (data) {
+        const hoje = new Date();
+        const offset = hoje.getTimezoneOffset();
+        const local = new Date(hoje.getTime() - offset * 60000).toISOString().slice(0, 10);
+        data.min = local;
+    }
+    if (btn)
+        btn.textContent = ehEncomenda ? '📅 Solicitar encomenda' : '✅ Enviar Pedido';
+    if (nota)
+        nota.textContent = ehEncomenda
+                ? 'A forma de pagamento é apenas uma preferência nesta etapa. A encomenda aguardará confirmação da loja; nenhum pagamento será processado agora.'
+                : 'Selecione a forma de pagamento do pedido.';
+    if (rotuloPagamento)
+        rotuloPagamento.textContent = ehEncomenda ? '💳 Pagamento pretendido' : '💳 Pagamento';
+}
+
+function atualizarCarrinho() {
+    atualizarContadorCarrinho();
+    atualizarInterfaceCarrinho();
+
+    const carrinhoAtivo = obterCarrinhoAtivo();
     const container = document.getElementById('cart-items');
     const summary = document.getElementById('cart-summary');
+    if (!container || !summary)
+        return;
 
-    if (carrinho.length === 0) {
-        container.innerHTML = '<p class="empty-cart">Seu carrinho está vazio.</p>';
+    if (carrinhoAtivo.length === 0) {
+        container.innerHTML = modoCardapioAtual === 'ENCOMENDA'
+                ? '<p class="empty-cart">Sua lista de encomendas está vazia. Escolha produtos na aba Encomendas.</p>'
+                : '<p class="empty-cart">Seu carrinho está vazio.</p>';
         summary.style.display = 'none';
         return;
     }
 
     summary.style.display = 'block';
     container.innerHTML = '';
-
     let subtotal = 0;
-    carrinho.forEach(item => {
-        const itemSubtotal = item.preco * item.qtd;
+    carrinhoAtivo.forEach(item => {
+        const itemSubtotal = Number(item.preco || 0) * Number(item.qtd || 0);
         subtotal += itemSubtotal;
-
         container.innerHTML += `
             <div class="cart-item">
                 <div>
-                    <strong>${item.nome}</strong><br>
-                    <small>R$ ${item.preco.toFixed(2).replace('.', ',')}</small>
+                    <strong>${escaparHTMLCardapio(item.nome)}</strong><br>
+                    <small>R$ ${Number(item.preco || 0).toFixed(2).replace('.', ',')}</small>
                 </div>
                 <div class="cart-item-qty">
-                    <button class="qty-btn" onclick="alterarQtd(${item.id}, -1)">-</button>
-                    <span>${item.qtd}</span>
-                    <button class="qty-btn" onclick="alterarQtd(${item.id}, 1)">+</button>
+                    <button type="button" class="qty-btn" onclick="alterarQtd(${Number(item.id)}, -1)">-</button>
+                    <span>${Number(item.qtd)}</span>
+                    <button type="button" class="qty-btn" onclick="alterarQtd(${Number(item.id)}, 1)">+</button>
                 </div>
             </div>
         `;
     });
 
-    const tipoPedido = document.getElementById('tipo_pedido').value;
+    const tipoPedido = document.getElementById('tipo_pedido')?.value || 'RETIRADA';
     const frete = tipoPedido === 'DELIVERY' ? taxaEntrega : 0;
     const total = subtotal + frete;
-
-    document.getElementById('subtotal-val').textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
-    document.getElementById('taxa-val').textContent = `R$ ${frete.toFixed(2).replace('.', ',')}`;
-    document.getElementById('total-val').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    const fmt = valor => `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
+    document.getElementById('subtotal-val').textContent = fmt(subtotal);
+    document.getElementById('taxa-val').textContent = fmt(frete);
+    document.getElementById('total-val').textContent = fmt(total);
 }
 
 function toggleCarrinho() {
+    if (MODO_CONSULTA_SALAO)
+        return;
     const modal = document.getElementById('cart-modal');
-    modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+    if (!modal)
+        return;
+    const vaiAbrir = modal.style.display !== 'flex';
+    if (vaiAbrir)
+        atualizarCarrinho();
+    modal.style.display = vaiAbrir ? 'flex' : 'none';
 }
 
 function atualizarTaxa() {
@@ -723,7 +988,8 @@ function abrirModalCancelamentoPedido(pedidoId) {
 
 function fecharModalCancelamentoPedido() {
     const modal = document.getElementById('modal-cancelar-pedido-online');
-    if (modal) modal.style.display = 'none';
+    if (modal)
+        modal.style.display = 'none';
     pedidoCancelamentoOnlineId = null;
 }
 
@@ -731,10 +997,13 @@ function atualizarCampoDetalheCancelamentoOnline() {
     const motivo = document.getElementById('motivo-cancelamento-online')?.value;
     const grupo = document.getElementById('grupo-detalhe-cancelamento-online');
     const detalhe = document.getElementById('detalhe-cancelamento-online');
-    if (grupo) grupo.style.display = motivo === 'OUTRO' ? 'block' : 'none';
+    if (grupo)
+        grupo.style.display = motivo === 'OUTRO' ? 'block' : 'none';
     if (detalhe) {
-        if (motivo === 'OUTRO') detalhe.setAttribute('required', 'required');
-        else detalhe.removeAttribute('required');
+        if (motivo === 'OUTRO')
+            detalhe.setAttribute('required', 'required');
+        else
+            detalhe.removeAttribute('required');
     }
 }
 
@@ -747,12 +1016,14 @@ async function confirmarCancelamentoPedidoOnline() {
     const botao = document.getElementById('btn-confirmar-cancelamento-online');
 
     if (!id || !acompanhamento?.token) {
-        if (erroEl) erroEl.textContent = 'Não encontramos o token de acompanhamento deste pedido. Atualize a página e tente novamente.';
+        if (erroEl)
+            erroEl.textContent = 'Não encontramos o token de acompanhamento deste pedido. Atualize a página e tente novamente.';
         return;
     }
 
     if (acompanhamento.status !== 'PENDENTE') {
-        if (erroEl) erroEl.textContent = 'O pedido não está mais aguardando preparo e não pode ser cancelado por aqui.';
+        if (erroEl)
+            erroEl.textContent = 'O pedido não está mais aguardando preparo e não pode ser cancelado por aqui.';
         return;
     }
 
@@ -768,12 +1039,14 @@ async function confirmarCancelamentoPedidoOnline() {
     const detalhe = (campoDetalhe?.value || '').trim();
 
     if (!Object.prototype.hasOwnProperty.call(motivos, motivoSelecionado)) {
-        if (erroEl) erroEl.textContent = 'Selecione o motivo do cancelamento.';
+        if (erroEl)
+            erroEl.textContent = 'Selecione o motivo do cancelamento.';
         campoMotivo?.focus();
         return;
     }
     if (motivoSelecionado === 'OUTRO' && detalhe.length < 3) {
-        if (erroEl) erroEl.textContent = 'Descreva o motivo do cancelamento (mínimo de 3 caracteres).';
+        if (erroEl)
+            erroEl.textContent = 'Descreva o motivo do cancelamento (mínimo de 3 caracteres).';
         campoDetalhe?.focus();
         return;
     }
@@ -786,7 +1059,8 @@ async function confirmarCancelamentoPedidoOnline() {
         botao.disabled = true;
         botao.textContent = 'Cancelando...';
     }
-    if (erroEl) erroEl.textContent = '';
+    if (erroEl)
+        erroEl.textContent = '';
 
     try {
         const {data, error} = await _supabase.rpc('cancelar_pedido_online_cliente', {
@@ -794,7 +1068,8 @@ async function confirmarCancelamentoPedidoOnline() {
             p_motivo: motivoFinal
         });
 
-        if (error) throw error;
+        if (error)
+            throw error;
         if (!data || data.sucesso !== true) {
             throw new Error('O banco não confirmou o cancelamento.');
         }
@@ -820,8 +1095,10 @@ Se o pagamento já foi realizado antecipadamente, este cancelamento não efetua 
         } else if (mensagem.includes('ESTOQUE') || mensagem.includes('LOTE')) {
             amigavel = 'Não foi possível concluir o cancelamento de forma segura. Entre em contato com a loja para que a equipe confira o estoque.';
         }
-        if (erroEl) erroEl.textContent = amigavel;
-        else alert('Não foi possível cancelar o pedido: ' + amigavel);
+        if (erroEl)
+            erroEl.textContent = amigavel;
+        else
+            alert('Não foi possível cancelar o pedido: ' + amigavel);
     } finally {
         if (botao) {
             botao.disabled = false;
@@ -971,6 +1248,386 @@ async function iniciarAcompanhamentoPedido(pedidoId, token, statusInicial = 'PEN
 }
 
 // ============================================================
+// SOLICITAÇÃO E ACOMPANHAMENTO DE ENCOMENDAS AGENDADAS
+// ============================================================
+function gerarChaveIdempotenciaEncomenda() {
+    if (window.crypto?.randomUUID)
+        return window.crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    if (window.crypto?.getRandomValues)
+        window.crypto.getRandomValues(bytes);
+    else
+        for (let i = 0; i < bytes.length; i++)
+            bytes[i] = Math.floor(Math.random() * 256);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const h = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+function salvarTokensEncomendasCliente() {
+    try {
+        const dadosMinimos = acompanhamentosEncomendasCliente.slice(-10).map(item => ({
+                encomenda_id: Number(item.encomenda_id),
+                token: item.token,
+                status: item.status || 'AGUARDANDO'
+            }));
+        localStorage.setItem(CHAVE_TOKENS_ENCOMENDAS, JSON.stringify(dadosMinimos));
+    } catch (err) {
+        console.warn('Não foi possível salvar o acompanhamento das encomendas neste navegador.', err);
+    }
+}
+
+function escaparHTMLCardapio(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[caractere]));
+}
+
+async function finalizarEncomenda(event) {
+    if (event)
+        event.preventDefault();
+
+    if (configLoja.encomendas_ativas === false) {
+        alert('A loja desativou temporariamente as encomendas. Sua solicitação não foi enviada.');
+        return;
+    }
+
+    if (!_supabase) {
+        alert('Não foi possível conectar ao sistema. Tente novamente.');
+        return;
+    }
+    if (!Array.isArray(carrinhoEncomenda) || carrinhoEncomenda.length === 0) {
+        alert('Sua lista de encomendas está vazia.');
+        return;
+    }
+
+    const nome = document.getElementById('cli_nome')?.value.trim() || '';
+    const telefoneFormatado = document.getElementById('cli_telefone')?.value.trim() || '';
+    const telefone = telefoneFormatado.replace(/\D/g, '');
+    const tipo = document.getElementById('tipo_pedido')?.value || '';
+    const dataEncomenda = document.getElementById('data_encomenda')?.value || '';
+    const horaEncomenda = document.getElementById('hora_encomenda')?.value || '';
+    const formaPagamento = document.getElementById('forma_pagamento')?.value || 'PIX';
+    const trocoInput = document.getElementById('troco_para')?.value.trim() || '';
+    const observacao = document.getElementById('observacao')?.value.trim() || null;
+
+    if (nome.length < 2) {
+        alert('Informe seu nome completo.');
+        document.getElementById('cli_nome')?.focus();
+        return;
+    }
+    if (!/^\d{10,11}$/.test(telefone)) {
+        alert('Informe um telefone válido com DDD.');
+        document.getElementById('cli_telefone')?.focus();
+        return;
+    }
+    if (!['DELIVERY', 'RETIRADA'].includes(tipo)) {
+        alert('Selecione entrega ou retirada.');
+        return;
+    }
+    if (!dataEncomenda || !horaEncomenda) {
+        alert('Informe a data e o horário desejados.');
+        return;
+    }
+    const dataHoraLocal = new Date(`${dataEncomenda}T${horaEncomenda}:00`);
+    if (!Number.isFinite(dataHoraLocal.getTime()) || dataHoraLocal <= new Date()) {
+        alert('A data e o horário precisam ser futuros.');
+        return;
+    }
+
+    // Validação local para feedback; o banco repete as regras de forma autoritativa.
+    for (const item of carrinhoEncomenda) {
+        const produto = produtosList.find(p => Number(p.id) === Number(item.id));
+        if (!produto || produto.ativo === false || produto.aceita_encomenda !== true) {
+            alert(`O produto "${item.nome}" não aceita mais encomendas. Atualizaremos o cardápio.`);
+            await carregarProdutos();
+            return;
+        }
+        const antecedencia = Math.max(0, Number(produto.antecedencia_encomenda_horas ?? 24));
+        if (dataHoraLocal.getTime() < Date.now() + antecedencia * 3600000) {
+            alert(`O produto "${produto.nome}" precisa de pelo menos ${antecedencia} hora(s) de antecedência.`);
+            return;
+        }
+        const limite = produto.quantidade_max_encomenda ? Number(produto.quantidade_max_encomenda) : null;
+        if (limite && Number(item.qtd) > limite) {
+            alert(`A quantidade máxima de "${produto.nome}" por encomenda é ${limite}.`);
+            return;
+        }
+    }
+
+    let cidadeId = null;
+    let rua = document.getElementById('cli_rua')?.value.trim() || '';
+    let numero = document.getElementById('cli_numero')?.value.trim() || '';
+    let bairro = document.getElementById('cli_bairro')?.value.trim() || '';
+    let complemento = document.getElementById('cli_complemento')?.value.trim() || '';
+    let referencia = document.getElementById('cli_referencia')?.value.trim() || '';
+
+    if (tipo === 'DELIVERY') {
+        if (!rua || !numero || !bairro) {
+            alert('Preencha rua, número e bairro para a entrega.');
+            return;
+        }
+        if (cidadeEntregaSelecionada && typeof cidadeEntregaSelecionada === 'object') {
+            cidadeId = cidadeEntregaSelecionada.id;
+        } else {
+            cidadeId = cidadeEntregaSelecionada;
+        }
+        if (!cidadeId) {
+            cidadeId = document.getElementById('cli_cidade')?.value || null;
+        }
+        cidadeId = cidadeId ? Number(cidadeId) : null;
+        if (!Number.isInteger(cidadeId) || cidadeId <= 0) {
+            alert('Selecione uma cidade válida para entrega.');
+            return;
+        }
+    } else {
+        rua = numero = bairro = complemento = referencia = '';
+    }
+
+    if (!['PIX', 'DINHEIRO', 'CARTAO_DEBITO', 'CARTAO_CREDITO'].includes(formaPagamento)) {
+        alert('Selecione uma forma de pagamento pretendida.');
+        return;
+    }
+    let trocoPara = null;
+    if (formaPagamento === 'DINHEIRO' && trocoInput !== '') {
+        const n = Number(trocoInput.replace(',', '.'));
+        if (!Number.isFinite(n) || n < 0) {
+            alert('Informe um valor de troco válido.');
+            return;
+        }
+        trocoPara = n;
+    }
+
+    const subtotal = carrinhoEncomenda.reduce((s, i) => s + Number(i.preco || 0) * Number(i.qtd || 0), 0);
+    const minimo = Number(configLoja.valor_minimo_pedido || 0);
+    if (subtotal < minimo) {
+        alert(`O valor mínimo do pedido é R$ ${minimo.toFixed(2).replace('.', ',')}.`);
+        return;
+    }
+
+    const btn = document.getElementById('btn-submit');
+    const textoOriginal = btn ? btn.textContent : 'Solicitar encomenda';
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Enviando solicitação...';
+    }
+
+    if (!chaveIdempotenciaEncomenda)
+        chaveIdempotenciaEncomenda = gerarChaveIdempotenciaEncomenda();
+    const itensRPC = carrinhoEncomenda.map(item => ({
+            produto_id: Number(item.id),
+            quantidade: Number(item.qtd)
+        }));
+
+    try {
+        const {data, error} = await _supabase.rpc('solicitar_encomenda_agendada_online', {
+            p_chave_idempotencia: chaveIdempotenciaEncomenda,
+            p_nome_cliente: nome,
+            p_telefone: telefone,
+            p_tipo: tipo,
+            p_cidade_id: cidadeId,
+            p_rua: tipo === 'DELIVERY' ? rua : null,
+            p_numero: tipo === 'DELIVERY' ? numero : null,
+            p_bairro: tipo === 'DELIVERY' ? bairro : null,
+            p_complemento: tipo === 'DELIVERY' ? (complemento || null) : null,
+            p_ponto_referencia: tipo === 'DELIVERY' ? (referencia || null) : null,
+            p_data_encomenda: dataEncomenda,
+            p_hora_encomenda: horaEncomenda,
+            p_forma_pagamento: formaPagamento,
+            p_troco_para: trocoPara,
+            p_observacao: observacao,
+            p_itens: itensRPC
+        });
+        if (error)
+            throw error;
+        if (!data || !data.encomenda_id || !data.token_acompanhamento) {
+            throw new Error('O banco não retornou os dados de acompanhamento da encomenda.');
+        }
+
+        acompanhamentosEncomendasCliente = acompanhamentosEncomendasCliente.filter(x => Number(x.encomenda_id) !== Number(data.encomenda_id));
+        acompanhamentosEncomendasCliente.push({
+            encomenda_id: Number(data.encomenda_id),
+            token: data.token_acompanhamento,
+            status: data.status || 'AGUARDANDO'
+        });
+        salvarTokensEncomendasCliente();
+
+        await atualizarAcompanhamentosEncomendas();
+        carrinhoEncomenda = [];
+        chaveIdempotenciaEncomenda = null;
+        atualizarCarrinho();
+        const modal = document.getElementById('cart-modal');
+        if (modal)
+            modal.style.display = 'none';
+
+        const total = Number(data.valor_total || 0).toFixed(2).replace('.', ',');
+        alert(`✅ Solicitação de encomenda #${data.encomenda_id} enviada!\n\nData: ${dataEncomenda}\nHorário: ${horaEncomenda}\nValor solicitado: R$ ${total}\n\nA encomenda ainda aguarda a confirmação da loja. Nenhum estoque foi baixado e nenhum pagamento foi processado nesta etapa.`);
+    } catch (err) {
+        console.error('Erro ao solicitar encomenda:', err);
+        let msg = err?.message || 'Não foi possível enviar a solicitação.';
+        const regras = [
+            ['ENCOMENDAS_DESATIVADAS', 'A loja desativou temporariamente as encomendas. Sua solicitação não foi enviada.'],
+            ['PRODUTO_NAO_ACEITA_ENCOMENDA', 'Um dos produtos não aceita mais encomendas. Atualize o cardápio.'],
+            ['PRODUTO_INATIVO', 'Um dos produtos foi pausado. Atualizamos o cardápio.'],
+            ['PRAZO_MINIMO_ENCOMENDA', 'A data escolhida não respeita a antecedência mínima de um dos produtos.'],
+            ['DATA_HORA_INVALIDA', 'Escolha uma data e um horário futuros.'],
+            ['HORARIO_ENCOMENDA_FORA_ATENDIMENTO', 'O horário escolhido está fora da faixa permitida para encomendas. Escolha outro horário.'],
+            ['LIMITE_ENCOMENDAS_HORARIO', 'A loja já atingiu o limite de encomendas para esse horário. Escolha outro horário.'],
+            ['LIMITE_ENCOMENDAS_DIA', 'A loja já atingiu o limite de encomendas para essa data. Escolha outro dia.'],
+            ['CIDADE_NAO_DISPONIVEL', 'A cidade selecionada não está disponível para entrega.'],
+            ['ENDERECO_INCOMPLETO', 'Preencha todos os dados obrigatórios de entrega.'],
+            ['TELEFONE_INVALIDO', 'Informe um telefone válido com DDD.'],
+            ['PEDIDO_ABAIXO_DO_MINIMO', 'O valor solicitado está abaixo do mínimo permitido.'],
+            ['QUANTIDADE_MAXIMA_ENCOMENDA', 'A quantidade solicitada excede o limite de um dos produtos.'],
+            ['TROCO_INSUFICIENTE', 'O valor informado para troco precisa ser igual ou maior que o total solicitado.']
+        ];
+        const regra = regras.find(([codigo]) => msg.includes(codigo));
+        if (regra)
+            msg = regra[1];
+        alert('❌ ' + msg);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = textoOriginal;
+        }
+    }
+}
+
+async function recuperarAcompanhamentoEncomendas() {
+    try {
+        const salvos = JSON.parse(localStorage.getItem(CHAVE_TOKENS_ENCOMENDAS) || '[]');
+        acompanhamentosEncomendasCliente = Array.isArray(salvos)
+                ? salvos.filter(x => x && x.token && x.encomenda_id).slice(-10)
+                : [];
+    } catch (_) {
+        acompanhamentosEncomendasCliente = [];
+    }
+    await atualizarAcompanhamentosEncomendas();
+}
+
+async function atualizarAcompanhamentosEncomendas() {
+    if (!_supabase || !Array.isArray(acompanhamentosEncomendasCliente) || !acompanhamentosEncomendasCliente.length) {
+        renderizarAcompanhamentosEncomendas([]);
+        return;
+    }
+    const resultados = [];
+    for (const item of acompanhamentosEncomendasCliente.slice(-10)) {
+        try {
+            const {data, error} = await _supabase.rpc('consultar_encomenda_agendada_online', {p_token: item.token});
+            if (error)
+                throw error;
+            if (data) {
+                item.status = data.status || item.status;
+                item.dados = data;
+                resultados.push(item);
+            }
+        } catch (err) {
+            console.warn('Não foi possível atualizar o status da encomenda #' + item.encomenda_id, err?.message || err);
+        }
+    }
+    salvarTokensEncomendasCliente();
+    renderizarAcompanhamentosEncomendas(resultados);
+}
+
+async function cancelarEncomendaClienteUI(token) {
+    const item = acompanhamentosEncomendasCliente.find(x => x && x.token === token);
+    if (!item || !_supabase) {
+        alert('Não foi possível localizar esta encomenda. Atualize a página e tente novamente.');
+        return;
+    }
+
+    const statusAtual = item.dados?.status || item.status || 'AGUARDANDO';
+    if (statusAtual !== 'AGUARDANDO') {
+        alert('Só é possível cancelar a encomenda enquanto ela estiver aguardando confirmação da loja.');
+        await atualizarAcompanhamentosEncomendas();
+        return;
+    }
+
+    if (!confirm(`Deseja cancelar a encomenda #${Number(item.encomenda_id)}? Essa ação não pode ser desfeita.`))
+        return;
+
+    const motivo = prompt('Informe o motivo do cancelamento (mínimo 5 caracteres):');
+    if (motivo === null)
+        return;
+    const motivoLimpo = motivo.trim();
+    if (motivoLimpo.length < 5 || motivoLimpo.length > 500) {
+        alert('Informe um motivo entre 5 e 500 caracteres.');
+        return;
+    }
+
+    try {
+        const {data, error} = await _supabase.rpc('cancelar_encomenda_agendada_online', {
+            p_token: token,
+            p_motivo: motivoLimpo
+        });
+        if (error)
+            throw error;
+        if (!data || data.status !== 'CANCELADA') {
+            throw new Error('Não foi possível confirmar o cancelamento no sistema.');
+        }
+
+        item.status = data.status;
+        item.dados = {
+            ...(item.dados || {}),
+            status: data.status,
+            motivo_cancelamento: data.motivo_cancelamento || motivoLimpo
+        };
+        salvarTokensEncomendasCliente();
+        await atualizarAcompanhamentosEncomendas();
+        alert(`Encomenda #${Number(item.encomenda_id)} cancelada com sucesso.`);
+    } catch (err) {
+        console.error('Erro ao cancelar encomenda pelo catálogo:', err);
+        const mensagem = String(err?.message || err || 'Erro desconhecido');
+        if (mensagem.includes('ENCOMENDA_CANCELAMENTO_FORA_PRAZO')) {
+            alert('A loja já confirmou ou iniciou o atendimento desta encomenda. O cancelamento pelo catálogo não está mais disponível.');
+        } else if (mensagem.includes('MOTIVO_CANCELAMENTO_OBRIGATORIO')) {
+            alert('Informe o motivo do cancelamento com pelo menos 5 caracteres.');
+        } else if (mensagem.includes('ENCOMENDA_NAO_ENCONTRADA')) {
+            alert('Não encontramos a encomenda associada a este acompanhamento.');
+        } else {
+            alert('Não foi possível cancelar a encomenda. Atualize o acompanhamento e tente novamente.');
+        }
+        await atualizarAcompanhamentosEncomendas();
+    }
+}
+
+function renderizarAcompanhamentosEncomendas(lista) {
+    const painel = document.getElementById('painel-acompanhamento-encomendas');
+    const container = document.getElementById('lista-acompanhamento-encomendas');
+    if (!painel || !container)
+        return;
+    if (!lista.length) {
+        painel.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+    painel.style.display = 'block';
+    const statusTexto = {AGUARDANDO: 'Aguardando confirmação da loja', ACEITA: 'Encomenda confirmada · aguardando programação da produção', EM_PRODUCAO: 'Em produção', PRONTA: 'Pronta para retirada/entrega', CONCLUIDA: 'Concluída', RECUSADA: 'Encomenda recusada', CANCELADA: 'Encomenda cancelada'};
+    container.innerHTML = lista.slice().reverse().map(item => {
+        const d = item.dados || {};
+        const itens = Array.isArray(d.itens) ? d.itens.map(i => `${Number(i.quantidade)} × ${escaparHTMLCardapio(i.nome_produto)}`).join('<br>') : '';
+        const status = d.status || item.status || 'AGUARDANDO';
+        const motivoRecusa = d.motivo_recusa ? `<p style="margin:7px 0 0;color:#9d2335;"><strong>Motivo da recusa:</strong> ${escaparHTMLCardapio(d.motivo_recusa)}</p>` : '';
+        const motivoCancelamento = d.motivo_cancelamento ? `<p style="margin:7px 0 0;color:#9d2335;"><strong>Motivo do cancelamento:</strong> ${escaparHTMLCardapio(d.motivo_cancelamento)}</p>` : '';
+        const motivo = motivoRecusa + motivoCancelamento;
+        const botaoCancelar = status === 'AGUARDANDO'
+                ? `<button type="button" onclick="cancelarEncomendaClienteUI('${escaparHTMLCardapio(item.token)}')" style="margin-top:12px;padding:9px 13px;border:1px solid #bd3542;border-radius:8px;background:#fff;color:#a52834;font-weight:700;cursor:pointer;">Cancelar encomenda</button>`
+                : '';
+        const cores = ['ACEITA', 'EM_PRODUCAO', 'PRONTA', 'CONCLUIDA'].includes(status) ? '#176b45' : (status === 'RECUSADA' || status === 'CANCELADA' ? '#a52834' : '#8a6100');
+        return `<article style="border:1px solid #ead7e0;border-radius:12px;padding:14px;background:#fff;">
+            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+                <strong>Encomenda #${Number(item.encomenda_id)}</strong>
+                <span style="color:${cores};font-weight:700;">${escaparHTMLCardapio(statusTexto[status] || status)}</span>
+            </div>
+            <p style="margin:7px 0;color:#66585d;">Data: ${escaparHTMLCardapio(String(d.data_encomenda || '').split('-').reverse().join('/'))} às ${escaparHTMLCardapio(d.hora_encomenda || '')}</p>
+            <div style="color:#4a3e3d;">${itens}</div>
+            <p style="margin:8px 0 0;font-weight:700;">Total solicitado: R$ ${Number(d.valor_total || 0).toFixed(2).replace('.', ',')}</p>${motivo}${botaoCancelar}
+        </article>`;
+    }).join('');
+}
+
+// ============================================================
 // FINALIZAÇÃO DO PEDIDO ONLINE
 // ============================================================
 // Envio do Pedido ao Supabase
@@ -979,6 +1636,14 @@ async function finalizarPedido(event) {
     // Impede o submit tradicional do formulário
     if (event) {
         event.preventDefault();
+    }
+    if (MODO_CONSULTA_SALAO) {
+        alert('Este QR Code é somente para consulta do cardápio. Chame o garçom para registrar o pedido na comanda.');
+        return;
+    }
+
+    if (modoCardapioAtual === 'ENCOMENDA') {
+        return finalizarEncomenda(event);
     }
 
     // ------------------------------------------------------------
@@ -1399,6 +2064,9 @@ async function finalizarPedido(event) {
         if (mensagemErro.includes('LOJA_FECHADA')) {
             mensagemErro =
                     'A loja acabou de ser fechada e não está aceitando novos pedidos.';
+        } else if (mensagemErro.includes('ESTOQUE_RESERVADO_ENCOMENDAS')) {
+            mensagemErro = 'Parte do estoque está reservada para uma encomenda. Atualize o cardápio e reduza a quantidade solicitada.';
+            await carregarProdutos();
         } else if (mensagemErro.includes('ESTOQUE_INSUFICIENTE')) {
             mensagemErro =
                     'Um dos produtos ficou sem estoque suficiente. O pedido não foi criado.';
@@ -1438,30 +2106,46 @@ async function finalizarPedido(event) {
 let configLoja = {
     loja_aberta: true,
     valor_minimo_pedido: 0,
-    whatsapp_notificacoes_ativas: false
+    whatsapp_notificacoes_ativas: false,
+    // Mantém encomendas ocultas até confirmar a configuração persistida no banco.
+    encomendas_ativas: false
 };
 
 // --- CARREGA E ESCUTA CONFIGURAÇÕES DA LOJA ---
 async function carregarConfiguracoesLoja() {
+    if (!_supabase) {
+        configLoja = {...configLoja, encomendas_ativas: false};
+        aplicarDisponibilidadeEncomendasUI();
+        return;
+    }
+
     const {data, error} = await _supabase
             .from('configuracoes')
             .select(`
             nome_loja,
             loja_aberta,
             valor_minimo_pedido,
-            whatsapp_notificacoes_ativas
+            whatsapp_notificacoes_ativas,
+            encomendas_ativas
         `)
-            .limit(1)
+            .eq('id', 1)
             .single();
 
-    if (error) {
-        console.error('Erro ao buscar configurações:', error.message);
+    if (error || !data) {
+        console.error('Erro ao buscar configurações da loja; encomendas permanecerão desativadas:', error?.message || 'Registro de configuração não encontrado.');
+        configLoja = {...configLoja, encomendas_ativas: false};
+        aplicarDisponibilidadeEncomendasUI();
         return;
     }
 
-    configLoja = data;
+    configLoja = {
+        ...data,
+        // Só habilita se o banco confirmar explicitamente true.
+        encomendas_ativas: data.encomendas_ativas === true
+    };
     atualizarBannerStatus();
     atualizarOpcaoWhatsApp();
+    aplicarDisponibilidadeEncomendasUI();
 }
 
 function escutarConfiguracoesRealtime() {
@@ -1477,19 +2161,29 @@ function escutarConfiguracoesRealtime() {
 
                 const dados = payload?.payload || payload;
 
-                if (!dados || typeof dados.loja_aberta === 'undefined') {
+                if (!dados || (
+                        typeof dados.loja_aberta === 'undefined' &&
+                        typeof dados.encomendas_ativas === 'undefined' &&
+                        typeof dados.valor_minimo_pedido === 'undefined' &&
+                        typeof dados.whatsapp_notificacoes_ativas === 'undefined'
+                        )) {
                     console.warn('⚠️ Payload de configuração inválido:', payload);
                     return;
                 }
 
                 configLoja = {
-                    nome_loja: dados.nome_loja,
-                    loja_aberta: dados.loja_aberta,
-                    taxa_entrega_padrao: Number(dados.taxa_entrega_padrao || 0),
-                    valor_minimo_pedido: Number(dados.valor_minimo_pedido || 0)
+                    ...configLoja,
+                    nome_loja: dados.nome_loja ?? configLoja.nome_loja,
+                    loja_aberta: typeof dados.loja_aberta === 'boolean' ? dados.loja_aberta : configLoja.loja_aberta,
+                    taxa_entrega_padrao: Number(dados.taxa_entrega_padrao ?? configLoja.taxa_entrega_padrao ?? 0),
+                    valor_minimo_pedido: Number(dados.valor_minimo_pedido ?? configLoja.valor_minimo_pedido ?? 0),
+                    encomendas_ativas: typeof dados.encomendas_ativas === 'boolean'
+                            ? dados.encomendas_ativas
+                            : configLoja.encomendas_ativas === true
                 };
 
                 atualizarBannerStatus();
+                aplicarDisponibilidadeEncomendasUI();
             }
             )
             .subscribe((status, error) => {
@@ -1520,6 +2214,33 @@ function atualizarBannerStatus() {
 //             texto += ` | Pedido mínimo: R$ ${configLoja.valor_minimo_pedido.toFixed(2).replace('.', ',')}`;
 //         }
         banner.innerHTML = texto;
+    }
+}
+
+function aplicarDisponibilidadeEncomendasUI() {
+    const ativas = configLoja.encomendas_ativas !== false;
+    const botaoEncomendas = document.getElementById('btn-modo-encomenda');
+    const gradeModalidades = botaoEncomendas?.parentElement;
+    const aviso = document.getElementById('aviso-modo-cardapio');
+
+    if (botaoEncomendas) {
+        botaoEncomendas.style.display = ativas ? '' : 'none';
+        botaoEncomendas.setAttribute('aria-hidden', String(!ativas));
+    }
+    if (gradeModalidades) {
+        gradeModalidades.style.gridTemplateColumns = ativas
+                ? 'repeat(2,minmax(0,1fr))'
+                : 'minmax(0,1fr)';
+    }
+
+    if (!ativas && modoCardapioAtual === 'ENCOMENDA') {
+        modoCardapioAtual = 'PRONTA_ENTREGA';
+    }
+    // Atualiza estado visual, catálogo e carrinho se o gerente desativar encomendas com o cardápio aberto.
+    selecionarModoCardapio(modoCardapioAtual);
+
+    if (!ativas && aviso) {
+        aviso.textContent = 'Encomendas temporariamente desativadas pela loja. Os produtos disponíveis para pronta entrega continuam sendo exibidos conforme o estoque.';
     }
 }
 
