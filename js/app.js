@@ -9,21 +9,26 @@ const MODO_CONSULTA_SALAO = PARAMS_CARDAPIO.get('salao_consulta') === '1';
 const MESA_CONSULTA_SALAO = PARAMS_CARDAPIO.get('mesa') || '';
 
 function prepararModoConsultaSalao() {
-    if (!MODO_CONSULTA_SALAO || !document.body) return;
+    if (!MODO_CONSULTA_SALAO || !document.body)
+        return;
     document.body.classList.add('modo-consulta-salao');
     document.title = MESA_CONSULTA_SALAO ? `Cardápio — Mesa ${MESA_CONSULTA_SALAO}` : 'Cardápio — Consulta';
     const header = document.querySelector('header.header') || document.querySelector('header');
     const aviso = document.createElement('div');
     aviso.style.cssText = 'max-width:1180px;margin:12px auto;padding:12px 16px;border:1px solid #d6d3d1;border-radius:10px;background:#fffaf7;color:#5b4646;font:600 14px/1.5 Arial,sans-serif;';
     aviso.textContent = MESA_CONSULTA_SALAO
-        ? `Cardápio para consulta — Mesa ${MESA_CONSULTA_SALAO}. Para fazer o pedido, chame o garçom.`
-        : 'Cardápio em modo de consulta. Para fazer o pedido, chame a equipe.';
-    if (header && header.parentNode) header.insertAdjacentElement('afterend', aviso);
+            ? `Cardápio para consulta — Mesa ${MESA_CONSULTA_SALAO}. Para fazer o pedido, chame o garçom.`
+            : 'Cardápio em modo de consulta. Para fazer o pedido, chame a equipe.';
+    if (header && header.parentNode)
+        header.insertAdjacentElement('afterend', aviso);
     const estilo = document.createElement('style');
     estilo.textContent = '.modo-consulta-salao .cart-btn,.modo-consulta-salao .add-btn,.modo-consulta-salao #cart-modal,.modo-consulta-salao [aria-label="Modalidade de compra"]{display:none!important}body.modo-consulta-salao{padding-bottom:12px}.modo-consulta-salao .product-card{cursor:default}';
     document.head.appendChild(estilo);
     const carrinho = document.getElementById('cart-modal');
-    if (carrinho) { carrinho.style.display = 'none'; carrinho.setAttribute('aria-hidden','true'); }
+    if (carrinho) {
+        carrinho.style.display = 'none';
+        carrinho.setAttribute('aria-hidden', 'true');
+    }
 }
 
 
@@ -38,7 +43,7 @@ let chaveIdempotenciaEncomenda = null;
 let taxaEntrega = 0.00;
 
 const CHAVE_TOKENS_ENCOMENDAS = 'encomendas_tokens_acompanhamento';
-let acompanhamentosEncomendasCliente = []; 
+let acompanhamentosEncomendasCliente = [];
 let pedidoAcompanhamentoAtual = null;
 let statusAcompanhamentoAtual = 'PENDENTE';
 
@@ -67,12 +72,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Atualiza a disponibilidade de encomendas quando o cliente volta ao catálogo
     // e periodicamente, mesmo que não receba um evento em tempo real.
     const atualizarConfigAoRetornar = () => {
-        if (!document.hidden) carregarConfiguracoesLoja();
+        if (!document.hidden)
+            carregarConfiguracoesLoja();
     };
     window.addEventListener('focus', atualizarConfigAoRetornar);
     document.addEventListener('visibilitychange', atualizarConfigAoRetornar);
     window.setInterval(() => {
-        if (!document.hidden) carregarConfiguracoesLoja();
+        if (!document.hidden)
+            carregarConfiguracoesLoja();
     }, 30000);
 
     await recuperarAcompanhamentoPedido();
@@ -81,9 +88,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formularioCheckout = document.getElementById('checkout-form');
     if (formularioCheckout) {
         ['input', 'change'].forEach(evento => formularioCheckout.addEventListener(evento, () => {
-            const botaoEnvio = document.getElementById('btn-submit');
-            if (!botaoEnvio?.disabled) chaveIdempotenciaEncomenda = null;
-        }));
+                const botaoEnvio = document.getElementById('btn-submit');
+                if (!botaoEnvio?.disabled)
+                    chaveIdempotenciaEncomenda = null;
+            }));
     }
 
     // Atualiza o acompanhamento quando o cliente mantém o cardápio aberto.
@@ -365,7 +373,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function renderizarCategorias() {
     const nav = document.getElementById('categories-container');
-    if (!nav) return;
+    if (!nav)
+        return;
     nav.innerHTML = '';
 
     const btnTodas = document.createElement('button');
@@ -386,7 +395,8 @@ function renderizarCategorias() {
 }
 
 function selecionarModoCardapio(modo) {
-    if (MODO_CONSULTA_SALAO) return;
+    if (MODO_CONSULTA_SALAO)
+        return;
     if (modo === 'ENCOMENDA' && configLoja.encomendas_ativas === false) {
         alert('A loja não está aceitando encomendas no momento.');
         return;
@@ -414,8 +424,8 @@ function selecionarModoCardapio(modo) {
 
     if (aviso) {
         aviso.textContent = modoCardapioAtual === 'ENCOMENDA'
-            ? 'Escolha produtos que aceitam encomenda. A data e o horário serão solicitados no carrinho; a loja precisa confirmar antes da encomenda ficar aceita.'
-            : 'Os produtos são exibidos conforme o estoque disponível. Produtos esgotados não podem ser adicionados.';
+                ? 'Escolha produtos que aceitam encomenda. A data e o horário serão solicitados no carrinho; a loja precisa confirmar antes da encomenda ficar aceita.'
+                : 'Os produtos são exibidos conforme o estoque disponível. Produtos esgotados não podem ser adicionados.';
     }
 
     renderizarCatalogo();
@@ -442,13 +452,14 @@ function estoqueDisponivelCatalogo(produto) {
 
 function renderizarProdutos(lista) {
     const grid = document.getElementById('products-container');
-    if (!grid) return;
+    if (!grid)
+        return;
     grid.innerHTML = '';
 
     if (!Array.isArray(lista) || lista.length === 0) {
         const mensagem = modoCardapioAtual === 'ENCOMENDA'
-            ? 'Nenhum produto está habilitado para encomenda no momento.'
-            : 'Nenhum produto encontrado nesta categoria.';
+                ? 'Nenhum produto está habilitado para encomenda no momento.'
+                : 'Nenhum produto encontrado nesta categoria.';
         grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;padding:24px;color:#76656b;">${mensagem}</p>`;
         return;
     }
@@ -465,11 +476,11 @@ function renderizarProdutos(lista) {
         const limite = p.quantidade_max_encomenda ? Number(p.quantidade_max_encomenda) : null;
         const disabledPronta = modoCardapioAtual === 'PRONTA_ENTREGA' && semEstoque;
         const etiqueta = modoCardapioAtual === 'ENCOMENDA'
-            ? `Encomenda${limite ? ` • máximo ${limite}` : ''}`
-            : (semEstoque ? 'Esgotado' : `${estoque} em estoque`);
+                ? `Encomenda${limite ? ` • máximo ${limite}` : ''}`
+                : (semEstoque ? 'Esgotado' : `${estoque} em estoque`);
         const textoBotao = disabledPronta
-            ? 'Esgotado'
-            : (modoCardapioAtual === 'ENCOMENDA' ? 'Adicionar à encomenda' : `Adicionar (${estoque} em estoque)`);
+                ? 'Esgotado'
+                : (modoCardapioAtual === 'ENCOMENDA' ? 'Adicionar à encomenda' : `Adicionar (${estoque} em estoque)`);
 
         grid.innerHTML += `
             <div class="product-card" style="${disabledPronta ? 'opacity: 0.6;' : ''}">
@@ -480,8 +491,8 @@ function renderizarProdutos(lista) {
                     <div class="product-price">R$ ${preco.toFixed(2).replace('.', ',')}</div>
                     <small style="display:block;margin:4px 0 10px;color:#76656b;">${etiqueta}</small>
                     ${disabledPronta
-                        ? `<button class="add-btn" disabled style="background:#888;cursor:not-allowed;">${textoBotao}</button>`
-                        : `<button class="add-btn" onclick="adicionarAoCarrinho(${Number(p.id)})">${textoBotao}</button>`}
+                ? `<button class="add-btn" disabled style="background:#888;cursor:not-allowed;">${textoBotao}</button>`
+                : `<button class="add-btn" onclick="adicionarAoCarrinho(${Number(p.id)})">${textoBotao}</button>`}
                 </div>
             </div>
         `;
@@ -511,10 +522,14 @@ function atualizarContadorCarrinho() {
     const label = document.getElementById('cart-button-label');
 
     // O botão principal mostra somente a modalidade selecionada.
-    if (el) el.textContent = modoCardapioAtual === 'ENCOMENDA' ? totalEncomenda : totalPronta;
-    if (elPronta) elPronta.textContent = totalPronta;
-    if (elEncomenda) elEncomenda.textContent = totalEncomenda;
-    if (label) label.textContent = modoCardapioAtual === 'ENCOMENDA' ? 'Minhas Encomendas' : 'Meu Pedido';
+    if (el)
+        el.textContent = modoCardapioAtual === 'ENCOMENDA' ? totalEncomenda : totalPronta;
+    if (elPronta)
+        elPronta.textContent = totalPronta;
+    if (elEncomenda)
+        elEncomenda.textContent = totalEncomenda;
+    if (label)
+        label.textContent = modoCardapioAtual === 'ENCOMENDA' ? 'Minhas Encomendas' : 'Meu Pedido';
 }
 
 // Gerenciamento de carrinhos separados: estoque atual x encomenda futura.
@@ -556,7 +571,8 @@ function adicionarAoCarrinho(produtoId) {
     } else {
         carrinhoAtivo.push({...prod, id: Number(prod.id), qtd: 1});
     }
-    if (modoCardapioAtual === 'ENCOMENDA') chaveIdempotenciaEncomenda = null;
+    if (modoCardapioAtual === 'ENCOMENDA')
+        chaveIdempotenciaEncomenda = null;
     atualizarCarrinho();
 }
 
@@ -564,7 +580,8 @@ function alterarQtd(produtoId, delta) {
     const carrinhoAtivo = obterCarrinhoAtivo();
     const item = carrinhoAtivo.find(i => Number(i.id) === Number(produtoId));
     const prod = produtosList.find(p => Number(p.id) === Number(produtoId));
-    if (!item || !prod) return;
+    if (!item || !prod)
+        return;
 
     if (delta > 0 && modoCardapioAtual === 'PRONTA_ENTREGA') {
         const estoque = modoCardapioAtual === 'ENCOMENDA' ? Math.max(0, Number(prod.estoque || 0)) : estoqueDisponivelCatalogo(prod);
@@ -585,9 +602,11 @@ function alterarQtd(produtoId, delta) {
     item.qtd += delta;
     if (item.qtd <= 0) {
         const idx = carrinhoAtivo.findIndex(i => Number(i.id) === Number(produtoId));
-        if (idx >= 0) carrinhoAtivo.splice(idx, 1);
+        if (idx >= 0)
+            carrinhoAtivo.splice(idx, 1);
     }
-    if (modoCardapioAtual === 'ENCOMENDA') chaveIdempotenciaEncomenda = null;
+    if (modoCardapioAtual === 'ENCOMENDA')
+        chaveIdempotenciaEncomenda = null;
     atualizarCarrinho();
 }
 
@@ -602,13 +621,17 @@ function atualizarInterfaceCarrinho() {
     const nota = document.getElementById('checkout-mode-note');
     const rotuloPagamento = document.getElementById('checkout-payment-title');
 
-    if (titulo) titulo.textContent = ehEncomenda ? '📅 Sua encomenda' : '🛒 Seu Pedido';
-    if (subtitulo) subtitulo.textContent = ehEncomenda
-        ? 'Confira os itens e solicite a data e o horário desejados.'
-        : 'Confira os itens antes de finalizar.';
-    if (agendamento) agendamento.style.display = ehEncomenda ? 'block' : 'none';
+    if (titulo)
+        titulo.textContent = ehEncomenda ? '📅 Sua encomenda' : '🛒 Seu Pedido';
+    if (subtitulo)
+        subtitulo.textContent = ehEncomenda
+                ? 'Confira os itens e solicite a data e o horário desejados.'
+                : 'Confira os itens antes de finalizar.';
+    if (agendamento)
+        agendamento.style.display = ehEncomenda ? 'block' : 'none';
     [data, hora].forEach(campo => {
-        if (!campo) return;
+        if (!campo)
+            return;
         campo.disabled = !ehEncomenda;
         campo.required = ehEncomenda;
     });
@@ -618,11 +641,14 @@ function atualizarInterfaceCarrinho() {
         const local = new Date(hoje.getTime() - offset * 60000).toISOString().slice(0, 10);
         data.min = local;
     }
-    if (btn) btn.textContent = ehEncomenda ? '📅 Solicitar encomenda' : '✅ Enviar Pedido';
-    if (nota) nota.textContent = ehEncomenda
-        ? 'A forma de pagamento é apenas uma preferência nesta etapa. A encomenda aguardará confirmação da loja; nenhum pagamento será processado agora.'
-        : 'Selecione a forma de pagamento do pedido.';
-    if (rotuloPagamento) rotuloPagamento.textContent = ehEncomenda ? '💳 Pagamento pretendido' : '💳 Pagamento';
+    if (btn)
+        btn.textContent = ehEncomenda ? '📅 Solicitar encomenda' : '✅ Enviar Pedido';
+    if (nota)
+        nota.textContent = ehEncomenda
+                ? 'A forma de pagamento é apenas uma preferência nesta etapa. A encomenda aguardará confirmação da loja; nenhum pagamento será processado agora.'
+                : 'Selecione a forma de pagamento do pedido.';
+    if (rotuloPagamento)
+        rotuloPagamento.textContent = ehEncomenda ? '💳 Pagamento pretendido' : '💳 Pagamento';
 }
 
 function atualizarCarrinho() {
@@ -632,12 +658,13 @@ function atualizarCarrinho() {
     const carrinhoAtivo = obterCarrinhoAtivo();
     const container = document.getElementById('cart-items');
     const summary = document.getElementById('cart-summary');
-    if (!container || !summary) return;
+    if (!container || !summary)
+        return;
 
     if (carrinhoAtivo.length === 0) {
         container.innerHTML = modoCardapioAtual === 'ENCOMENDA'
-            ? '<p class="empty-cart">Sua lista de encomendas está vazia. Escolha produtos na aba Encomendas.</p>'
-            : '<p class="empty-cart">Seu carrinho está vazio.</p>';
+                ? '<p class="empty-cart">Sua lista de encomendas está vazia. Escolha produtos na aba Encomendas.</p>'
+                : '<p class="empty-cart">Seu carrinho está vazio.</p>';
         summary.style.display = 'none';
         return;
     }
@@ -673,11 +700,14 @@ function atualizarCarrinho() {
 }
 
 function toggleCarrinho() {
-    if (MODO_CONSULTA_SALAO) return;
+    if (MODO_CONSULTA_SALAO)
+        return;
     const modal = document.getElementById('cart-modal');
-    if (!modal) return;
+    if (!modal)
+        return;
     const vaiAbrir = modal.style.display !== 'flex';
-    if (vaiAbrir) atualizarCarrinho();
+    if (vaiAbrir)
+        atualizarCarrinho();
     modal.style.display = vaiAbrir ? 'flex' : 'none';
 }
 
@@ -960,7 +990,8 @@ function abrirModalCancelamentoPedido(pedidoId) {
 
 function fecharModalCancelamentoPedido() {
     const modal = document.getElementById('modal-cancelar-pedido-online');
-    if (modal) modal.style.display = 'none';
+    if (modal)
+        modal.style.display = 'none';
     pedidoCancelamentoOnlineId = null;
 }
 
@@ -968,10 +999,13 @@ function atualizarCampoDetalheCancelamentoOnline() {
     const motivo = document.getElementById('motivo-cancelamento-online')?.value;
     const grupo = document.getElementById('grupo-detalhe-cancelamento-online');
     const detalhe = document.getElementById('detalhe-cancelamento-online');
-    if (grupo) grupo.style.display = motivo === 'OUTRO' ? 'block' : 'none';
+    if (grupo)
+        grupo.style.display = motivo === 'OUTRO' ? 'block' : 'none';
     if (detalhe) {
-        if (motivo === 'OUTRO') detalhe.setAttribute('required', 'required');
-        else detalhe.removeAttribute('required');
+        if (motivo === 'OUTRO')
+            detalhe.setAttribute('required', 'required');
+        else
+            detalhe.removeAttribute('required');
     }
 }
 
@@ -984,12 +1018,14 @@ async function confirmarCancelamentoPedidoOnline() {
     const botao = document.getElementById('btn-confirmar-cancelamento-online');
 
     if (!id || !acompanhamento?.token) {
-        if (erroEl) erroEl.textContent = 'Não encontramos o token de acompanhamento deste pedido. Atualize a página e tente novamente.';
+        if (erroEl)
+            erroEl.textContent = 'Não encontramos o token de acompanhamento deste pedido. Atualize a página e tente novamente.';
         return;
     }
 
     if (acompanhamento.status !== 'PENDENTE') {
-        if (erroEl) erroEl.textContent = 'O pedido não está mais aguardando preparo e não pode ser cancelado por aqui.';
+        if (erroEl)
+            erroEl.textContent = 'O pedido não está mais aguardando preparo e não pode ser cancelado por aqui.';
         return;
     }
 
@@ -1005,12 +1041,14 @@ async function confirmarCancelamentoPedidoOnline() {
     const detalhe = (campoDetalhe?.value || '').trim();
 
     if (!Object.prototype.hasOwnProperty.call(motivos, motivoSelecionado)) {
-        if (erroEl) erroEl.textContent = 'Selecione o motivo do cancelamento.';
+        if (erroEl)
+            erroEl.textContent = 'Selecione o motivo do cancelamento.';
         campoMotivo?.focus();
         return;
     }
     if (motivoSelecionado === 'OUTRO' && detalhe.length < 3) {
-        if (erroEl) erroEl.textContent = 'Descreva o motivo do cancelamento (mínimo de 3 caracteres).';
+        if (erroEl)
+            erroEl.textContent = 'Descreva o motivo do cancelamento (mínimo de 3 caracteres).';
         campoDetalhe?.focus();
         return;
     }
@@ -1023,7 +1061,8 @@ async function confirmarCancelamentoPedidoOnline() {
         botao.disabled = true;
         botao.textContent = 'Cancelando...';
     }
-    if (erroEl) erroEl.textContent = '';
+    if (erroEl)
+        erroEl.textContent = '';
 
     try {
         const {data, error} = await _supabase.rpc('cancelar_pedido_online_cliente', {
@@ -1031,7 +1070,8 @@ async function confirmarCancelamentoPedidoOnline() {
             p_motivo: motivoFinal
         });
 
-        if (error) throw error;
+        if (error)
+            throw error;
         if (!data || data.sucesso !== true) {
             throw new Error('O banco não confirmou o cancelamento.');
         }
@@ -1057,8 +1097,10 @@ Se o pagamento já foi realizado antecipadamente, este cancelamento não efetua 
         } else if (mensagem.includes('ESTOQUE') || mensagem.includes('LOTE')) {
             amigavel = 'Não foi possível concluir o cancelamento de forma segura. Entre em contato com a loja para que a equipe confira o estoque.';
         }
-        if (erroEl) erroEl.textContent = amigavel;
-        else alert('Não foi possível cancelar o pedido: ' + amigavel);
+        if (erroEl)
+            erroEl.textContent = amigavel;
+        else
+            alert('Não foi possível cancelar o pedido: ' + amigavel);
     } finally {
         if (botao) {
             botao.disabled = false;
@@ -1211,23 +1253,27 @@ async function iniciarAcompanhamentoPedido(pedidoId, token, statusInicial = 'PEN
 // SOLICITAÇÃO E ACOMPANHAMENTO DE ENCOMENDAS AGENDADAS
 // ============================================================
 function gerarChaveIdempotenciaEncomenda() {
-    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    if (window.crypto?.randomUUID)
+        return window.crypto.randomUUID();
     const bytes = new Uint8Array(16);
-    if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
-    else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    if (window.crypto?.getRandomValues)
+        window.crypto.getRandomValues(bytes);
+    else
+        for (let i = 0; i < bytes.length; i++)
+            bytes[i] = Math.floor(Math.random() * 256);
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
     const h = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
-    return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
 function salvarTokensEncomendasCliente() {
     try {
         const dadosMinimos = acompanhamentosEncomendasCliente.slice(-10).map(item => ({
-            encomenda_id: Number(item.encomenda_id),
-            token: item.token,
-            status: item.status || 'AGUARDANDO'
-        }));
+                encomenda_id: Number(item.encomenda_id),
+                token: item.token,
+                status: item.status || 'AGUARDANDO'
+            }));
         localStorage.setItem(CHAVE_TOKENS_ENCOMENDAS, JSON.stringify(dadosMinimos));
     } catch (err) {
         console.warn('Não foi possível salvar o acompanhamento das encomendas neste navegador.', err);
@@ -1236,12 +1282,13 @@ function salvarTokensEncomendasCliente() {
 
 function escaparHTMLCardapio(valor) {
     return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[caractere]));
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[caractere]));
 }
 
 async function finalizarEncomenda(event) {
-    if (event) event.preventDefault();
+    if (event)
+        event.preventDefault();
 
     if (!lojaOnlineAceitaPedidosAgora()) {
         alert(mensagemLojaOnlineFechada());
@@ -1376,11 +1423,12 @@ async function finalizarEncomenda(event) {
         btn.textContent = 'Enviando solicitação...';
     }
 
-    if (!chaveIdempotenciaEncomenda) chaveIdempotenciaEncomenda = gerarChaveIdempotenciaEncomenda();
+    if (!chaveIdempotenciaEncomenda)
+        chaveIdempotenciaEncomenda = gerarChaveIdempotenciaEncomenda();
     const itensRPC = carrinhoEncomenda.map(item => ({
-        produto_id: Number(item.id),
-        quantidade: Number(item.qtd)
-    }));
+            produto_id: Number(item.id),
+            quantidade: Number(item.qtd)
+        }));
 
     try {
         const {data, error} = await _supabase.rpc('solicitar_encomenda_agendada_online', {
@@ -1401,7 +1449,8 @@ async function finalizarEncomenda(event) {
             p_observacao: observacao,
             p_itens: itensRPC
         });
-        if (error) throw error;
+        if (error)
+            throw error;
         if (!data || !data.encomenda_id || !data.token_acompanhamento) {
             throw new Error('O banco não retornou os dados de acompanhamento da encomenda.');
         }
@@ -1419,7 +1468,8 @@ async function finalizarEncomenda(event) {
         chaveIdempotenciaEncomenda = null;
         atualizarCarrinho();
         const modal = document.getElementById('cart-modal');
-        if (modal) modal.style.display = 'none';
+        if (modal)
+            modal.style.display = 'none';
 
         const total = Number(data.valor_total || 0).toFixed(2).replace('.', ',');
         alert(`✅ Solicitação de encomenda #${data.encomenda_id} enviada!\n\nData: ${dataEncomenda}\nHorário: ${horaEncomenda}\nValor solicitado: R$ ${total}\n\nA encomenda ainda aguarda a confirmação da loja. Nenhum estoque foi baixado e nenhum pagamento foi processado nesta etapa.`);
@@ -1445,7 +1495,8 @@ async function finalizarEncomenda(event) {
             ['TROCO_INSUFICIENTE', 'O valor informado para troco precisa ser igual ou maior que o total solicitado.']
         ];
         const regra = regras.find(([codigo]) => msg.includes(codigo));
-        if (regra) msg = regra[1];
+        if (regra)
+            msg = regra[1];
         alert('❌ ' + msg);
     } finally {
         if (btn) {
@@ -1459,8 +1510,8 @@ async function recuperarAcompanhamentoEncomendas() {
     try {
         const salvos = JSON.parse(localStorage.getItem(CHAVE_TOKENS_ENCOMENDAS) || '[]');
         acompanhamentosEncomendasCliente = Array.isArray(salvos)
-            ? salvos.filter(x => x && x.token && x.encomenda_id).slice(-10)
-            : [];
+                ? salvos.filter(x => x && x.token && x.encomenda_id).slice(-10)
+                : [];
     } catch (_) {
         acompanhamentosEncomendasCliente = [];
     }
@@ -1476,7 +1527,8 @@ async function atualizarAcompanhamentosEncomendas() {
     for (const item of acompanhamentosEncomendasCliente.slice(-10)) {
         try {
             const {data, error} = await _supabase.rpc('consultar_encomenda_agendada_online', {p_token: item.token});
-            if (error) throw error;
+            if (error)
+                throw error;
             if (data) {
                 item.status = data.status || item.status;
                 item.dados = data;
@@ -1504,10 +1556,12 @@ async function cancelarEncomendaClienteUI(token) {
         return;
     }
 
-    if (!confirm(`Deseja cancelar a encomenda #${Number(item.encomenda_id)}? Essa ação não pode ser desfeita.`)) return;
+    if (!confirm(`Deseja cancelar a encomenda #${Number(item.encomenda_id)}? Essa ação não pode ser desfeita.`))
+        return;
 
     const motivo = prompt('Informe o motivo do cancelamento (mínimo 5 caracteres):');
-    if (motivo === null) return;
+    if (motivo === null)
+        return;
     const motivoLimpo = motivo.trim();
     if (motivoLimpo.length < 5 || motivoLimpo.length > 500) {
         alert('Informe um motivo entre 5 e 500 caracteres.');
@@ -1515,11 +1569,12 @@ async function cancelarEncomendaClienteUI(token) {
     }
 
     try {
-        const { data, error } = await _supabase.rpc('cancelar_encomenda_agendada_online', {
+        const {data, error} = await _supabase.rpc('cancelar_encomenda_agendada_online', {
             p_token: token,
             p_motivo: motivoLimpo
         });
-        if (error) throw error;
+        if (error)
+            throw error;
         if (!data || data.status !== 'CANCELADA') {
             throw new Error('Não foi possível confirmar o cancelamento no sistema.');
         }
@@ -1552,14 +1607,15 @@ async function cancelarEncomendaClienteUI(token) {
 function renderizarAcompanhamentosEncomendas(lista) {
     const painel = document.getElementById('painel-acompanhamento-encomendas');
     const container = document.getElementById('lista-acompanhamento-encomendas');
-    if (!painel || !container) return;
+    if (!painel || !container)
+        return;
     if (!lista.length) {
         painel.style.display = 'none';
         container.innerHTML = '';
         return;
     }
     painel.style.display = 'block';
-    const statusTexto = {AGUARDANDO:'Aguardando confirmação da loja', ACEITA:'Encomenda confirmada · aguardando programação da produção', EM_PRODUCAO:'Em produção', PRONTA:'Pronta para retirada/entrega', CONCLUIDA:'Concluída', RECUSADA:'Encomenda recusada', CANCELADA:'Encomenda cancelada'};
+    const statusTexto = {AGUARDANDO: 'Aguardando confirmação da loja', ACEITA: 'Encomenda confirmada · aguardando programação da produção', EM_PRODUCAO: 'Em produção', PRONTA: 'Pronta para retirada/entrega', CONCLUIDA: 'Concluída', RECUSADA: 'Encomenda recusada', CANCELADA: 'Encomenda cancelada'};
     container.innerHTML = lista.slice().reverse().map(item => {
         const d = item.dados || {};
         const itens = Array.isArray(d.itens) ? d.itens.map(i => `${Number(i.quantidade)} × ${escaparHTMLCardapio(i.nome_produto)}`).join('<br>') : '';
@@ -1568,9 +1624,9 @@ function renderizarAcompanhamentosEncomendas(lista) {
         const motivoCancelamento = d.motivo_cancelamento ? `<p style="margin:7px 0 0;color:#9d2335;"><strong>Motivo do cancelamento:</strong> ${escaparHTMLCardapio(d.motivo_cancelamento)}</p>` : '';
         const motivo = motivoRecusa + motivoCancelamento;
         const botaoCancelar = status === 'AGUARDANDO'
-            ? `<button type="button" onclick="cancelarEncomendaClienteUI('${escaparHTMLCardapio(item.token)}')" style="margin-top:12px;padding:9px 13px;border:1px solid #bd3542;border-radius:8px;background:#fff;color:#a52834;font-weight:700;cursor:pointer;">Cancelar encomenda</button>`
-            : '';
-        const cores = ['ACEITA','EM_PRODUCAO','PRONTA','CONCLUIDA'].includes(status) ? '#176b45' : (status === 'RECUSADA' || status === 'CANCELADA' ? '#a52834' : '#8a6100');
+                ? `<button type="button" onclick="cancelarEncomendaClienteUI('${escaparHTMLCardapio(item.token)}')" style="margin-top:12px;padding:9px 13px;border:1px solid #bd3542;border-radius:8px;background:#fff;color:#a52834;font-weight:700;cursor:pointer;">Cancelar encomenda</button>`
+                : '';
+        const cores = ['ACEITA', 'EM_PRODUCAO', 'PRONTA', 'CONCLUIDA'].includes(status) ? '#176b45' : (status === 'RECUSADA' || status === 'CANCELADA' ? '#a52834' : '#8a6100');
         return `<article style="border:1px solid #ead7e0;border-radius:12px;padding:14px;background:#fff;">
             <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
                 <strong>Encomenda #${Number(item.encomenda_id)}</strong>
@@ -2086,16 +2142,19 @@ function obterRelogioLojaOnline(instante = new Date()) {
         timeZone: 'America/Sao_Paulo', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
     }).formatToParts(instante);
     const mapa = Object.fromEntries(partes.map(p => [p.type, p.value]));
-    const diaMap = {Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6};
-    return { dia: diaMap[mapa.weekday], minuto: Number(mapa.hour) * 60 + Number(mapa.minute) };
+    const diaMap = {Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6};
+    return {dia: diaMap[mapa.weekday], minuto: Number(mapa.hour) * 60 + Number(mapa.minute)};
 }
 
 function horaParaMinutosLojaOnline(hora) {
-    if (!hora) return null;
+    if (!hora)
+        return null;
     const m = String(hora).match(/^(\d{1,2}):(\d{2})/);
-    if (!m) return null;
+    if (!m)
+        return null;
     const h = Number(m[1]), min = Number(m[2]);
-    if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+    if (h < 0 || h > 23 || min < 0 || min > 59)
+        return null;
     return h * 60 + min;
 }
 
@@ -2104,59 +2163,75 @@ function lojaOnlineDentroDaProgramacao(dia, minuto) {
     if (schedules && typeof schedules === 'object' && !Array.isArray(schedules) && Object.keys(schedules).length) {
         const lerRegra = d => {
             const r = schedules[String(d)];
-            if (!r || r.aberto !== true) return null;
+            if (!r || r.aberto !== true)
+                return null;
             const inicio = horaParaMinutosLojaOnline(r.inicio);
             const fim = horaParaMinutosLojaOnline(r.fim);
-            if ((r.inicio && inicio === null) || (r.fim && fim === null)) return {invalida:true};
-            if ((inicio === null) !== (fim === null)) return {invalida:true};
+            if ((r.inicio && inicio === null) || (r.fim && fim === null))
+                return {invalida: true};
+            if ((inicio === null) !== (fim === null))
+                return {invalida: true};
             return {inicio, fim};
         };
         const hoje = lerRegra(dia);
         if (hoje && !hoje.invalida) {
-            if (hoje.inicio === null && hoje.fim === null) return true; // Dia inteiro
-            if (hoje.inicio < hoje.fim && minuto >= hoje.inicio && minuto < hoje.fim) return true;
-            if (hoje.inicio > hoje.fim && minuto >= hoje.inicio) return true; // Início de faixa noturna
+            if (hoje.inicio === null && hoje.fim === null)
+                return true; // Dia inteiro
+            if (hoje.inicio < hoje.fim && minuto >= hoje.inicio && minuto < hoje.fim)
+                return true;
+            if (hoje.inicio > hoje.fim && minuto >= hoje.inicio)
+                return true; // Início de faixa noturna
         }
         // A parte depois da meia-noite pertence à faixa do dia anterior.
         const diaAnterior = (dia + 6) % 7;
         const ontem = lerRegra(diaAnterior);
-        if (ontem && !ontem.invalida && ontem.inicio !== null && ontem.fim !== null && ontem.inicio > ontem.fim && minuto < ontem.fim) return true;
+        if (ontem && !ontem.invalida && ontem.inicio !== null && ontem.fim !== null && ontem.inicio > ontem.fim && minuto < ontem.fim)
+            return true;
         return false;
     }
 
     // Compatibilidade com configuração legada enquanto uma instalação não migrada é identificada.
     const dias = Array.isArray(configLoja.dias_funcionamento_online)
-        ? configLoja.dias_funcionamento_online.map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6)
-        : [...DIAS_SEMANA_ONLINE];
+            ? configLoja.dias_funcionamento_online.map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6)
+            : [...DIAS_SEMANA_ONLINE];
     const inicio = horaParaMinutosLojaOnline(configLoja.hora_abertura_online);
     const fim = horaParaMinutosLojaOnline(configLoja.hora_fechamento_online);
-    if (Boolean(configLoja.hora_abertura_online) !== Boolean(configLoja.hora_fechamento_online)) return false;
-    if (inicio === null && fim === null) return dias.includes(dia);
-    if (inicio === null || fim === null || inicio === fim) return false;
-    if (inicio < fim) return dias.includes(dia) && minuto >= inicio && minuto < fim;
+    if (Boolean(configLoja.hora_abertura_online) !== Boolean(configLoja.hora_fechamento_online))
+        return false;
+    if (inicio === null && fim === null)
+        return dias.includes(dia);
+    if (inicio === null || fim === null || inicio === fim)
+        return false;
+    if (inicio < fim)
+        return dias.includes(dia) && minuto >= inicio && minuto < fim;
     const diaAnterior = (dia + 6) % 7;
     return (dias.includes(dia) && minuto >= inicio) || (dias.includes(diaAnterior) && minuto < fim);
 }
 
 function lojaOnlineAceitaPedidosAgora() {
-    if (!configLoja.configuracoes_carregadas || configLoja.loja_aberta !== true) return false;
+    if (!configLoja.configuracoes_carregadas || configLoja.loja_aberta !== true)
+        return false;
     const agora = obterRelogioLojaOnline(new Date());
     return lojaOnlineDentroDaProgramacao(agora.dia, agora.minuto);
 }
 
 function lojaOnlinePermiteDataHora(dataISO, hora) {
-    if (!configLoja.configuracoes_carregadas || configLoja.loja_aberta !== true || !/^\d{4}-\d{2}-\d{2}$/.test(String(dataISO || ''))) return false;
+    if (!configLoja.configuracoes_carregadas || configLoja.loja_aberta !== true || !/^\d{4}-\d{2}-\d{2}$/.test(String(dataISO || '')))
+        return false;
     // Meio-dia UTC mantém o mesmo dia civil para calcular o dia da semana; a hora é uma hora local da loja.
     const data = new Date(`${dataISO}T12:00:00Z`);
-    if (!Number.isFinite(data.getTime())) return false;
+    if (!Number.isFinite(data.getTime()))
+        return false;
     const dia = data.getUTCDay();
     const minuto = horaParaMinutosLojaOnline(hora);
     return minuto !== null && lojaOnlineDentroDaProgramacao(dia, minuto);
 }
 
 function mensagemLojaOnlineFechada() {
-    if (!configLoja.configuracoes_carregadas) return 'Não foi possível confirmar o horário de funcionamento da loja. Atualize o catálogo e tente novamente.';
-    if (configLoja.loja_aberta !== true) return '🔴 A loja está fechada manualmente e não está aceitando novos pedidos.';
+    if (!configLoja.configuracoes_carregadas)
+        return 'Não foi possível confirmar o horário de funcionamento da loja. Atualize o catálogo e tente novamente.';
+    if (configLoja.loja_aberta !== true)
+        return '🔴 A loja está fechada manualmente e não está aceitando novos pedidos.';
     return '🔴 A loja está fora dos dias ou horários de funcionamento configurados e não está aceitando novos pedidos.';
 }
 
@@ -2233,19 +2308,19 @@ function escutarConfiguracoesRealtime() {
                 const dados = payload?.payload || payload;
 
                 if (!dados || (
-                    typeof dados.loja_aberta === 'undefined' &&
-                    typeof dados.encomendas_ativas === 'undefined' &&
-                    typeof dados.valor_minimo_pedido === 'undefined' &&
-                    typeof dados.whatsapp_notificacoes_ativas === 'undefined' &&
-                    typeof dados.dias_funcionamento_online === 'undefined' &&
-                    typeof dados.hora_abertura_online === 'undefined' &&
-                    typeof dados.hora_fechamento_online === 'undefined' &&
-                    typeof dados.horarios_funcionamento_online === 'undefined' &&
-                    typeof dados.telefone_contato_online === 'undefined' &&
-                    typeof dados.whatsapp_contato_online === 'undefined' &&
-                    typeof dados.email_contato_online === 'undefined' &&
-                    typeof dados.endereco_contato_online === 'undefined'
-                )) {
+                        typeof dados.loja_aberta === 'undefined' &&
+                        typeof dados.encomendas_ativas === 'undefined' &&
+                        typeof dados.valor_minimo_pedido === 'undefined' &&
+                        typeof dados.whatsapp_notificacoes_ativas === 'undefined' &&
+                        typeof dados.dias_funcionamento_online === 'undefined' &&
+                        typeof dados.hora_abertura_online === 'undefined' &&
+                        typeof dados.hora_fechamento_online === 'undefined' &&
+                        typeof dados.horarios_funcionamento_online === 'undefined' &&
+                        typeof dados.telefone_contato_online === 'undefined' &&
+                        typeof dados.whatsapp_contato_online === 'undefined' &&
+                        typeof dados.email_contato_online === 'undefined' &&
+                        typeof dados.endereco_contato_online === 'undefined'
+                        )) {
                     console.warn('⚠️ Payload de configuração inválido:', payload);
                     return;
                 }
@@ -2257,11 +2332,11 @@ function escutarConfiguracoesRealtime() {
                     taxa_entrega_padrao: Number(dados.taxa_entrega_padrao ?? configLoja.taxa_entrega_padrao ?? 0),
                     valor_minimo_pedido: Number(dados.valor_minimo_pedido ?? configLoja.valor_minimo_pedido ?? 0),
                     encomendas_ativas: typeof dados.encomendas_ativas === 'boolean'
-                        ? dados.encomendas_ativas
-                        : configLoja.encomendas_ativas === true,
+                            ? dados.encomendas_ativas
+                            : configLoja.encomendas_ativas === true,
                     dias_funcionamento_online: Array.isArray(dados.dias_funcionamento_online)
-                        ? dados.dias_funcionamento_online.map(Number)
-                        : configLoja.dias_funcionamento_online,
+                            ? dados.dias_funcionamento_online.map(Number)
+                            : configLoja.dias_funcionamento_online,
                     hora_abertura_online: typeof dados.hora_abertura_online !== 'undefined' ? (dados.hora_abertura_online || null) : configLoja.hora_abertura_online,
                     hora_fechamento_online: typeof dados.hora_fechamento_online !== 'undefined' ? (dados.hora_fechamento_online || null) : configLoja.hora_fechamento_online,
                     horarios_funcionamento_online: dados.horarios_funcionamento_online && typeof dados.horarios_funcionamento_online === 'object' ? dados.horarios_funcionamento_online : configLoja.horarios_funcionamento_online,
@@ -2290,7 +2365,8 @@ function escutarConfiguracoesRealtime() {
 
 function atualizarBannerStatus() {
     const banner = document.getElementById('store-status-banner');
-    if (!banner) return;
+    if (!banner)
+        return;
     banner.style.display = 'block';
 
     if (!configLoja.configuracoes_carregadas) {
@@ -2325,8 +2401,8 @@ function aplicarDisponibilidadeEncomendasUI() {
     }
     if (gradeModalidades) {
         gradeModalidades.style.gridTemplateColumns = ativas
-            ? 'repeat(2,minmax(0,1fr))'
-            : 'minmax(0,1fr)';
+                ? 'repeat(2,minmax(0,1fr))'
+                : 'minmax(0,1fr)';
     }
 
     if (!ativas && modoCardapioAtual === 'ENCOMENDA') {
@@ -2343,10 +2419,11 @@ function aplicarDisponibilidadeEncomendasUI() {
 // ============================================================
 // INFORMAÇÕES PÚBLICAS DA LOJA: HORÁRIOS E CONTATOS
 // ============================================================
-const NOMES_DIAS_LOJA_INFO = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+const NOMES_DIAS_LOJA_INFO = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
 function horarioCurtoLojaInfo(valor) {
-    if (!valor) return null;
+    if (!valor)
+        return null;
     const m = String(valor).match(/^(\d{1,2}:\d{2})/);
     return m ? m[1] : null;
 }
@@ -2355,15 +2432,19 @@ function textoHorarioDiaLojaInfo(dia) {
     const mapa = configLoja.horarios_funcionamento_online;
     const regra = mapa && typeof mapa === 'object' ? mapa[String(dia)] : null;
     if (regra && typeof regra === 'object') {
-        if (regra.aberto !== true) return 'Fechado';
+        if (regra.aberto !== true)
+            return 'Fechado';
         const inicio = horarioCurtoLojaInfo(regra.inicio);
         const fim = horarioCurtoLojaInfo(regra.fim);
-        if (!inicio && !fim) return 'Aberto o dia todo';
-        if (inicio && fim) return `${inicio} às ${fim}`;
+        if (!inicio && !fim)
+            return 'Aberto o dia todo';
+        if (inicio && fim)
+            return `${inicio} às ${fim}`;
         return 'Horário não configurado';
     }
     const dias = Array.isArray(configLoja.dias_funcionamento_online) ? configLoja.dias_funcionamento_online.map(Number) : DIAS_SEMANA_ONLINE;
-    if (!dias.includes(Number(dia))) return 'Fechado';
+    if (!dias.includes(Number(dia)))
+        return 'Fechado';
     const inicio = horarioCurtoLojaInfo(configLoja.hora_abertura_online);
     const fim = horarioCurtoLojaInfo(configLoja.hora_fechamento_online);
     return inicio && fim ? `${inicio} às ${fim}` : 'Aberto o dia todo';
@@ -2374,7 +2455,8 @@ function atualizarInformacoesPublicasLoja() {
     const status = document.getElementById('store-info-status');
     const hours = document.getElementById('store-info-hours');
     const contacts = document.getElementById('store-info-contacts');
-    if (!title || !status || !hours || !contacts) return;
+    if (!title || !status || !hours || !contacts)
+        return;
 
     title.textContent = configLoja.nome_loja || 'Horários e contato da loja';
     if (!configLoja.configuracoes_carregadas) {
@@ -2382,9 +2464,9 @@ function atualizarInformacoesPublicasLoja() {
         hours.innerHTML = '<p style="margin:0;color:#777;">Horários indisponíveis no momento.</p>';
     } else {
         status.textContent = lojaOnlineAceitaPedidosAgora()
-            ? '🟢 Loja aberta — recebendo pedidos.'
-            : (configLoja.loja_aberta !== true ? '🔴 Loja fechada manualmente — não recebe pedidos pelo site.' : '🔴 Loja fechada neste horário. Confira a programação abaixo.');
-        hours.innerHTML = NOMES_DIAS_LOJA_INFO.map((nome, dia) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 11px;border-radius:8px;background:#fff7fa;border:1px solid #f5e4ea;"><span style="font-weight:700;">${nome}</span><span style="text-align:right;color:${textoHorarioDiaLojaInfo(dia)==='Fechado'?'#9b243d':'#4a3e3d'};">${escaparHTMLCardapio(textoHorarioDiaLojaInfo(dia))}</span></div>`).join('');
+                ? '🟢 Loja aberta — recebendo pedidos.'
+                : (configLoja.loja_aberta !== true ? '🔴 Loja fechada manualmente — não recebe pedidos pelo site.' : '🔴 Loja fechada neste horário. Confira a programação abaixo.');
+        hours.innerHTML = NOMES_DIAS_LOJA_INFO.map((nome, dia) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 11px;border-radius:8px;background:#fff7fa;border:1px solid #f5e4ea;"><span style="font-weight:700;">${nome}</span><span style="text-align:right;color:${textoHorarioDiaLojaInfo(dia) === 'Fechado' ? '#9b243d' : '#4a3e3d'};">${escaparHTMLCardapio(textoHorarioDiaLojaInfo(dia))}</span></div>`).join('');
     }
 
     const linhas = [];
@@ -2401,8 +2483,10 @@ function atualizarInformacoesPublicasLoja() {
         const href = numeros ? `https://wa.me/${numeros}` : '';
         linhas.push(`<div>💬 <strong>WhatsApp:</strong> ${href ? `<a style="color:#a5164a;" href="${href}" target="_blank" rel="noopener noreferrer">${escaparHTMLCardapio(whatsapp)}</a>` : escaparHTMLCardapio(whatsapp)}</div>`);
     }
-    if (email) linhas.push(`<div>✉️ <strong>E-mail:</strong> <a style="color:#a5164a;" href="mailto:${escaparHTMLCardapio(email)}">${escaparHTMLCardapio(email)}</a></div>`);
-    if (endereco) linhas.push(`<div>📍 <strong>Endereço:</strong> ${escaparHTMLCardapio(endereco)}</div>`);
+    if (email)
+        linhas.push(`<div>✉️ <strong>E-mail:</strong> <a style="color:#a5164a;" href="mailto:${escaparHTMLCardapio(email)}">${escaparHTMLCardapio(email)}</a></div>`);
+    if (endereco)
+        linhas.push(`<div>📍 <strong>Endereço:</strong> ${escaparHTMLCardapio(endereco)}</div>`);
     contacts.innerHTML = linhas.length ? linhas.map(l => `<div style="padding:8px 2px;line-height:1.5;overflow-wrap:anywhere;">${l}</div>`).join('') : '<p style="margin:0;color:#777;">A loja ainda não cadastrou informações de contato.</p>';
 }
 
@@ -2419,11 +2503,15 @@ function abrirInformacoesLoja() {
 
 function fecharInformacoesLoja() {
     const modal = document.getElementById('store-info-modal');
-    if (modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); }
+    if (modal) {
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
 }
 
 document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && document.getElementById('store-info-modal')?.style.display === 'flex') fecharInformacoesLoja();
+    if (event.key === 'Escape' && document.getElementById('store-info-modal')?.style.display === 'flex')
+        fecharInformacoesLoja();
 });
 
 // ============================================================
@@ -2433,11 +2521,12 @@ let buscaCepEmAndamento = false;
 let ultimoCepConsultadoComSucesso = '';
 
 function formatarCepEntrega(input) {
-    if (!input) return;
+    if (!input)
+        return;
     const numeros = String(input.value || '').replace(/\D/g, '').slice(0, 8);
     input.value = numeros.length > 5
-        ? `${numeros.slice(0, 5)}-${numeros.slice(5)}`
-        : numeros;
+            ? `${numeros.slice(0, 5)}-${numeros.slice(5)}`
+            : numeros;
     input.setCustomValidity('');
     const status = document.getElementById('cli_cep_status');
     if (status && numeros.replace(/\D/g, '') !== ultimoCepConsultadoComSucesso) {
@@ -2447,22 +2536,24 @@ function formatarCepEntrega(input) {
 
 function normalizarNomeCidadeCep(valor) {
     return String(valor || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
-        .replace(/\s+/g, ' ')
-        .toLocaleLowerCase('pt-BR');
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .toLocaleLowerCase('pt-BR');
 }
 
 async function buscarCepEntrega() {
     const input = document.getElementById('cli_cep');
     const status = document.getElementById('cli_cep_status');
     const botao = document.getElementById('btn-buscar-cep');
-    if (!input) return false;
+    if (!input)
+        return false;
 
     const cep = String(input.value || '').replace(/\D/g, '');
     if (!cep) {
-        if (status) status.textContent = '';
+        if (status)
+            status.textContent = '';
         return false;
     }
     if (!/^\d{8}$/.test(cep)) {
@@ -2477,8 +2568,10 @@ async function buscarCepEntrega() {
 
     input.value = `${cep.slice(0, 5)}-${cep.slice(5)}`;
     input.setCustomValidity('');
-    if (cep === ultimoCepConsultadoComSucesso) return true;
-    if (buscaCepEmAndamento) return false;
+    if (cep === ultimoCepConsultadoComSucesso)
+        return true;
+    if (buscaCepEmAndamento)
+        return false;
 
     buscaCepEmAndamento = true;
     if (botao) {
@@ -2494,9 +2587,10 @@ async function buscarCepEntrega() {
     try {
         const resposta = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
             method: 'GET',
-            headers: { 'Accept': 'application/json' }
+            headers: {'Accept': 'application/json'}
         });
-        if (!resposta.ok) throw new Error('Não foi possível consultar o serviço de CEP.');
+        if (!resposta.ok)
+            throw new Error('Não foi possível consultar o serviço de CEP.');
         const endereco = await resposta.json();
         if (endereco.erro) {
             if (status) {
@@ -2509,14 +2603,16 @@ async function buscarCepEntrega() {
         const rua = document.getElementById('cli_rua');
         const bairro = document.getElementById('cli_bairro');
         const selectCidade = document.getElementById('cli_cidade');
-        if (rua) rua.value = endereco.logradouro || '';
-        if (bairro) bairro.value = endereco.bairro || '';
+        if (rua)
+            rua.value = endereco.logradouro || '';
+        if (bairro)
+            bairro.value = endereco.bairro || '';
 
         const cidadeApi = normalizarNomeCidadeCep(endereco.localidade);
         const ufApi = String(endereco.uf || '').trim().toLocaleUpperCase('pt-BR');
         const cidadeCorrespondente = cidadesEntregaList.find(cidade =>
             normalizarNomeCidadeCep(cidade.nome) === cidadeApi &&
-            String(cidade.uf || '').trim().toLocaleUpperCase('pt-BR') === ufApi
+                    String(cidade.uf || '').trim().toLocaleUpperCase('pt-BR') === ufApi
         );
 
         if (cidadeCorrespondente && selectCidade) {
@@ -2528,7 +2624,8 @@ async function buscarCepEntrega() {
             }
         } else {
             // Não seleciona cidade fora da área de entrega configurada pela loja.
-            if (selectCidade) selectCidade.value = '';
+            if (selectCidade)
+                selectCidade.value = '';
             selecionarCidadeEntrega();
             if (status) {
                 status.textContent = `CEP localizado em ${endereco.localidade}/${ufApi}, mas essa cidade não está habilitada para entrega. Selecione uma cidade disponível ou escolha retirada.`;

@@ -2193,10 +2193,10 @@ function elementoVisivelParaAjuda(elemento) {
         const estilo = window.getComputedStyle(atual);
 
         if (
-            estilo.display === 'none' ||
-            estilo.visibility === 'hidden' ||
-            estilo.visibility === 'collapse'
-        ) {
+                estilo.display === 'none' ||
+                estilo.visibility === 'hidden' ||
+                estilo.visibility === 'collapse'
+                ) {
             return false;
         }
 
@@ -2239,7 +2239,6 @@ function obterAbaAtualAjuda() {
     if (!aba) {
         for (const [nome, id] of mapaAbas) {
             const elemento = document.getElementById(id);
-
             if (elementoVisivelParaAjuda(elemento)) {
                 aba = nome;
                 break;
@@ -2286,7 +2285,6 @@ function obterAbaAtualAjuda() {
 
         for (const [nome, id] of subAbas) {
             const elemento = document.getElementById(id);
-
             if (elementoVisivelParaAjuda(elemento)) {
                 subAba = nome;
                 break;
@@ -2331,7 +2329,8 @@ function atualizarBotoesModoAjuda() {
 
 function abrirSobreSistemaPDV() {
     const modal = document.getElementById('modal-central-ajuda');
-    if (!modal) return;
+    if (!modal)
+        return;
     ajudaPDVModoSobre = true;
     modal.style.display = 'flex';
     atualizarBotoesModoAjuda();
@@ -2364,8 +2363,8 @@ function abrirCentralAjuda(modo = 'completo') {
 
         if (!AJUDA_PDV_TELAS[chaveAjuda]) {
             chaveAjuda = AJUDA_PDV_TELAS[telaAtual.aba]
-                ? telaAtual.aba
-                : 'pedidos';
+                    ? telaAtual.aba
+                    : 'pedidos';
         }
 
         ajudaPDVAtual = chaveAjuda;
@@ -2446,16 +2445,21 @@ function renderizarCentralAjuda() {
                     'btn-ajuda-ir-tela'
                     );
 
-    if (!conteudo) return;
+    if (!conteudo)
+        return;
 
     if (ajudaPDVModoSobre) {
         if (subtitulo) {
             subtitulo.textContent = 'Identificação, autoria, direitos de uso e suporte.';
         }
-        if (progresso) progresso.style.display = 'none';
-        if (btnAnterior) btnAnterior.style.display = 'none';
-        if (btnProxima) btnProxima.style.display = 'none';
-        if (btnAbrirTela) btnAbrirTela.style.display = 'none';
+        if (progresso)
+            progresso.style.display = 'none';
+        if (btnAnterior)
+            btnAnterior.style.display = 'none';
+        if (btnProxima)
+            btnProxima.style.display = 'none';
+        if (btnAbrirTela)
+            btnAbrirTela.style.display = 'none';
 
         const s = SOBRE_SISTEMA_PDV;
         conteudo.innerHTML = `
@@ -2495,7 +2499,8 @@ function renderizarCentralAjuda() {
     }
 
     const ajuda = obterAjudaAtual();
-    if (!ajuda) return;
+    if (!ajuda)
+        return;
 
     if (ajudaPDVModo === 'completo') {
 
@@ -3059,21 +3064,22 @@ async function carregarPedidos() {
 // ============================================================
 function escaparHTMLSeguroEncomenda(valor) {
     return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[caractere]));
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[caractere]));
 }
 
 async function carregarEncomendas() {
     const container = document.getElementById('lista-encomendas-pdv');
-    if (!container) return;
+    if (!container)
+        return;
     container.innerHTML = '<p style="color:#aaa;">⏳ Carregando encomendas...</p>';
 
     const {data, error} = await _supabase
-        .from('encomendas_agendadas')
-        .select('*, itens_encomendas_agendadas(*, produtos(id,estoque,estoque_reservado_encomendas))')
-        .order('data_encomenda', {ascending: true})
-        .order('hora_encomenda', {ascending: true})
-        .order('criado_em', {ascending: false});
+            .from('encomendas_agendadas')
+            .select('*, itens_encomendas_agendadas(*, produtos(id,estoque,estoque_reservado_encomendas))')
+            .order('data_encomenda', {ascending: true})
+            .order('hora_encomenda', {ascending: true})
+            .order('criado_em', {ascending: false});
 
     if (error) {
         console.error('Erro ao carregar encomendas:', error);
@@ -3087,9 +3093,11 @@ async function carregarEncomendas() {
 
 function encomendaEstoqueLivreProdutoUI(item) {
     let produto = item?.produtos || null;
-    if (Array.isArray(produto)) produto = produto[0] || null;
+    if (Array.isArray(produto))
+        produto = produto[0] || null;
     const produtoId = Number(item?.produto_id || produto?.id || 0);
-    if (!produtoId) return null;
+    if (!produtoId)
+        return null;
 
     // Exibe um número apenas se veio da mesma consulta que respeita lotes,
     // validade e reservas. O RPC no banco sempre faz a validação definitiva.
@@ -3102,11 +3110,13 @@ function encomendaEstoqueLivreProdutoUI(item) {
 
 function renderizarEncomendas(lista) {
     const container = document.getElementById('lista-encomendas-pdv');
-    if (!container) return;
+    if (!container)
+        return;
     const filtro = document.getElementById('filtro-encomendas-status')?.value || 'AGUARDANDO';
     const pendentes = (lista || []).filter(e => e.status === 'AGUARDANDO').length;
     const contador = document.getElementById('contador-encomendas-pendentes');
-    if (contador) contador.textContent = `${pendentes} aguardando confirmação`;
+    if (contador)
+        contador.textContent = `${pendentes} aguardando confirmação`;
 
     const filtradas = (lista || []).filter(e => filtro === 'TODAS' || e.status === filtro);
     if (!filtradas.length) {
@@ -3115,15 +3125,15 @@ function renderizarEncomendas(lista) {
     }
 
     const statusRotulos = {
-        AGUARDANDO:'Aguardando confirmação', ACEITA:'Aceita · aguardando liberação para produção',
-        EM_PRODUCAO:'Em produção', PRONTA:'Pronta para retirada/entrega',
-        CONCLUIDA:'Concluída', RECUSADA:'Recusada', CANCELADA:'Cancelada'
+        AGUARDANDO: 'Aguardando confirmação', ACEITA: 'Aceita · aguardando liberação para produção',
+        EM_PRODUCAO: 'Em produção', PRONTA: 'Pronta para retirada/entrega',
+        CONCLUIDA: 'Concluída', RECUSADA: 'Recusada', CANCELADA: 'Cancelada'
     };
     const cores = {
-        AGUARDANDO:'#d6a53f', ACEITA:'#2eaa72', EM_PRODUCAO:'#60a5fa',
-        PRONTA:'#22c55e', CONCLUIDA:'#86efac', RECUSADA:'#e06464', CANCELADA:'#999'
+        AGUARDANDO: '#d6a53f', ACEITA: '#2eaa72', EM_PRODUCAO: '#60a5fa',
+        PRONTA: '#22c55e', CONCLUIDA: '#86efac', RECUSADA: '#e06464', CANCELADA: '#999'
     };
-    const rotulosProducao = {AGUARDANDO:'Aguardando produção', PREPARANDO:'Produzido · aguardando liberação', PRONTO:'Pronto'};
+    const rotulosProducao = {AGUARDANDO: 'Aguardando produção', PREPARANDO: 'Produzido · aguardando liberação', PRONTO: 'Pronto'};
     container.innerHTML = filtradas.map(e => {
         const id = Number(e.id);
         const itens = Array.isArray(e.itens_encomendas_agendadas) ? e.itens_encomendas_agendadas : [];
@@ -3163,8 +3173,8 @@ function renderizarEncomendas(lista) {
         </div>` : status === 'ACEITA' ? `<button type="button" class="btn-refresh" style="background:#1d4ed8;width:100%;margin-top:14px;" onclick="encomendaLiberarProducaoUI(${id})">📅 Liberar para produção</button>` : status === 'PRONTA' ? `<button type="button" class="btn-refresh" style="background:#15803d;width:100%;margin-top:14px;" onclick="finalizarEncomendaNoCaixaUI(${id})">💳 Finalizar no caixa / dar baixa</button>` : '';
         const venda = status === 'CONCLUIDA' && e.pedido_venda_id ? `<p style="color:#86efac;margin:8px 0 0;"><strong>Venda registrada:</strong> #${Number(e.pedido_venda_id)}</p>` : '';
         const ajudaStatus = status === 'ACEITA'
-            ? '<p style="font-size:.78rem;color:#a1a1aa;line-height:1.45;margin:10px 0 0;">A encomenda foi aceita e aguarda a data apropriada. Clique em “Liberar para produção” quando a equipe for iniciar a preparação.</p>'
-            : status === 'EM_PRODUCAO'
+                ? '<p style="font-size:.78rem;color:#a1a1aa;line-height:1.45;margin:10px 0 0;">A encomenda foi aceita e aguarda a data apropriada. Clique em “Liberar para produção” quando a equipe for iniciar a preparação.</p>'
+                : status === 'EM_PRODUCAO'
                 ? '<p style="font-size:.78rem;color:#a1a1aa;line-height:1.45;margin:10px 0 0;">Cada item pode ser produzido pela Ficha Técnica, com baixa oficial dos insumos, ou separado do estoque existente. Em ambos os casos, a quantidade fica reservada para esta encomenda e indisponível para outras vendas.</p>'
                 : status === 'PRONTA'
                 ? '<p style="font-size:.78rem;color:#a1a1aa;line-height:1.45;margin:10px 0 0;">Todos os itens estão prontos. Ao concluir no caixa, a reserva será consumida junto com a venda, na mesma transação.</p>' : '';
@@ -3176,7 +3186,7 @@ function renderizarEncomendas(lista) {
             <div style="margin:12px 0;color:#ddd;line-height:1.5;">
                 <strong>Cliente:</strong> ${escaparHTMLSeguroEncomenda(e.cliente_nome)}<br>
                 <strong>Telefone:</strong> ${escaparHTMLSeguroEncomenda(telefone)}<br>
-                <strong>Agendada:</strong> ${dataTexto} às ${escaparHTMLSeguroEncomenda(String(e.hora_encomenda || '').slice(0,5))}<br>
+                <strong>Agendada:</strong> ${dataTexto} às ${escaparHTMLSeguroEncomenda(String(e.hora_encomenda || '').slice(0, 5))}<br>
                 <strong>Modalidade:</strong> ${e.tipo === 'DELIVERY' ? 'Entrega' : 'Retirada'}<br>
                 <strong>Endereço:</strong> ${escaparHTMLSeguroEncomenda(entrega)}<br>
                 <strong>Pagamento indicado:</strong> ${escaparHTMLSeguroEncomenda(e.forma_pagamento || '-')} (confirmar no caixa)
@@ -3199,16 +3209,19 @@ async function decidirEncomenda(encomendaId, acao) {
 
     let motivo = null;
     if (acao === 'ACEITA') {
-        if (!confirm(`Aceitar a encomenda #${id}? Ela ficará disponível para produção na fila da cozinha. O estoque será movimentado somente quando a produção for registrada.`)) return;
+        if (!confirm(`Aceitar a encomenda #${id}? Ela ficará disponível para produção na fila da cozinha. O estoque será movimentado somente quando a produção for registrada.`))
+            return;
     } else {
         motivo = prompt(`Informe o motivo da recusa da encomenda #${id} (mínimo 3 caracteres):`);
-        if (motivo === null) return;
+        if (motivo === null)
+            return;
         motivo = motivo.trim();
         if (motivo.length < 3 || motivo.length > 500) {
             alert('O motivo deve ter entre 3 e 500 caracteres.');
             return;
         }
-        if (!confirm(`Recusar a encomenda #${id}?`)) return;
+        if (!confirm(`Recusar a encomenda #${id}?`))
+            return;
     }
 
     const {data, error} = await _supabase.rpc('decidir_encomenda_agendada', {
@@ -3219,8 +3232,10 @@ async function decidirEncomenda(encomendaId, acao) {
     if (error) {
         console.error('Erro ao decidir encomenda:', error);
         let msg = error.message || 'Não foi possível atualizar a encomenda.';
-        if (msg.includes('USUARIO_NAO_AUTORIZADO')) msg = 'Seu usuário não está autorizado a realizar esta ação.';
-        else if (msg.includes('ENCOMENDA_JA_DECIDIDA')) msg = 'Esta encomenda já foi decidida por outro usuário. Atualize a lista.';
+        if (msg.includes('USUARIO_NAO_AUTORIZADO'))
+            msg = 'Seu usuário não está autorizado a realizar esta ação.';
+        else if (msg.includes('ENCOMENDA_JA_DECIDIDA'))
+            msg = 'Esta encomenda já foi decidida por outro usuário. Atualize a lista.';
         alert('❌ ' + msg);
         return;
     }
@@ -3603,7 +3618,8 @@ async function alternarAba(nomeAba) {
 
     // Oculta todas
     abaPedidos.style.display = 'none';
-    if (abaEncomendas) abaEncomendas.style.display = 'none';
+    if (abaEncomendas)
+        abaEncomendas.style.display = 'none';
     abaBalcao.style.display = 'none';
     abaProdutos.style.display = 'none';
     abaCompras.style.display = 'none';
@@ -3615,7 +3631,8 @@ async function alternarAba(nomeAba) {
     abaFinancas.style.display = 'none';
     abaAuditoria.style.display = 'none';
     abaPix.style.display = 'none';
-    if (abaSalao) abaSalao.style.display = 'none';
+    if (abaSalao)
+        abaSalao.style.display = 'none';
 
     btnPedidos.classList.remove('active');
     btnBalcao.classList.remove('active');
@@ -3638,8 +3655,10 @@ async function alternarAba(nomeAba) {
         btnPedidos.classList.add('active');
         carregarPedidos();
     } else if (nomeAba === 'encomendas') {
-        if (abaEncomendas) abaEncomendas.style.display = 'block';
-        if (btnEncomendas) btnEncomendas.classList.add('active');
+        if (abaEncomendas)
+            abaEncomendas.style.display = 'block';
+        if (btnEncomendas)
+            btnEncomendas.classList.add('active');
         await carregarEncomendas();
     } else if (nomeAba === 'balcao') {
         document.getElementById('aba-balcao').style.display = 'block';
@@ -3660,8 +3679,10 @@ async function alternarAba(nomeAba) {
             alert('O módulo Salão / Mesas está desativado. Um Gerente/Admin pode ativá-lo em Configurações → Módulos de atendimento.');
             return;
         }
-        if (abaSalao) abaSalao.style.display = 'block';
-        if (btnSalao) btnSalao.classList.add('active');
+        if (abaSalao)
+            abaSalao.style.display = 'block';
+        if (btnSalao)
+            btnSalao.classList.add('active');
         await salaoCarregarDadosUI();
     } else if (nomeAba === 'produtos') {
         abaProdutos.style.display = 'block';
@@ -10143,11 +10164,16 @@ function fecharModalProducao(retornarSalao = true) {
     const titulo = modal?.querySelector('h2');
     const descricao = modal?.querySelector('p');
 
-    if (modal) modal.style.display = 'none';
-    if (selectProduto) selectProduto.disabled = false;
-    if (campoQuantidade) campoQuantidade.readOnly = false;
-    if (titulo) titulo.textContent = '🏭 Registrar Produção';
-    if (descricao) descricao.textContent = 'Produza produtos acabados usando a Ficha Técnica e faça o consumo automático dos insumos.';
+    if (modal)
+        modal.style.display = 'none';
+    if (selectProduto)
+        selectProduto.disabled = false;
+    if (campoQuantidade)
+        campoQuantidade.readOnly = false;
+    if (titulo)
+        titulo.textContent = '🏭 Registrar Produção';
+    if (descricao)
+        descricao.textContent = 'Produza produtos acabados usando a Ficha Técnica e faça o consumo automático dos insumos.';
 
     producaoOrigemSalaoItemId = null;
     producaoOrigemEncomendaItemId = null;
@@ -10164,9 +10190,12 @@ function fecharModalProducao(retornarSalao = true) {
         const destino = retornoEncomenda === 'cozinha' && salaoModuloAtivo ? 'salao' : 'encomendas';
         Promise.resolve(alternarAba(destino)).then(async () => {
             await carregarEncomendas();
-            if (destino === 'salao') { salaoAlternarVisaoUI('cozinha'); await salaoCarregarDadosUI(); }
+            if (destino === 'salao') {
+                salaoAlternarVisaoUI('cozinha');
+                await salaoCarregarDadosUI();
+            }
         }).catch(err => console.error('Erro ao retornar à fila da encomenda:', err));
-    }
+}
 }
 
 
@@ -10852,7 +10881,8 @@ function atualizarResumoProducaoUI() {
     const botaoProduzir = document.querySelector('#modal-producao button[onclick="registrarProducaoUI()"]');
     const emProcessamento = botaoProduzir?.dataset.processando === '1';
     const definirBotaoProduzir = (habilitado, motivo = '') => {
-        if (!botaoProduzir || emProcessamento) return;
+        if (!botaoProduzir || emProcessamento)
+            return;
         botaoProduzir.disabled = !habilitado;
         botaoProduzir.title = motivo;
         botaoProduzir.style.opacity = habilitado ? '1' : '.55';
@@ -10892,7 +10922,7 @@ function atualizarResumoProducaoUI() {
     }
 
     if (!Array.isArray(producaoUI.itens) || !Array.isArray(producaoUI.insumos) ||
-        !Array.isArray(producaoUI.unidades) || !Array.isArray(producaoUI.estoques)) {
+            !Array.isArray(producaoUI.unidades) || !Array.isArray(producaoUI.estoques)) {
         definirBotaoProduzir(false, 'Aguarde o carregamento dos insumos.');
         resumo.innerHTML = '<strong>⚠️ Dados da produção ainda não carregados.</strong>';
         resumo.style.display = 'block';
@@ -10907,12 +10937,14 @@ function atualizarResumoProducaoUI() {
 
     producaoUI.itens.forEach(function (item) {
         const insumo = producaoUI.insumos.find(i => Number(i.id) === Number(item.insumo_id));
-        if (!insumo) return;
+        if (!insumo)
+            return;
 
         const unidadeItem = producaoUI.unidades.find(u => Number(u.id) === Number(item.unidade_id));
         const unidadeBase = producaoUI.unidades.find(u => Number(u.id) === Number(insumo.unidade_base_id));
         const estoque = producaoUI.estoques.find(e => Number(e.insumo_id) === Number(item.insumo_id));
-        if (!unidadeItem || !unidadeBase) return;
+        if (!unidadeItem || !unidadeBase)
+            return;
 
         const fatorUnidade = Number(unidadeItem.fator_base || 0);
         const fatorUnidadeBase = Number(unidadeBase.fator_base || 1);
@@ -10938,21 +10970,21 @@ function atualizarResumoProducaoUI() {
         }
 
         detalhesHTML +=
-            '<div style="border:1px solid ' + (suficiente ? '#c8e6c9' : '#ef9a9a') + ';border-left:4px solid ' + (suficiente ? '#2e7d32' : '#c62828') + ';border-radius:6px;padding:9px;margin:7px 0;background:' + (suficiente ? '#f7fff7' : '#fff5f5') + ';">' +
+                '<div style="border:1px solid ' + (suficiente ? '#c8e6c9' : '#ef9a9a') + ';border-left:4px solid ' + (suficiente ? '#2e7d32' : '#c62828') + ';border-radius:6px;padding:9px;margin:7px 0;background:' + (suficiente ? '#f7fff7' : '#fff5f5') + ';">' +
                 '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +
-                    '<strong>' + insumo.nome + '</strong>' +
-                    '<span><strong>Necessário:</strong> ' + quantidadeBrutaBase.toFixed(3).replace('.', ',') + ' ' + unidadeBase.codigo + '</span>' +
+                '<strong>' + insumo.nome + '</strong>' +
+                '<span><strong>Necessário:</strong> ' + quantidadeBrutaBase.toFixed(3).replace('.', ',') + ' ' + unidadeBase.codigo + '</span>' +
                 '</div>' +
                 '<div style="font-size:0.9rem;line-height:1.6;margin-top:5px;">' +
-                    '<div><strong>Disponível:</strong> ' + estoqueAtual.toFixed(3).replace('.', ',') + ' ' + unidadeBase.codigo + '</div>' +
-                    (suficiente
+                '<div><strong>Disponível:</strong> ' + estoqueAtual.toFixed(3).replace('.', ',') + ' ' + unidadeBase.codigo + '</div>' +
+                (suficiente
                         ? '<div style="color:#2e7d32;font-weight:bold;">✅ Estoque suficiente</div>'
                         : '<div style="color:#b71c1c;font-weight:bold;">❌ Falta: ' + faltaBase.toFixed(3).replace('.', ',') + ' ' + unidadeBase.codigo + '</div>') +
-                    '<div style="font-size:0.82rem;color:#555;margin-top:3px;">Custo estimado: R$ ' + custoInsumo.toFixed(4).replace('.', ',') +
-                    ' | Perda prevista: ' + perdaBase.toFixed(3).replace('.', ',') + ' ' + unidadeBase.codigo +
-                    ' | Líquido estimado: ' + quantidadeLiquidaBase.toFixed(3).replace('.', ',') + ' ' + unidadeBase.codigo + '</div>' +
+                '<div style="font-size:0.82rem;color:#555;margin-top:3px;">Custo estimado: R$ ' + custoInsumo.toFixed(4).replace('.', ',') +
+                ' | Perda prevista: ' + perdaBase.toFixed(3).replace('.', ',') + ' ' + unidadeBase.codigo +
+                ' | Líquido estimado: ' + quantidadeLiquidaBase.toFixed(3).replace('.', ',') + ' ' + unidadeBase.codigo + '</div>' +
                 '</div>' +
-            '</div>';
+                '</div>';
     });
 
     resumo.dataset.faltasInsumos = JSON.stringify(faltasInsumos);
@@ -10967,35 +10999,35 @@ function atualizarResumoProducaoUI() {
     if (estoqueInsuficiente) {
         const linhasFaltas = faltasInsumos.map(f =>
             '<li style="margin:5px 0;"><strong>' + f.nome + '</strong>: necessário ' +
-            f.necessario.toFixed(3).replace('.', ',') + ' ' + f.unidade +
-            ', disponível ' + f.disponivel.toFixed(3).replace('.', ',') + ' ' + f.unidade +
-            '; <strong>falta ' + f.falta.toFixed(3).replace('.', ',') + ' ' + f.unidade + '</strong>.</li>'
+                    f.necessario.toFixed(3).replace('.', ',') + ' ' + f.unidade +
+                    ', disponível ' + f.disponivel.toFixed(3).replace('.', ',') + ' ' + f.unidade +
+                    '; <strong>falta ' + f.falta.toFixed(3).replace('.', ',') + ' ' + f.unidade + '</strong>.</li>'
         ).join('');
 
         statusEstoque =
-            '<div style="margin-top:12px;padding:12px;color:#b71c1c;background:#fff0f0;border:1px solid #ef9a9a;border-radius:8px;">' +
+                '<div style="margin-top:12px;padding:12px;color:#b71c1c;background:#fff0f0;border:1px solid #ef9a9a;border-radius:8px;">' +
                 '<div style="font-weight:bold;font-size:1rem;">⚠️ Estoque insuficiente para esta produção</div>' +
                 '<div style="margin-top:7px;font-weight:bold;">Ingredientes em falta:</div>' +
                 '<ul style="margin:6px 0 0;padding-left:22px;">' + linhasFaltas + '</ul>' +
-            '</div>';
+                '</div>';
     } else {
         statusEstoque = '<div style="margin-top:12px;padding:10px;color:#2e7d32;background:#f1fff2;border:1px solid #c8e6c9;border-radius:8px;font-weight:bold;">✅ Estoque suficiente para esta produção.</div>';
     }
 
     resumo.innerHTML =
-        '<strong>📊 Resumo da Produção</strong>' +
-        '<div style="margin-top:10px;line-height:1.7;">' +
+            '<strong>📊 Resumo da Produção</strong>' +
+            '<div style="margin-top:10px;line-height:1.7;">' +
             'Produto: <strong>' + produto.nome + '</strong><br>' +
             'Quantidade: <strong>' + quantidade + '</strong><br>' +
             'Estoque atual do produto: <strong>' + estoqueAtualProduto + '</strong><br>' +
             'Estoque após produção: <strong>' + estoqueDepois + '</strong><br>' +
             'Custo total estimado: <strong>R$ ' + custoTotal.toFixed(4).replace('.', ',') + '</strong><br>' +
             'Custo por unidade: <strong>R$ ' + custoUnitario.toFixed(4).replace('.', ',') + '</strong>' +
-        '</div>' +
-        '<hr style="border:0;border-top:1px solid #ddd;margin:12px 0;">' +
-        '<strong>📦 Consumo previsto e disponibilidade dos insumos</strong>' +
-        '<div style="margin-top:6px;">' + (detalhesHTML || 'Nenhum insumo cadastrado na ficha técnica.') + '</div>' +
-        statusEstoque;
+            '</div>' +
+            '<hr style="border:0;border-top:1px solid #ddd;margin:12px 0;">' +
+            '<strong>📦 Consumo previsto e disponibilidade dos insumos</strong>' +
+            '<div style="margin-top:6px;">' + (detalhesHTML || 'Nenhum insumo cadastrado na ficha técnica.') + '</div>' +
+            statusEstoque;
 
     resumo.style.display = 'block';
 }
@@ -11337,32 +11369,37 @@ async function registrarProducaoUI() {
         if (origemSalaoItemId > 0) {
             // A RPC vincula a produção ao item da comanda, em uma única transação.
             const {data: resultadoSalao, error: erroSalao} = await _supabase.rpc(
-                'salao_produzir_item_comanda',
-                { p_item_id: origemSalaoItemId, p_data_fabricacao: dataFabricacao, p_data_validade: dataValidade, p_observacao: observacao }
+                    'salao_produzir_item_comanda',
+                    {p_item_id: origemSalaoItemId, p_data_fabricacao: dataFabricacao, p_data_validade: dataValidade, p_observacao: observacao}
             );
-            if (erroSalao) throw erroSalao;
+            if (erroSalao)
+                throw erroSalao;
             data = Number(resultadoSalao?.producao_id || 0);
-            if (!data) throw new Error('A produção não retornou o identificador do lote produzido.');
+            if (!data)
+                throw new Error('A produção não retornou o identificador do lote produzido.');
         } else if (origemEncomendaItemId > 0) {
             const {data: resultadoEncomenda, error: erroEncomenda} = await _supabase.rpc(
-                'encomenda_produzir_item_agendada',
-                { p_item_id: origemEncomendaItemId, p_data_fabricacao: dataFabricacao, p_data_validade: dataValidade, p_observacao: observacao }
+                    'encomenda_produzir_item_agendada',
+                    {p_item_id: origemEncomendaItemId, p_data_fabricacao: dataFabricacao, p_data_validade: dataValidade, p_observacao: observacao}
             );
-            if (erroEncomenda) throw erroEncomenda;
+            if (erroEncomenda)
+                throw erroEncomenda;
             data = Number(resultadoEncomenda?.producao_id || 0);
-            if (!data) throw new Error('A produção da encomenda não retornou o identificador do lote produzido.');
+            if (!data)
+                throw new Error('A produção da encomenda não retornou o identificador do lote produzido.');
         } else {
             const {data: idProducao, error: erroProducao} = await _supabase.rpc(
-                'registrar_producao_com_lote',
-                {
-                    p_produto_id: produtoId,
-                    p_quantidade_produzida: quantidade,
-                    p_data_fabricacao: dataFabricacao,
-                    p_data_validade: dataValidade,
-                    p_observacao: observacao
-                }
+                    'registrar_producao_com_lote',
+                    {
+                        p_produto_id: produtoId,
+                        p_quantidade_produzida: quantidade,
+                        p_data_fabricacao: dataFabricacao,
+                        p_data_validade: dataValidade,
+                        p_observacao: observacao
+                    }
             );
-            if (erroProducao) throw erroProducao;
+            if (erroProducao)
+                throw erroProducao;
             data = idProducao;
         }
 
@@ -11450,10 +11487,12 @@ async function registrarProducaoUI() {
             await salaoCarregarDadosUI();
         } else if (origemEncomendaItemId > 0) {
             await carregarEncomendas();
-            if (salaoModuloAtivo) await salaoCarregarDadosUI();
+            if (salaoModuloAtivo)
+                await salaoCarregarDadosUI();
             const destino = origemEncomendaRetorno === 'cozinha' && salaoModuloAtivo ? 'salao' : 'encomendas';
             await alternarAba(destino);
-            if (destino === 'salao') salaoAlternarVisaoUI('cozinha');
+            if (destino === 'salao')
+                salaoAlternarVisaoUI('cozinha');
         }
 
 
@@ -11482,12 +11521,12 @@ async function registrarProducaoUI() {
                 faltasAtualizadas = [];
             }
             const textoFaltas = faltasAtualizadas.length
-                ? '\n\nInsumos abaixo do necessário:\n' + faltasAtualizadas.map(f =>
-                    `• ${f.nome}: necessário ${Number(f.necessario).toFixed(3).replace('.', ',')} ${f.unidade}, ` +
-                    `disponível ${Number(f.disponivel).toFixed(3).replace('.', ',')} ${f.unidade}, ` +
-                    `falta ${Number(f.falta).toFixed(3).replace('.', ',')} ${f.unidade}`
-                  ).join('\n')
-                : ''; 
+                    ? '\n\nInsumos abaixo do necessário:\n' + faltasAtualizadas.map(f =>
+                            `• ${f.nome}: necessário ${Number(f.necessario).toFixed(3).replace('.', ',')} ${f.unidade}, ` +
+                                `disponível ${Number(f.disponivel).toFixed(3).replace('.', ',')} ${f.unidade}, ` +
+                                `falta ${Number(f.falta).toFixed(3).replace('.', ',')} ${f.unidade}`
+                    ).join('\n')
+                    : '';
             alert('⚠️ A produção foi bloqueada porque o saldo real de um ou mais insumos não é suficiente. A tela foi atualizada com os saldos atuais.' + textoFaltas + (textoFaltas ? '' : '\n\n' + mensagemErro));
         } else {
             alert(
@@ -11714,18 +11753,20 @@ function usuarioPodeAjustarLoteUI() {
 
 function escaparHTMLAjusteLoteUI(valor) {
     return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-    }[caractere]));
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[caractere]));
 }
 
 function dataBRAjusteLoteUI(valor) {
-    if (!valor) return '—';
+    if (!valor)
+        return '—';
     const texto = String(valor).slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(texto))
+        return texto;
     return texto.split('-').reverse().join('/');
 }
 
@@ -11745,31 +11786,32 @@ function motivoAjusteLoteRotuloUI(motivo) {
 function atualizarMotivosAjusteLoteUI() {
     const direcao = document.getElementById('ajuste-lote-direcao')?.value || 'SAIDA';
     const select = document.getElementById('ajuste-lote-motivo');
-    if (!select) return;
+    if (!select)
+        return;
 
     const anterior = select.value;
     const opcoes = direcao === 'SAIDA'
-        ? [
-            ['PERDA', 'Perda / produto estragado'],
-            ['VENCIMENTO', 'Produto vencido'],
-            ['DANIFICADO', 'Produto danificado'],
-            ['CONTAGEM_FISICA', 'Diferença na contagem física'],
-            ['CONSUMO_INTERNO', 'Consumo interno'],
-            ['OUTRO', 'Outro motivo']
-        ]
-        : [
-            ['CONTAGEM_FISICA', 'Diferença na contagem física'],
-            ['CORRECAO_LANCAMENTO', 'Correção de lançamento'],
-            ['OUTRO', 'Outro motivo']
-        ];
+            ? [
+                ['PERDA', 'Perda / produto estragado'],
+                ['VENCIMENTO', 'Produto vencido'],
+                ['DANIFICADO', 'Produto danificado'],
+                ['CONTAGEM_FISICA', 'Diferença na contagem física'],
+                ['CONSUMO_INTERNO', 'Consumo interno'],
+                ['OUTRO', 'Outro motivo']
+            ]
+            : [
+                ['CONTAGEM_FISICA', 'Diferença na contagem física'],
+                ['CORRECAO_LANCAMENTO', 'Correção de lançamento'],
+                ['OUTRO', 'Outro motivo']
+            ];
 
     select.innerHTML = opcoes.map(([valor, rotulo]) =>
-        `<option value="${valor}">${rotulo}</option>`
+            `<option value="${valor}">${rotulo}</option>`
     ).join('');
 
     select.value = opcoes.some(([valor]) => valor === anterior)
-        ? anterior
-        : 'CONTAGEM_FISICA';
+            ? anterior
+            : 'CONTAGEM_FISICA';
 
     atualizarObservacaoAjusteLoteUI();
 }
@@ -11777,33 +11819,38 @@ function atualizarMotivosAjusteLoteUI() {
 function atualizarObservacaoAjusteLoteUI() {
     const motivo = document.getElementById('ajuste-lote-motivo')?.value || '';
     const campo = document.getElementById('ajuste-lote-observacao');
-    if (!campo) return;
+    if (!campo)
+        return;
     campo.required = motivo === 'OUTRO';
     campo.placeholder = motivo === 'OUTRO'
-        ? 'Descreva o motivo do ajuste (obrigatório).'
-        : 'Ex.: 3 unidades estragaram durante o armazenamento.';
+            ? 'Descreva o motivo do ajuste (obrigatório).'
+            : 'Ex.: 3 unidades estragaram durante o armazenamento.';
 }
 
 function obterLotesVisiveisAjusteLoteUI() {
     return ajusteLoteProdutoFixadoId
-        ? lotesAjusteUI.filter(item => Number(item.produto_id) === Number(ajusteLoteProdutoFixadoId))
-        : lotesAjusteUI;
+            ? lotesAjusteUI.filter(item => Number(item.produto_id) === Number(ajusteLoteProdutoFixadoId))
+            : lotesAjusteUI;
 }
 
 async function carregarLotesAjusteLoteUI() {
     const select = document.getElementById('ajuste-lote-select');
     const detalhes = document.getElementById('ajuste-lote-detalhes');
-    if (select) select.innerHTML = '<option value="">Carregando produtos e lotes...</option>';
-    if (detalhes) detalhes.textContent = 'Carregando estoques e lotes...';
+    if (select)
+        select.innerHTML = '<option value="">Carregando produtos e lotes...</option>';
+    if (detalhes)
+        detalhes.textContent = 'Carregando estoques e lotes...';
 
     const [resProdutos, resLotes] = await Promise.all([
-        _supabase.from('produtos').select('id, nome, estoque, ativo').order('nome', { ascending: true }).limit(5000),
+        _supabase.from('produtos').select('id, nome, estoque, ativo').order('nome', {ascending: true}).limit(5000),
         _supabase.from('lotes_producao')
-            .select('id, produto_id, numero_lote, data_fabricacao, data_validade, quantidade_inicial, quantidade_disponivel, status')
-            .order('id', { ascending: false }).limit(5000)
+                .select('id, produto_id, numero_lote, data_fabricacao, data_validade, quantidade_inicial, quantidade_disponivel, status')
+                .order('id', {ascending: false}).limit(5000)
     ]);
-    if (resProdutos.error) throw new Error('Não foi possível carregar os produtos: ' + resProdutos.error.message);
-    if (resLotes.error) throw new Error('Não foi possível carregar os lotes: ' + resLotes.error.message);
+    if (resProdutos.error)
+        throw new Error('Não foi possível carregar os produtos: ' + resProdutos.error.message);
+    if (resLotes.error)
+        throw new Error('Não foi possível carregar os lotes: ' + resLotes.error.message);
 
     const produtos = resProdutos.data || [];
     const lotes = resLotes.data || [];
@@ -11824,27 +11871,29 @@ async function carregarLotesAjusteLoteUI() {
     });
 
     const itensSemLote = produtos
-        .filter(p => !produtosComLotes.has(Number(p.id)))
-        .map(p => ({
-            chave: 'PRODUTO:' + p.id,
-            controle: 'PRODUTO',
-            id: null,
-            lote_id: null,
-            produto_id: Number(p.id),
-            produto_nome: p.nome || `Produto #${p.id}`,
-            produto_estoque: Number(p.estoque || 0),
-            quantidade_disponivel: Number(p.estoque || 0),
-            quantidade_inicial: Number(p.estoque || 0),
-            numero_lote: null,
-            data_fabricacao: null,
-            data_validade: null,
-            status: 'SEM LOTE'
-        }));
+            .filter(p => !produtosComLotes.has(Number(p.id)))
+            .map(p => ({
+                    chave: 'PRODUTO:' + p.id,
+                    controle: 'PRODUTO',
+                    id: null,
+                    lote_id: null,
+                    produto_id: Number(p.id),
+                    produto_nome: p.nome || `Produto #${p.id}`,
+                    produto_estoque: Number(p.estoque || 0),
+                    quantidade_disponivel: Number(p.estoque || 0),
+                    quantidade_inicial: Number(p.estoque || 0),
+                    numero_lote: null,
+                    data_fabricacao: null,
+                    data_validade: null,
+                    status: 'SEM LOTE'
+                }));
 
     lotesAjusteUI = [...itensLote, ...itensSemLote].sort((a, b) => {
         const nome = String(a.produto_nome).localeCompare(String(b.produto_nome), 'pt-BR');
-        if (nome) return nome;
-        if (a.controle !== b.controle) return a.controle === 'LOTE' ? -1 : 1;
+        if (nome)
+            return nome;
+        if (a.controle !== b.controle)
+            return a.controle === 'LOTE' ? -1 : 1;
         return Number(b.id || 0) - Number(a.id || 0);
     });
 
@@ -11853,7 +11902,8 @@ async function carregarLotesAjusteLoteUI() {
 
 function preencherSelectLotesAjusteLoteUI() {
     const select = document.getElementById('ajuste-lote-select');
-    if (!select) return;
+    if (!select)
+        return;
     const selecionadoAntes = select.value;
     const itens = obterLotesVisiveisAjusteLoteUI();
 
@@ -11882,7 +11932,8 @@ function preencherSelectLotesAjusteLoteUI() {
                 if (direcao === 'SAIDA') {
                     const da = a.data_validade || '9999-12-31';
                     const db = b.data_validade || '9999-12-31';
-                    if (da !== db) return da.localeCompare(db);
+                    if (da !== db)
+                        return da.localeCompare(db);
                 }
                 return Number(b.id) - Number(a.id);
             });
@@ -11912,16 +11963,22 @@ async function abrirModalAjusteLoteUI(opcoes = {}) {
     const campoQuantidade = document.getElementById('ajuste-lote-quantidade');
     const campoMotivo = document.getElementById('ajuste-lote-motivo');
     const campoObservacao = document.getElementById('ajuste-lote-observacao');
-    if (campoDirecao) campoDirecao.value = direcao;
-    if (campoQuantidade) campoQuantidade.value = String(Math.max(1, Math.abs(Number(opcoes.quantidade) || 1)));
-    if (campoObservacao) campoObservacao.value = '';
-    if (campoMotivo) campoMotivo.value = '';
+    if (campoDirecao)
+        campoDirecao.value = direcao;
+    if (campoQuantidade)
+        campoQuantidade.value = String(Math.max(1, Math.abs(Number(opcoes.quantidade) || 1)));
+    if (campoObservacao)
+        campoObservacao.value = '';
+    if (campoMotivo)
+        campoMotivo.value = '';
     atualizarMotivosAjusteLoteUI();
 
     const status = document.getElementById('ajuste-lote-status');
     const botaoConfirmar = document.getElementById('btn-confirmar-ajuste-lote');
-    if (status) status.textContent = '';
-    if (botaoConfirmar) botaoConfirmar.disabled = true;
+    if (status)
+        status.textContent = '';
+    if (botaoConfirmar)
+        botaoConfirmar.disabled = true;
     modal.style.display = 'flex';
 
     try {
@@ -11932,14 +11989,16 @@ async function abrirModalAjusteLoteUI(opcoes = {}) {
         atualizarResumoAjusteLoteUI();
     } catch (erro) {
         console.error('Erro ao abrir ajuste de estoque:', erro);
-        if (status) status.textContent = erro.message || String(erro);
+        if (status)
+            status.textContent = erro.message || String(erro);
         alert('❌ Não foi possível abrir o ajuste de estoque:\n\n' + (erro.message || erro));
-    }
+}
 }
 
 function fecharModalAjusteLoteUI() {
     const modal = document.getElementById('modal-ajuste-lote');
-    if (modal) modal.style.display = 'none';
+    if (modal)
+        modal.style.display = 'none';
     ajusteLoteProdutoFixadoId = null;
     ajusteLoteSalvando = false;
 }
@@ -11956,9 +12015,12 @@ function atualizarResumoAjusteLoteUI() {
     const item = lotesAjusteUI.find(i => i.chave === String(select?.value || ''));
 
     if (!item) {
-        if (detalhes) detalhes.innerHTML = 'Selecione um produto ou lote para conferir as quantidades.';
-        if (status) status.textContent = '';
-        if (btn) btn.disabled = true;
+        if (detalhes)
+            detalhes.innerHTML = 'Selecione um produto ou lote para conferir as quantidades.';
+        if (status)
+            status.textContent = '';
+        if (btn)
+            btn.disabled = true;
         return;
     }
 
@@ -11970,16 +12032,21 @@ function atualizarResumoAjusteLoteUI() {
     const estoqueDepois = estoqueAntes + delta;
     const statusLote = String(item.status || '').toUpperCase();
     let problema = '';
-    if (!Number.isInteger(quantidade) || quantidade <= 0) problema = 'Informe uma quantidade inteira maior que zero.';
-    else if (direcao === 'SAIDA' && quantidade > saldoAntes) problema = usaLote ? 'A quantidade informada é maior que o disponível neste lote.' : 'A quantidade informada é maior que o estoque disponível.';
-    else if (usaLote && direcao === 'ENTRADA' && statusLote !== 'ATIVO') problema = 'Só é permitido acrescentar quantidade a um lote com status ATIVO.';
-    else if (estoqueDepois < 0) problema = 'O estoque consolidado do produto ficaria negativo.';
-    else if (motivo === 'OUTRO' && !observacao) problema = 'Descreva o motivo no campo de observação.';
+    if (!Number.isInteger(quantidade) || quantidade <= 0)
+        problema = 'Informe uma quantidade inteira maior que zero.';
+    else if (direcao === 'SAIDA' && quantidade > saldoAntes)
+        problema = usaLote ? 'A quantidade informada é maior que o disponível neste lote.' : 'A quantidade informada é maior que o estoque disponível.';
+    else if (usaLote && direcao === 'ENTRADA' && statusLote !== 'ATIVO')
+        problema = 'Só é permitido acrescentar quantidade a um lote com status ATIVO.';
+    else if (estoqueDepois < 0)
+        problema = 'O estoque consolidado do produto ficaria negativo.';
+    else if (motivo === 'OUTRO' && !observacao)
+        problema = 'Descreva o motivo no campo de observação.';
 
     if (detalhes) {
         const nomeControle = usaLote
-            ? `Lote ${escaparHTMLAjusteLoteUI(item.numero_lote || '#' + item.id)}`
-            : 'Estoque geral — produto sem lote';
+                ? `Lote ${escaparHTMLAjusteLoteUI(item.numero_lote || '#' + item.id)}`
+                : 'Estoque geral — produto sem lote';
         const saldoRotulo = usaLote ? 'Disponível no lote' : 'Estoque geral';
         const saldoDepoisRotulo = usaLote ? 'Saldo do lote após ajuste' : 'Estoque após ajuste';
         detalhes.innerHTML = `
@@ -11996,11 +12063,13 @@ function atualizarResumoAjusteLoteUI() {
         status.textContent = problema ? '⚠️ ' + problema : 'Confira o saldo, o motivo e a observação antes de confirmar.';
         status.style.color = problema ? '#fca5a5' : '#cbd5e1';
     }
-    if (btn) btn.disabled = !!problema || ajusteLoteSalvando;
+    if (btn)
+        btn.disabled = !!problema || ajusteLoteSalvando;
 }
 
 async function salvarAjusteLoteUI() {
-    if (ajusteLoteSalvando) return;
+    if (ajusteLoteSalvando)
+        return;
     if (!usuarioPodeAjustarLoteUI()) {
         alert('⛔ Somente GERENTE ou ADMIN pode ajustar estoque.');
         return;
@@ -12040,25 +12109,30 @@ async function salvarAjusteLoteUI() {
     const loteId = usaLote ? Number(item.lote_id) : null;
     const rotuloDirecao = direcao === 'SAIDA' ? 'REDUÇÃO' : 'ENTRADA DE CORREÇÃO';
     const confirmar = confirm(
-        `Confirmar ${rotuloDirecao} no estoque?\n\n` +
-        `Produto: ${item.produto_nome}\n` +
-        (usaLote ? `Lote: ${item.numero_lote || '#' + item.id}\n` : 'Controle: estoque geral (sem lote)\n') +
-        `Quantidade: ${quantidade}\n` +
-        `Motivo: ${motivoAjusteLoteRotuloUI(motivo)}\n` +
-        (observacao ? `Observação: ${observacao}\n` : '') +
-        '\nO saldo escolhido e o estoque consolidado serão atualizados juntos.'
-    );
-    if (!confirmar) return;
+            `Confirmar ${rotuloDirecao} no estoque?\n\n` +
+            `Produto: ${item.produto_nome}\n` +
+            (usaLote ? `Lote: ${item.numero_lote || '#' + item.id}\n` : 'Controle: estoque geral (sem lote)\n') +
+            `Quantidade: ${quantidade}\n` +
+            `Motivo: ${motivoAjusteLoteRotuloUI(motivo)}\n` +
+            (observacao ? `Observação: ${observacao}\n` : '') +
+            '\nO saldo escolhido e o estoque consolidado serão atualizados juntos.'
+            );
+    if (!confirmar)
+        return;
 
     ajusteLoteSalvando = true;
     const btn = document.getElementById('btn-confirmar-ajuste-lote');
     const status = document.getElementById('ajuste-lote-status');
     const textoOriginal = btn?.textContent || '✅ Confirmar Ajuste';
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Registrando...'; }
-    if (status) status.textContent = 'Registrando ajuste e históricos...';
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Registrando...';
+    }
+    if (status)
+        status.textContent = 'Registrando ajuste e históricos...';
 
     try {
-        const { data, error } = await _supabase.rpc('ajustar_lote_producao', {
+        const {data, error} = await _supabase.rpc('ajustar_lote_producao', {
             p_lote_id: loteId,
             p_produto_id: Number(item.produto_id),
             p_direcao: direcao,
@@ -12066,40 +12140,56 @@ async function salvarAjusteLoteUI() {
             p_motivo: motivo,
             p_observacao: observacao || null
         });
-        if (error) throw new Error(error.message || 'Erro desconhecido no banco de dados.');
+        if (error)
+            throw new Error(error.message || 'Erro desconhecido no banco de dados.');
         const resultado = Array.isArray(data) ? data[0] : data;
-        if (!resultado || resultado.sucesso !== true) throw new Error(resultado?.mensagem || 'O banco não confirmou o ajuste.');
+        if (!resultado || resultado.sucesso !== true)
+            throw new Error(resultado?.mensagem || 'O banco não confirmou o ajuste.');
 
         fecharModalAjusteLoteUI();
         alert(
-            '✅ Ajuste de estoque registrado!\n\n' +
-            `Produto: ${resultado.produto_nome || item.produto_nome}\n` +
-            (usaLote ? `Lote: ${resultado.numero_lote || item.numero_lote || '#' + item.id}\n` : 'Controle: estoque geral (sem lote)\n') +
-            `Saldo do controle: ${resultado.quantidade_lote_anterior == null ? resultado.estoque_anterior : resultado.quantidade_lote_anterior} → ${resultado.quantidade_lote_posterior == null ? resultado.estoque_posterior : resultado.quantidade_lote_posterior}\n` +
-            `Estoque consolidado: ${resultado.estoque_anterior} → ${resultado.estoque_posterior}\n` +
-            `Motivo: ${motivoAjusteLoteRotuloUI(motivo)}\n` +
-            'O ajuste também foi enviado para a auditoria.'
-        );
+                '✅ Ajuste de estoque registrado!\n\n' +
+                `Produto: ${resultado.produto_nome || item.produto_nome}\n` +
+                (usaLote ? `Lote: ${resultado.numero_lote || item.numero_lote || '#' + item.id}\n` : 'Controle: estoque geral (sem lote)\n') +
+                `Saldo do controle: ${resultado.quantidade_lote_anterior == null ? resultado.estoque_anterior : resultado.quantidade_lote_anterior} → ${resultado.quantidade_lote_posterior == null ? resultado.estoque_posterior : resultado.quantidade_lote_posterior}\n` +
+                `Estoque consolidado: ${resultado.estoque_anterior} → ${resultado.estoque_posterior}\n` +
+                `Motivo: ${motivoAjusteLoteRotuloUI(motivo)}\n` +
+                'O ajuste também foi enviado para a auditoria.'
+                );
         await carregarProdutosGerenciador();
-        if (document.getElementById('modal-historico-ajustes-lote')?.style.display === 'flex') await carregarHistoricoAjustesLoteUI();
-        if (typeof carregarBalcao === 'function') await carregarBalcao();
+        if (document.getElementById('modal-historico-ajustes-lote')?.style.display === 'flex')
+            await carregarHistoricoAjustesLoteUI();
+        if (typeof carregarBalcao === 'function')
+            await carregarBalcao();
     } catch (erro) {
         console.error('Erro ao ajustar estoque:', erro);
         const mensagem = String(erro?.message || erro);
         let explicacao = mensagem;
-        if (mensagem.includes('USUARIO_NAO_AUTORIZADO')) explicacao = 'Somente um usuário ativo com cargo GERENTE ou ADMIN pode ajustar estoque.';
-        else if (mensagem.includes('QUANTIDADE_MAIOR_QUE_LOTE')) explicacao = 'A quantidade supera o saldo disponível deste lote. Atualize a lista e tente novamente.';
-        else if (mensagem.includes('ESTOQUE_GERAL_INSUFICIENTE')) explicacao = 'A quantidade supera o estoque geral disponível.';
-        else if (mensagem.includes('LOTE_NAO_ATIVO_PARA_ENTRADA')) explicacao = 'Só é possível acrescentar quantidade a um lote com status ATIVO.';
-        else if (mensagem.includes('PRODUTO_CONTROLADO_POR_LOTE')) explicacao = 'Este produto possui lotes; selecione um lote específico para fazer o ajuste.';
-        else if (mensagem.includes('OBSERVACAO_OBRIGATORIA')) explicacao = 'Informe a observação quando o motivo for Outro.';
-        else if (mensagem.includes('function ajustar_lote_producao') || mensagem.includes('Could not find the function')) explicacao = 'Execute o SQL atualizado ajuste_lotes_producao.sql no Supabase e tente novamente.';
+        if (mensagem.includes('USUARIO_NAO_AUTORIZADO'))
+            explicacao = 'Somente um usuário ativo com cargo GERENTE ou ADMIN pode ajustar estoque.';
+        else if (mensagem.includes('QUANTIDADE_MAIOR_QUE_LOTE'))
+            explicacao = 'A quantidade supera o saldo disponível deste lote. Atualize a lista e tente novamente.';
+        else if (mensagem.includes('ESTOQUE_GERAL_INSUFICIENTE'))
+            explicacao = 'A quantidade supera o estoque geral disponível.';
+        else if (mensagem.includes('LOTE_NAO_ATIVO_PARA_ENTRADA'))
+            explicacao = 'Só é possível acrescentar quantidade a um lote com status ATIVO.';
+        else if (mensagem.includes('PRODUTO_CONTROLADO_POR_LOTE'))
+            explicacao = 'Este produto possui lotes; selecione um lote específico para fazer o ajuste.';
+        else if (mensagem.includes('OBSERVACAO_OBRIGATORIA'))
+            explicacao = 'Informe a observação quando o motivo for Outro.';
+        else if (mensagem.includes('function ajustar_lote_producao') || mensagem.includes('Could not find the function'))
+            explicacao = 'Execute o SQL atualizado ajuste_lotes_producao.sql no Supabase e tente novamente.';
         alert('❌ Não foi possível registrar o ajuste:\n\n' + explicacao);
-        if (status) status.textContent = explicacao;
+        if (status)
+            status.textContent = explicacao;
     } finally {
         ajusteLoteSalvando = false;
-        if (btn) { btn.disabled = false; btn.textContent = textoOriginal; }
-        if (document.getElementById('modal-ajuste-lote')?.style.display === 'flex') atualizarResumoAjusteLoteUI();
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = textoOriginal;
+        }
+        if (document.getElementById('modal-ajuste-lote')?.style.display === 'flex')
+            atualizarResumoAjusteLoteUI();
     }
 }
 
@@ -12139,7 +12229,8 @@ function abrirAjudaAjusteLoteUI(modo = 'ajuste') {
 
 function fecharAjudaAjusteLoteUI() {
     const modal = document.getElementById('modal-ajuda-ajuste-estoque');
-    if (modal) modal.style.display = 'none';
+    if (modal)
+        modal.style.display = 'none';
 }
 
 async function abrirHistoricoAjustesLoteUI() {
@@ -12148,27 +12239,31 @@ async function abrirHistoricoAjustesLoteUI() {
         return;
     }
     const modal = document.getElementById('modal-historico-ajustes-lote');
-    if (modal) modal.style.display = 'flex';
+    if (modal)
+        modal.style.display = 'flex';
     await carregarHistoricoAjustesLoteUI();
 }
 
 function fecharHistoricoAjustesLoteUI() {
     const modal = document.getElementById('modal-historico-ajustes-lote');
-    if (modal) modal.style.display = 'none';
+    if (modal)
+        modal.style.display = 'none';
 }
 
 async function carregarHistoricoAjustesLoteUI() {
     const tbody = document.getElementById('historico-ajustes-lote-body');
-    if (!tbody) return;
+    if (!tbody)
+        return;
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">Carregando histórico...</td></tr>';
 
     try {
-        const { data: ajustes, error } = await _supabase
-            .from('ajustes_lotes_producao')
-            .select('id, lote_id, produto_id, direcao, quantidade, quantidade_anterior, quantidade_posterior, estoque_anterior, estoque_posterior, motivo, observacao, usuario_auth_id, usuario_nome, criado_em')
-            .order('criado_em', { ascending: false })
-            .limit(200);
-        if (error) throw new Error(error.message);
+        const {data: ajustes, error} = await _supabase
+                .from('ajustes_lotes_producao')
+                .select('id, lote_id, produto_id, direcao, quantidade, quantidade_anterior, quantidade_posterior, estoque_anterior, estoque_posterior, motivo, observacao, usuario_auth_id, usuario_nome, criado_em')
+                .order('criado_em', {ascending: false})
+                .limit(200);
+        if (error)
+            throw new Error(error.message);
 
         if (!ajustes?.length) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">Nenhum ajuste de estoque registrado ainda.</td></tr>';
@@ -12178,11 +12273,13 @@ async function carregarHistoricoAjustesLoteUI() {
         const produtoIds = [...new Set(ajustes.map(a => Number(a.produto_id)).filter(Number.isFinite))];
         const loteIds = [...new Set(ajustes.map(a => Number(a.lote_id)).filter(id => Number.isFinite(id) && id > 0))];
         const [resProdutos, resLotes] = await Promise.all([
-            produtoIds.length ? _supabase.from('produtos').select('id, nome').in('id', produtoIds) : Promise.resolve({ data: [], error: null }),
-            loteIds.length ? _supabase.from('lotes_producao').select('id, numero_lote').in('id', loteIds) : Promise.resolve({ data: [], error: null })
+            produtoIds.length ? _supabase.from('produtos').select('id, nome').in('id', produtoIds) : Promise.resolve({data: [], error: null}),
+            loteIds.length ? _supabase.from('lotes_producao').select('id, numero_lote').in('id', loteIds) : Promise.resolve({data: [], error: null})
         ]);
-        if (resProdutos.error) throw new Error(resProdutos.error.message);
-        if (resLotes.error) throw new Error(resLotes.error.message);
+        if (resProdutos.error)
+            throw new Error(resProdutos.error.message);
+        if (resLotes.error)
+            throw new Error(resLotes.error.message);
         const mapaProdutos = new Map((resProdutos.data || []).map(p => [Number(p.id), p.nome]));
         const mapaLotes = new Map((resLotes.data || []).map(l => [Number(l.id), l.numero_lote]));
 
@@ -12199,8 +12296,8 @@ async function carregarHistoricoAjustesLoteUI() {
             const antes = temLote ? ajuste.quantidade_anterior : ajuste.estoque_anterior;
             const depois = temLote ? ajuste.quantidade_posterior : ajuste.estoque_posterior;
             const controleHTML = temLote
-                ? `<strong>${escaparHTMLAjusteLoteUI(produtoNome)}</strong><br><small>Lote ${escaparHTMLAjusteLoteUI(numeroLote)}</small>`
-                : `<strong>${escaparHTMLAjusteLoteUI(produtoNome)}</strong><br><small>Estoque geral (sem lote)</small>`;
+                    ? `<strong>${escaparHTMLAjusteLoteUI(produtoNome)}</strong><br><small>Lote ${escaparHTMLAjusteLoteUI(numeroLote)}</small>`
+                    : `<strong>${escaparHTMLAjusteLoteUI(produtoNome)}</strong><br><small>Estoque geral (sem lote)</small>`;
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${escaparHTMLAjusteLoteUI(dataHora)}</td>
@@ -12238,22 +12335,24 @@ function imprimirPedido(pedidoId) {
     // Resolve o cliente de todos os fluxos: pedidos relacionados à tabela clientes,
     // vendas de balcão (que guardam "Balcão - Nome" no snapshot) e metadados legados.
     const normalizarTextoImpressao = valor => String(valor ?? '')
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR');
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR');
     const enderecoOriginal = String(p.endereco_snapshot ?? '').trim();
     const matchNomeBalcao = enderecoOriginal.match(/^balc[aã]o\s*[-–—:]\s*(.+)$/i);
     const observacaoOriginal = String(p.observacao ?? '').trim();
     const linhasObservacao = observacaoOriginal.split(/\r?\n/).map(linha => linha.trim()).filter(Boolean);
     const matchClienteObservacao = observacaoOriginal.match(/(?:^|\n)\s*(?:cliente|nome\s+do\s+cliente)\s*:\s*([^\r\n]+)\s*(?=\n|$)/i);
     const nomeCliente = String(
-        p.clientes?.nome || p.cliente_nome || p.nome_cliente ||
-        matchClienteObservacao?.[1] || matchNomeBalcao?.[1] || ''
-    ).trim();
+            p.clientes?.nome || p.cliente_nome || p.nome_cliente ||
+            matchClienteObservacao?.[1] || matchNomeBalcao?.[1] || ''
+            ).trim();
     const nomeClienteNormalizado = normalizarTextoImpressao(nomeCliente);
     const observacaoImpressao = linhasObservacao.filter(linha => {
         const matchRotulo = linha.match(/^(?:cliente|nome\s+do\s+cliente)\s*:\s*(.+)$/i);
-        if (matchRotulo && nomeClienteNormalizado && normalizarTextoImpressao(matchRotulo[1]) === nomeClienteNormalizado) return false;
+        if (matchRotulo && nomeClienteNormalizado && normalizarTextoImpressao(matchRotulo[1]) === nomeClienteNormalizado)
+            return false;
         // Alguns registros legados guardaram somente o nome no campo observação.
-        if (linhasObservacao.length === 1 && nomeClienteNormalizado && normalizarTextoImpressao(linha) === nomeClienteNormalizado) return false;
+        if (linhasObservacao.length === 1 && nomeClienteNormalizado && normalizarTextoImpressao(linha) === nomeClienteNormalizado)
+            return false;
         return true;
     }).join('\n');
     const enderecoImpressao = matchNomeBalcao ? 'Balcão' : (enderecoOriginal || 'Balcão');
@@ -12390,9 +12489,9 @@ async function carregarHistoricoVendas() {
     const ehPedidoSalao = p => String(p.endereco_snapshot || '').toLowerCase().includes('salão / mesa');
     const qtdSalao = concluidos.filter(ehPedidoSalao).length;
     const qtdBalcao = concluidos.filter(p => !ehPedidoSalao(p) && (
-        (p.tipo || '').toUpperCase() === 'BALCAO' ||
+                (p.tipo || '').toUpperCase() === 'BALCAO' ||
                 (p.endereco_snapshot || '').toLowerCase().includes('balcão')
-    )).length;
+                )).length;
 
     const totalFaturado = concluidos.reduce((acc, p) => acc + (p.valor_total || 0), 0);
     const qtdConcluidos = concluidos.length;
@@ -12661,10 +12760,10 @@ async function carregarConfiguracoesPDV() {
             campoEncomendasAtivas.checked = cfg.encomendas_ativas !== false;
         }
         const diasOnline = Array.isArray(cfg.dias_funcionamento_online)
-            ? cfg.dias_funcionamento_online.map(Number)
-            : [0, 1, 2, 3, 4, 5, 6];
+                ? cfg.dias_funcionamento_online.map(Number)
+                : [0, 1, 2, 3, 4, 5, 6];
         const horariosPorDia = cfg.horarios_funcionamento_online && typeof cfg.horarios_funcionamento_online === 'object'
-            ? cfg.horarios_funcionamento_online : {};
+                ? cfg.horarios_funcionamento_online : {};
         document.querySelectorAll('[data-loja-dia]').forEach(campoDia => {
             const dia = Number(campoDia.dataset.lojaDia);
             const regra = horariosPorDia[String(dia)];
@@ -12673,20 +12772,27 @@ async function carregarConfiguracoesPDV() {
             const fim = document.querySelector(`[data-loja-dia-fim="${dia}"]`);
             const valorInicio = regra && Object.prototype.hasOwnProperty.call(regra, 'inicio') ? regra.inicio : cfg.hora_abertura_online;
             const valorFim = regra && Object.prototype.hasOwnProperty.call(regra, 'fim') ? regra.fim : cfg.hora_fechamento_online;
-            if (inicio) inicio.value = valorInicio ? String(valorInicio).slice(0, 5) : '';
-            if (fim) fim.value = valorFim ? String(valorFim).slice(0, 5) : '';
+            if (inicio)
+                inicio.value = valorInicio ? String(valorInicio).slice(0, 5) : '';
+            if (fim)
+                fim.value = valorFim ? String(valorFim).slice(0, 5) : '';
         });
         const campoContatoTelefone = document.getElementById('cfg-contato-telefone');
         const campoContatoWhatsApp = document.getElementById('cfg-contato-whatsapp');
         const campoContatoEmail = document.getElementById('cfg-contato-email');
         const campoContatoEndereco = document.getElementById('cfg-contato-endereco');
-        if (campoContatoTelefone) campoContatoTelefone.value = cfg.telefone_contato_online || '';
-        if (campoContatoWhatsApp) campoContatoWhatsApp.value = cfg.whatsapp_contato_online || '';
-        if (campoContatoEmail) campoContatoEmail.value = cfg.email_contato_online || '';
-        if (campoContatoEndereco) campoContatoEndereco.value = cfg.endereco_contato_online || '';
+        if (campoContatoTelefone)
+            campoContatoTelefone.value = cfg.telefone_contato_online || '';
+        if (campoContatoWhatsApp)
+            campoContatoWhatsApp.value = cfg.whatsapp_contato_online || '';
+        if (campoContatoEmail)
+            campoContatoEmail.value = cfg.email_contato_online || '';
+        if (campoContatoEndereco)
+            campoContatoEndereco.value = cfg.endereco_contato_online || '';
         salaoModuloAtivo = cfg.modulo_salao_ativo === true;
         const campoSalao = document.getElementById('cfg-modulo-salao-ativo');
-        if (campoSalao) campoSalao.checked = salaoModuloAtivo;
+        if (campoSalao)
+            campoSalao.checked = salaoModuloAtivo;
         atualizarVisibilidadeMenuSalaoUI();
         atualizarTextoStatusModuloSalaoUI();
     }
@@ -12704,13 +12810,16 @@ async function carregarConfiguracoesEncomendasAgendadas() {
         inicio: document.getElementById('cfg-encomenda-hora-inicio'),
         fim: document.getElementById('cfg-encomenda-hora-fim')
     };
-    if (!campos.horario || !campos.dia || !campos.inicio || !campos.fim) return;
+    if (!campos.horario || !campos.dia || !campos.inicio || !campos.fim)
+        return;
 
     try {
-        const { data, error } = await _supabase.rpc('obter_configuracoes_encomendas_agendadas');
-        if (error) throw error;
+        const {data, error} = await _supabase.rpc('obter_configuracoes_encomendas_agendadas');
+        if (error)
+            throw error;
         const cfg = Array.isArray(data) ? data[0] : data;
-        if (!cfg) throw new Error('O banco não retornou as configurações de encomendas.');
+        if (!cfg)
+            throw new Error('O banco não retornou as configurações de encomendas.');
 
         campos.horario.value = String(Math.max(0, Number(cfg.limite_por_horario ?? 0)));
         campos.dia.value = String(Math.max(0, Number(cfg.limite_por_dia ?? 0)));
@@ -12736,7 +12845,8 @@ async function salvarConfiguracoesEncomendasAgendadas() {
     const campoDia = document.getElementById('cfg-encomenda-limite-dia');
     const campoInicio = document.getElementById('cfg-encomenda-hora-inicio');
     const campoFim = document.getElementById('cfg-encomenda-hora-fim');
-    if (!btn || !campoHorario || !campoDia || !campoInicio || !campoFim) return;
+    if (!btn || !campoHorario || !campoDia || !campoInicio || !campoFim)
+        return;
 
     const limiteHorario = Number(campoHorario.value);
     const limiteDia = Number(campoDia.value);
@@ -12759,23 +12869,34 @@ async function salvarConfiguracoesEncomendasAgendadas() {
     const textoOriginal = btn.textContent;
     btn.disabled = true;
     btn.textContent = '⏳ Salvando regras...';
-    if (status) { status.textContent = 'Salvando no banco de dados...'; status.style.color = '#aaa'; }
+    if (status) {
+        status.textContent = 'Salvando no banco de dados...';
+        status.style.color = '#aaa';
+    }
 
     try {
-        const { data, error } = await _supabase.rpc('salvar_configuracoes_encomendas_agendadas', {
+        const {data, error} = await _supabase.rpc('salvar_configuracoes_encomendas_agendadas', {
             p_limite_por_horario: limiteHorario,
             p_limite_por_dia: limiteDia,
             p_hora_inicio_permitida: campoInicio.value || null,
             p_hora_fim_permitida: campoFim.value || null
         });
-        if (error) throw error;
-        if (data && data.sucesso === false) throw new Error(data.mensagem || 'Não foi possível salvar as regras.');
-        if (status) { status.textContent = '✅ Regras de encomendas salvas com sucesso.'; status.style.color = '#2ed573'; }
+        if (error)
+            throw error;
+        if (data && data.sucesso === false)
+            throw new Error(data.mensagem || 'Não foi possível salvar as regras.');
+        if (status) {
+            status.textContent = '✅ Regras de encomendas salvas com sucesso.';
+            status.style.color = '#2ed573';
+        }
         alert('✅ Regras de encomendas agendadas salvas com sucesso!');
         await carregarConfiguracoesEncomendasAgendadas();
     } catch (err) {
         console.error('Erro ao salvar regras de encomendas agendadas:', err);
-        if (status) { status.textContent = '❌ Erro ao salvar. Confira a migração SQL e as permissões do usuário.'; status.style.color = '#ff6b6b'; }
+        if (status) {
+            status.textContent = '❌ Erro ao salvar. Confira a migração SQL e as permissões do usuário.';
+            status.style.color = '#ff6b6b';
+        }
         alert('❌ Não foi possível salvar as regras de encomendas: ' + (err.message || err));
     } finally {
         btn.disabled = false;
@@ -12855,8 +12976,9 @@ async function salvarConfiguracoes() {
             return;
         }
         const aberto = campoDia.checked;
-        horariosFuncionamentoOnline[String(dia)] = { aberto, inicio: horaInicio, fim: horaFim };
-        if (aberto) diasFuncionamentoOnline.push(dia);
+        horariosFuncionamentoOnline[String(dia)] = {aberto, inicio: horaInicio, fim: horaFim};
+        if (aberto)
+            diasFuncionamentoOnline.push(dia);
     }
 
     // As colunas legadas são mantidas para compatibilidade com telas antigas.
@@ -13557,9 +13679,12 @@ async function abrirEdicaoProduto(produtoId) {
         const campoAceitaEncomenda = document.getElementById('edit-produto-aceita-encomenda');
         const campoAntecedenciaEncomenda = document.getElementById('edit-produto-antecedencia');
         const campoMaxEncomenda = document.getElementById('edit-produto-max-encomenda');
-        if (campoAceitaEncomenda) campoAceitaEncomenda.checked = produto.aceita_encomenda === true;
-        if (campoAntecedenciaEncomenda) campoAntecedenciaEncomenda.value = String(produto.antecedencia_encomenda_horas ?? 24);
-        if (campoMaxEncomenda) campoMaxEncomenda.value = produto.quantidade_max_encomenda == null ? '' : String(produto.quantidade_max_encomenda);
+        if (campoAceitaEncomenda)
+            campoAceitaEncomenda.checked = produto.aceita_encomenda === true;
+        if (campoAntecedenciaEncomenda)
+            campoAntecedenciaEncomenda.value = String(produto.antecedencia_encomenda_horas ?? 24);
+        if (campoMaxEncomenda)
+            campoMaxEncomenda.value = produto.quantidade_max_encomenda == null ? '' : String(produto.quantidade_max_encomenda);
 
         if (preview) {
 
@@ -14476,8 +14601,8 @@ async function carregarEstoqueVendavelBalcao(produtos) {
         const estoqueFisico = Number(produto.estoque || 0);
         const estoqueReservadoEncomendas = Number(produto.estoque_reservado_encomendas || 0);
         const estoqueVendavelBruto = temLote
-            ? Number(infoLote.estoqueVendavel || 0)
-            : estoqueFisico;
+                ? Number(infoLote.estoqueVendavel || 0)
+                : estoqueFisico;
         // Quantidades vinculadas a encomendas não podem ser vendidas como pronta entrega.
         const estoqueVendavel = Math.max(0, estoqueVendavelBruto - estoqueReservadoEncomendas);
 
@@ -16503,9 +16628,11 @@ async function carregarResumoFinanceiro() {
         let parcelasFinanceiro = [];
         let idsPedidosComParcelasFinanceiro = new Set();
         let queryParcelasFinanceiro = _supabase.from('salao_pagamentos_v2').select('pedido_id,forma_pagamento,criado_em');
-        if (inicioPeriodoISO) queryParcelasFinanceiro = queryParcelasFinanceiro.gte('criado_em', inicioPeriodoISO);
+        if (inicioPeriodoISO)
+            queryParcelasFinanceiro = queryParcelasFinanceiro.gte('criado_em', inicioPeriodoISO);
         const {data: parcelasCarregadas, error: erroParcelasFinanceiro} = await queryParcelasFinanceiro;
-        if (erroParcelasFinanceiro) console.error('Erro ao carregar parcelas de pagamentos do salão:', erroParcelasFinanceiro);
+        if (erroParcelasFinanceiro)
+            console.error('Erro ao carregar parcelas de pagamentos do salão:', erroParcelasFinanceiro);
         else {
             parcelasFinanceiro = parcelasCarregadas || [];
             idsPedidosComParcelasFinanceiro = new Set(parcelasFinanceiro.map(p => Number(p.pedido_id)));
@@ -16603,7 +16730,10 @@ async function carregarResumoFinanceiro() {
     // Inclui cada parcela dos pedidos divididos sem contar novamente o meio primário do pedido.
     (parcelasFinanceiro || []).forEach(p => {
         const metodo = String(p.forma_pagamento || '').toUpperCase().trim();
-        if (metodo) { contagemPagamentos[metodo] = (contagemPagamentos[metodo] || 0) + 1; totalVendasValidas++; }
+        if (metodo) {
+            contagemPagamentos[metodo] = (contagemPagamentos[metodo] || 0) + 1;
+            totalVendasValidas++;
+        }
     });
 
     // Identifica o método de pagamento mais usado
@@ -17690,7 +17820,7 @@ async function exibirPainelCaixaAberto() {
 
     if (caixaAtual.id) {
         const {data: linhasPagamento, error: erroLinhasPagamento} = await _supabase
-            .from('salao_pagamentos_v2').select('pedido_id').eq('caixa_id', caixaAtual.id);
+                .from('salao_pagamentos_v2').select('pedido_id').eq('caixa_id', caixaAtual.id);
         if (erroLinhasPagamento) {
             console.error('Erro ao consultar parcelas de pagamento do salão:', erroLinhasPagamento);
         } else {
@@ -17700,7 +17830,8 @@ async function exibirPainelCaixaAberto() {
 
     if (vendas) {
         vendas.forEach(v => {
-            if (idsPedidosComPagamentoDividido.has(Number(v.id))) return;
+            if (idsPedidosComPagamentoDividido.has(Number(v.id)))
+                return;
             const val = parseFloat(v.valor_total || 0);
             const pgto = String(v.forma_pagamento || '').toUpperCase().trim();
 
@@ -17723,15 +17854,17 @@ async function exibirPainelCaixaAberto() {
     // Pedidos com linhas de pagamento V2 são contabilizados pelas parcelas reais.
     if (caixaAtual.id) {
         const {data: pagamentosSalao, error: erroPagamentosSalao} = await _supabase
-            .from('salao_pagamentos_v2').select('forma_pagamento, valor').eq('caixa_id', caixaAtual.id);
+                .from('salao_pagamentos_v2').select('forma_pagamento, valor').eq('caixa_id', caixaAtual.id);
         if (erroPagamentosSalao) {
             console.error('Erro ao carregar pagamentos divididos do salão:', erroPagamentosSalao);
         } else if (pagamentosSalao) {
             pagamentosSalao.forEach(p => {
                 const val = Number(p.valor || 0);
                 const forma = String(p.forma_pagamento || '').toUpperCase();
-                if (forma === 'DINHEIRO') totalDinheiro += val;
-                else if (['PIX','CARTAO_DEBITO','CARTAO_CREDITO'].includes(forma)) totalOutros += val;
+                if (forma === 'DINHEIRO')
+                    totalDinheiro += val;
+                else if (['PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'].includes(forma))
+                    totalOutros += val;
             });
         }
     }
@@ -19956,8 +20089,8 @@ async function abrirCadastroInsumosUI() {
     if (cadastroClientes) {
         cadastroClientes.style.display = 'none';
     }
-    
-     if (cadastroCidades) {
+
+    if (cadastroCidades) {
         cadastroCidades.style.display = 'none';
     }
 
@@ -19996,7 +20129,7 @@ async function abrirCadastroFornecedoresUI() {
     if (cadastroClientes) {
         cadastroClientes.style.display = 'none';
     }
-    
+
     if (cadastroCidades) {
         cadastroCidades.style.display = 'none';
     }
@@ -24370,8 +24503,8 @@ function renderizarAuditoriaAtual() {
             const tipoMovimento = String(m.tipo || '').toUpperCase();
             const motivoMovimento = String(m.motivo || '').toLowerCase();
             return tipoMovimento === 'AJUSTE' ||
-                motivoMovimento.includes('ajuste de lote') ||
-                motivoMovimento.includes('ajuste de estoque geral');
+                    motivoMovimento.includes('ajuste de lote') ||
+                    motivoMovimento.includes('ajuste de estoque geral');
         });
         const linhas = ajustes.map(m => `
             <tr>
@@ -24385,11 +24518,11 @@ function renderizarAuditoriaAtual() {
             </tr>
         `);
         return conteudo.innerHTML = tabelaAuditoria(
-            'Ajustes manuais de estoque',
-            ['Data / Hora', 'Produto', 'Quantidade', 'Estoque anterior', 'Estoque posterior', 'Motivo / observação', 'Usuário'],
-            linhas,
-            'Nenhum ajuste manual de estoque encontrado no período selecionado.'
-        );
+                'Ajustes manuais de estoque',
+                ['Data / Hora', 'Produto', 'Quantidade', 'Estoque anterior', 'Estoque posterior', 'Motivo / observação', 'Usuário'],
+                linhas,
+                'Nenhum ajuste manual de estoque encontrado no período selecionado.'
+                );
     }
 
     if (tipo === 'FINANCEIRO') {
@@ -25078,11 +25211,11 @@ let salaoPagamentoProximoId = 1;
 
 function salaoEscaparHTML(valor) {
     return String(valor ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
 }
 
 function salaoMoeda(valor) {
@@ -25096,13 +25229,17 @@ function salaoEhGerente() {
 
 function atualizarVisibilidadeMenuSalaoUI() {
     const botao = document.getElementById('btn-tab-salao');
-    if (botao) botao.style.display = salaoModuloAtivo ? '' : 'none';
+    if (botao)
+        botao.style.display = salaoModuloAtivo ? '' : 'none';
     const botaoMesa = document.getElementById('btn-salao-nova-mesa');
-    if (botaoMesa) botaoMesa.style.display = salaoEhGerente() ? '' : 'none';
+    if (botaoMesa)
+        botaoMesa.style.display = salaoEhGerente() ? '' : 'none';
     const campo = document.getElementById('cfg-modulo-salao-ativo');
-    if (campo) campo.disabled = !salaoEhGerente();
+    if (campo)
+        campo.disabled = !salaoEhGerente();
     const salvar = document.getElementById('btn-salvar-modulo-salao');
-    if (salvar) salvar.style.display = salaoEhGerente() ? '' : 'none';
+    if (salvar)
+        salvar.style.display = salaoEhGerente() ? '' : 'none';
 }
 
 function atualizarTextoStatusModuloSalaoUI() {
@@ -25116,11 +25253,12 @@ function atualizarTextoStatusModuloSalaoUI() {
 async function carregarStatusModuloSalaoUI() {
     try {
         const {data, error} = await _supabase
-            .from('configuracoes')
-            .select('modulo_salao_ativo')
-            .eq('id', 1)
-            .single();
-        if (error) throw error;
+                .from('configuracoes')
+                .select('modulo_salao_ativo')
+                .eq('id', 1)
+                .single();
+        if (error)
+            throw error;
         salaoModuloAtivo = data?.modulo_salao_ativo === true;
     } catch (err) {
         // Em instalações anteriores ao SQL, o módulo permanece seguro/desligado.
@@ -25128,7 +25266,8 @@ async function carregarStatusModuloSalaoUI() {
         console.warn('Não foi possível carregar a ativação de Salão / Mesas. Execute salao_mesas.sql.', err?.message || err);
     }
     const campo = document.getElementById('cfg-modulo-salao-ativo');
-    if (campo) campo.checked = salaoModuloAtivo;
+    if (campo)
+        campo.checked = salaoModuloAtivo;
     atualizarVisibilidadeMenuSalaoUI();
     atualizarTextoStatusModuloSalaoUI();
 }
@@ -25140,7 +25279,8 @@ async function salvarConfiguracaoModuloSalaoUI() {
     }
     const campo = document.getElementById('cfg-modulo-salao-ativo');
     const botao = document.getElementById('btn-salvar-modulo-salao');
-    if (!campo || !botao) return;
+    if (!campo || !botao)
+        return;
     const valorAnterior = salaoModuloAtivo;
     const novoValor = campo.checked === true;
     const textoOriginal = botao.textContent;
@@ -25148,7 +25288,8 @@ async function salvarConfiguracaoModuloSalaoUI() {
     botao.textContent = '⏳ Salvando...';
     try {
         const {data, error} = await _supabase.rpc('salao_configurar_modulo', {p_ativo: novoValor});
-        if (error) throw error;
+        if (error)
+            throw error;
         salaoModuloAtivo = data?.modulo_salao_ativo === true;
         if (!salaoModuloAtivo && document.getElementById('aba-salao')?.style.display !== 'none') {
             document.getElementById('aba-salao').style.display = 'none';
@@ -25156,10 +25297,11 @@ async function salvarConfiguracaoModuloSalaoUI() {
         }
         atualizarVisibilidadeMenuSalaoUI();
         atualizarTextoStatusModuloSalaoUI();
-        if (salaoModuloAtivo) salaoIniciarRealtimeUI();
+        if (salaoModuloAtivo)
+            salaoIniciarRealtimeUI();
         alert(salaoModuloAtivo
-            ? '✅ Módulo Salão / Mesas ativado. O acesso já aparece no menu principal.'
-            : '✅ Módulo Salão / Mesas desativado. Mesas e histórico foram preservados.');
+                ? '✅ Módulo Salão / Mesas ativado. O acesso já aparece no menu principal.'
+                : '✅ Módulo Salão / Mesas desativado. Mesas e histórico foram preservados.');
     } catch (err) {
         campo.checked = valorAnterior;
         console.error('Erro ao salvar módulo Salão / Mesas:', err);
@@ -25181,7 +25323,8 @@ async function salvarConfiguracaoModuloSalaoUI() {
 
 function salaoMostrarAlertaUI(mensagem, erro = false) {
     const el = document.getElementById('salao-alerta-status');
-    if (!el) return;
+    if (!el)
+        return;
     if (!mensagem) {
         el.style.display = 'none';
         el.textContent = '';
@@ -25244,16 +25387,20 @@ function salaoInterpretarErro(err) {
         ['OBSERVACAO_MUITO_LONGA', 'As observações devem ter no máximo 500 caracteres.'],
     ];
     for (const [codigo, explicacao] of regras) {
-        if (msg.includes(codigo)) return explicacao;
+        if (msg.includes(codigo))
+            return explicacao;
     }
-    if (msg.includes('duplicate key') || msg.includes('mesas_salao_numero_key')) return 'Já existe uma mesa com esse número ou nome.';
-    if (msg.includes('Could not find the function') || msg.includes('schema cache')) return 'Execute os arquivos SQL do Salão / Mesas V2 e da correção de cozinha/liberação no Supabase, depois atualize a página.';
+    if (msg.includes('duplicate key') || msg.includes('mesas_salao_numero_key'))
+        return 'Já existe uma mesa com esse número ou nome.';
+    if (msg.includes('Could not find the function') || msg.includes('schema cache'))
+        return 'Execute os arquivos SQL do Salão / Mesas V2 e da correção de cozinha/liberação no Supabase, depois atualize a página.';
     return msg;
 }
 
 async function salaoRpcUI(nome, parametros = {}) {
     const {data, error} = await _supabase.rpc(nome, parametros);
-    if (error) throw error;
+    if (error)
+        throw error;
     return data;
 }
 
@@ -25266,14 +25413,18 @@ async function salaoCarregarDadosUI() {
     try {
         const [mesasRes, comandasRes, produtosRes, encomendasRes] = await Promise.all([
             _supabase.from('mesas_salao').select('id,numero,capacidade,observacao,ativo').order('numero'),
-            _supabase.from('comandas_salao').select('id,mesa_id,status,garcom_nome,pessoas,observacao,criado_em,total_snapshot,pedido_fechamento_id,paga_em').in('status', ['ABERTA','AGUARDANDO_CONTA','PAGA_AGUARDANDO_LIBERACAO']).order('criado_em', {ascending: false}),
+            _supabase.from('comandas_salao').select('id,mesa_id,status,garcom_nome,pessoas,observacao,criado_em,total_snapshot,pedido_fechamento_id,paga_em').in('status', ['ABERTA', 'AGUARDANDO_CONTA', 'PAGA_AGUARDANDO_LIBERACAO']).order('criado_em', {ascending: false}),
             _supabase.from('produtos').select('id,nome,preco,estoque,estoque_reservado_encomendas,ativo').eq('ativo', true).order('nome'),
             _supabase.from('encomendas_agendadas').select('*, itens_encomendas_agendadas(*, produtos(id,estoque,estoque_reservado_encomendas))').in('status', ['EM_PRODUCAO']).order('data_encomenda', {ascending: true}).order('hora_encomenda', {ascending: true})
         ]);
-        if (mesasRes.error) throw mesasRes.error;
-        if (comandasRes.error) throw comandasRes.error;
-        if (produtosRes.error) throw produtosRes.error;
-        if (encomendasRes.error) throw encomendasRes.error;
+        if (mesasRes.error)
+            throw mesasRes.error;
+        if (comandasRes.error)
+            throw comandasRes.error;
+        if (produtosRes.error)
+            throw produtosRes.error;
+        if (encomendasRes.error)
+            throw encomendasRes.error;
         salaoMesasCache = mesasRes.data || [];
         salaoComandasCache = comandasRes.data || [];
         salaoProdutosCache = produtosRes.data || [];
@@ -25281,10 +25432,11 @@ async function salaoCarregarDadosUI() {
         const ids = salaoComandasCache.map(c => Number(c.id));
         if (ids.length) {
             const itensRes = await _supabase.from('itens_comanda_salao')
-                .select('id,comanda_id,produto_id,quantidade,preco_unitario,observacao,estado,producao_id,rodada,criado_em,enviado_em,produtos(nome)')
-                .in('comanda_id', ids)
-                .order('criado_em', {ascending: true});
-            if (itensRes.error) throw itensRes.error;
+                    .select('id,comanda_id,produto_id,quantidade,preco_unitario,observacao,estado,producao_id,rodada,criado_em,enviado_em,produtos(nome)')
+                    .in('comanda_id', ids)
+                    .order('criado_em', {ascending: true});
+            if (itensRes.error)
+                throw itensRes.error;
             salaoItensCache = itensRes.data || [];
         } else {
             salaoItensCache = [];
@@ -25295,8 +25447,10 @@ async function salaoCarregarDadosUI() {
         salaoPopularProdutosUI();
         if (salaoComandaAtualId) {
             const ativa = salaoComandasCache.find(c => Number(c.id) === Number(salaoComandaAtualId));
-            if (ativa) salaoRenderizarModalComandaUI(ativa);
-            else salaoFecharModalComandaUI(true);
+            if (ativa)
+                salaoRenderizarModalComandaUI(ativa);
+            else
+                salaoFecharModalComandaUI(true);
         }
     } catch (err) {
         console.error('Erro ao carregar Salão / Mesas:', err);
@@ -25307,25 +25461,30 @@ async function salaoCarregarDadosUI() {
 function salaoTotalComandaUI(comandaId) {
     return salaoItensCache.reduce((total, item) =>
         Number(item.comanda_id) === Number(comandaId) && item.estado !== 'CANCELADO'
-            ? total + Number(item.quantidade || 0) * Number(item.preco_unitario || 0)
-            : total, 0);
+                ? total + Number(item.quantidade || 0) * Number(item.preco_unitario || 0)
+                : total, 0);
 }
 
 function salaoRenderizarMapaMesasUI() {
     const grid = document.getElementById('salao-mesas-grid');
-    if (!grid) return;
+    if (!grid)
+        return;
     const mesasAtivas = salaoMesasCache.filter(m => m.ativo !== false);
     const livres = mesasAtivas.filter(m => !salaoComandasCache.some(c => Number(c.mesa_id) === Number(m.id)));
-    const ocupadas = salaoComandasCache.filter(c => ['ABERTA','PAGA_AGUARDANDO_LIBERACAO'].includes(c.status)).length;
+    const ocupadas = salaoComandasCache.filter(c => ['ABERTA', 'PAGA_AGUARDANDO_LIBERACAO'].includes(c.status)).length;
     const contas = salaoComandasCache.filter(c => c.status === 'AGUARDANDO_CONTA').length;
     const elLivres = document.getElementById('salao-contador-livres');
     const elOcupadas = document.getElementById('salao-contador-ocupadas');
     const elContas = document.getElementById('salao-contador-contas');
     const elComandas = document.getElementById('salao-contador-comandas');
-    if (elLivres) elLivres.textContent = String(livres.length);
-    if (elOcupadas) elOcupadas.textContent = String(ocupadas);
-    if (elContas) elContas.textContent = String(contas);
-    if (elComandas) elComandas.textContent = String(salaoComandasCache.length);
+    if (elLivres)
+        elLivres.textContent = String(livres.length);
+    if (elOcupadas)
+        elOcupadas.textContent = String(ocupadas);
+    if (elContas)
+        elContas.textContent = String(contas);
+    if (elComandas)
+        elComandas.textContent = String(salaoComandasCache.length);
     if (!salaoMesasCache.length) {
         grid.innerHTML = `<div style="grid-column:1/-1;padding:28px;text-align:center;color:#a1a1aa;background:#202029;border:1px dashed #4b5563;border-radius:10px;">Nenhuma mesa cadastrada. ${salaoEhGerente() ? 'Use “Nova mesa” para começar.' : 'Peça ao Gerente/Admin para cadastrar as mesas.'}</div>`;
         return;
@@ -25335,34 +25494,34 @@ function salaoRenderizarMapaMesasUI() {
         const itens = comanda ? salaoItensCache.filter(i => Number(i.comanda_id) === Number(comanda.id) && i.estado !== 'CANCELADO') : [];
         const total = comanda ? salaoTotalComandaUI(comanda.id) : 0;
         const pendentes = itens.filter(i => i.estado === 'RASCUNHO').length;
-        const emPreparo = itens.filter(i => ['ENVIADO','PREPARANDO'].includes(i.estado)).length;
+        const emPreparo = itens.filter(i => ['ENVIADO', 'PREPARANDO'].includes(i.estado)).length;
         const prontos = itens.filter(i => i.estado === 'PRONTO').length;
         const badge = mesa.ativo === false
-            ? `<span style="background:#3f3f46;color:#d4d4d8;padding:4px 8px;border-radius:99px;font-size:.78rem;font-weight:700;">Inativa</span>`
-            : !comanda
+                ? `<span style="background:#3f3f46;color:#d4d4d8;padding:4px 8px;border-radius:99px;font-size:.78rem;font-weight:700;">Inativa</span>`
+                : !comanda
                 ? `<span style="background:#14532d;color:#bbf7d0;padding:4px 8px;border-radius:99px;font-size:.78rem;font-weight:700;">Livre</span>`
                 : comanda.status === 'AGUARDANDO_CONTA'
-                    ? `<span style="background:#1e3a8a;color:#bfdbfe;padding:4px 8px;border-radius:99px;font-size:.78rem;font-weight:700;">Aguardando conta</span>`
-                    : comanda.status === 'PAGA_AGUARDANDO_LIBERACAO'
-                        ? `<span style="background:#854d0e;color:#fef3c7;padding:4px 8px;border-radius:99px;font-size:.78rem;font-weight:700;">Paga · cliente na mesa</span>`
-                        : `<span style="background:#78350f;color:#fde68a;padding:4px 8px;border-radius:99px;font-size:.78rem;font-weight:700;">Ocupada</span>`;
+                ? `<span style="background:#1e3a8a;color:#bfdbfe;padding:4px 8px;border-radius:99px;font-size:.78rem;font-weight:700;">Aguardando conta</span>`
+                : comanda.status === 'PAGA_AGUARDANDO_LIBERACAO'
+                ? `<span style="background:#854d0e;color:#fef3c7;padding:4px 8px;border-radius:99px;font-size:.78rem;font-weight:700;">Paga · cliente na mesa</span>`
+                : `<span style="background:#78350f;color:#fde68a;padding:4px 8px;border-radius:99px;font-size:.78rem;font-weight:700;">Ocupada</span>`;
         const detalhes = comanda
-            ? `<div style="font-size:.86rem;color:#cbd5e1;line-height:1.65;margin:12px 0;"><div>Comanda <strong>#${comanda.id}</strong> · ${Number(comanda.pessoas || 1)} pessoa(s)</div><div>Garçom: ${salaoEscaparHTML(comanda.garcom_nome || 'Equipe')}</div><div>${itens.length} item(ns) · ${pendentes} rascunho(s)</div><div>Enviados/preparo: ${emPreparo} · Prontos: ${prontos}</div>${comanda.status==='PAGA_AGUARDANDO_LIBERACAO'?'<div style="color:#fde68a;font-weight:700;margin-top:6px;">Conta paga. A mesa continua ocupada até a equipe confirmar a saída dos clientes.</div>':''}<div style="font-size:1.25rem;font-weight:800;color:#86efac;margin-top:4px;">${salaoMoeda(total)}</div></div>`
-            : `<div style="font-size:.86rem;color:#a1a1aa;margin:12px 0;line-height:1.65;">Capacidade: ${Number(mesa.capacidade || 0)} pessoa(s)<br>${mesa.observacao ? `Observações: ${salaoEscaparHTML(mesa.observacao)}<br>` : ''}${mesa.ativo === false ? 'Mesa inativa. Reative-a para receber clientes.' : 'Pronta para receber clientes.'}</div>`;
+                ? `<div style="font-size:.86rem;color:#cbd5e1;line-height:1.65;margin:12px 0;"><div>Comanda <strong>#${comanda.id}</strong> · ${Number(comanda.pessoas || 1)} pessoa(s)</div><div>Garçom: ${salaoEscaparHTML(comanda.garcom_nome || 'Equipe')}</div><div>${itens.length} item(ns) · ${pendentes} rascunho(s)</div><div>Enviados/preparo: ${emPreparo} · Prontos: ${prontos}</div>${comanda.status === 'PAGA_AGUARDANDO_LIBERACAO' ? '<div style="color:#fde68a;font-weight:700;margin-top:6px;">Conta paga. A mesa continua ocupada até a equipe confirmar a saída dos clientes.</div>' : ''}<div style="font-size:1.25rem;font-weight:800;color:#86efac;margin-top:4px;">${salaoMoeda(total)}</div></div>`
+                : `<div style="font-size:.86rem;color:#a1a1aa;margin:12px 0;line-height:1.65;">Capacidade: ${Number(mesa.capacidade || 0)} pessoa(s)<br>${mesa.observacao ? `Observações: ${salaoEscaparHTML(mesa.observacao)}<br>` : ''}${mesa.ativo === false ? 'Mesa inativa. Reative-a para receber clientes.' : 'Pronta para receber clientes.'}</div>`;
         const acao = mesa.ativo === false
-            ? `<button type="button" disabled style="width:100%;padding:10px;border:1px solid #52525b;border-radius:7px;background:#27272a;color:#a1a1aa;cursor:not-allowed;">Mesa inativa</button>`
-            : comanda
+                ? `<button type="button" disabled style="width:100%;padding:10px;border:1px solid #52525b;border-radius:7px;background:#27272a;color:#a1a1aa;cursor:not-allowed;">Mesa inativa</button>`
+                : comanda
                 ? `<button type="button" onclick="salaoAbrirComandaModalUI(${comanda.id})" style="width:100%;padding:10px;border:0;border-radius:7px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;">Abrir comanda</button>`
                 : `<button type="button" onclick="salaoAbrirComandaUI(${mesa.id})" style="width:100%;padding:10px;border:0;border-radius:7px;background:#15803d;color:#fff;font-weight:700;cursor:pointer;">＋ Abrir comanda</button>`;
         const qrCardapio = mesa.ativo !== false
-            ? `<button type="button" onclick="salaoImprimirQrMesaUI(${mesa.id})" title="Gerar QR Code para consultar o cardápio" style="margin-top:7px;width:100%;padding:8px;border:1px solid #475569;border-radius:7px;background:#334155;color:#f8fafc;cursor:pointer;">▦ QR Code do cardápio</button>`
-            : '';
+                ? `<button type="button" onclick="salaoImprimirQrMesaUI(${mesa.id})" title="Gerar QR Code para consultar o cardápio" style="margin-top:7px;width:100%;padding:8px;border:1px solid #475569;border-radius:7px;background:#334155;color:#f8fafc;cursor:pointer;">▦ QR Code do cardápio</button>`
+                : '';
         const admin = salaoEhGerente() && !comanda
-            ? `<button type="button" onclick="salaoEditarMesaUI(${mesa.id})" title="Editar nome, capacidade e observações" style="margin-top:7px;width:100%;padding:8px;border:1px solid #1d4ed8;border-radius:7px;background:#1e3a8a;color:#dbeafe;cursor:pointer;font-weight:700;">✏️ Editar mesa</button>${mesa.ativo === false
+                ? `<button type="button" onclick="salaoEditarMesaUI(${mesa.id})" title="Editar nome, capacidade e observações" style="margin-top:7px;width:100%;padding:8px;border:1px solid #1d4ed8;border-radius:7px;background:#1e3a8a;color:#dbeafe;cursor:pointer;font-weight:700;">✏️ Editar mesa</button>${mesa.ativo === false
                 ? `<button type="button" onclick="salaoAlterarMesaUI(${mesa.id},true)" title="Reativar mesa" style="margin-top:7px;width:100%;padding:7px;border:1px solid #166534;border-radius:7px;background:#14532d;color:#bbf7d0;cursor:pointer;">Reativar mesa</button>`
                 : `<button type="button" onclick="salaoAlterarMesaUI(${mesa.id},false)" title="Inativar mesa" style="margin-top:7px;width:100%;padding:7px;border:1px solid #7f1d1d;border-radius:7px;background:#450a0a;color:#fecaca;cursor:pointer;">Inativar mesa</button>`}`
-            : '';
-        return `<article style="background:#202029;border:1px solid ${comanda ? (comanda.status==='AGUARDANDO_CONTA'?'#3b82f6':'#b45309'):'#353543'};border-radius:11px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,.16);"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><h3 style="margin:0;font-size:1.22rem;">Mesa ${salaoEscaparHTML(mesa.numero)}</h3>${badge}</div>${detalhes}${acao}${qrCardapio}${admin}</article>`;
+                : '';
+        return `<article style="background:#202029;border:1px solid ${comanda ? (comanda.status === 'AGUARDANDO_CONTA' ? '#3b82f6' : '#b45309') : '#353543'};border-radius:11px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,.16);"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><h3 style="margin:0;font-size:1.22rem;">Mesa ${salaoEscaparHTML(mesa.numero)}</h3>${badge}</div>${detalhes}${acao}${qrCardapio}${admin}</article>`;
     }).join('');
 }
 
@@ -25372,21 +25531,28 @@ function salaoAlternarVisaoUI(visao) {
     const cozinha = document.getElementById('salao-visao-cozinha');
     const btnMesas = document.getElementById('btn-salao-visao-mesas');
     const btnCozinha = document.getElementById('btn-salao-visao-cozinha');
-    if (mesas) mesas.style.display = salaoVisaoAtual === 'mesas' ? '' : 'none';
-    if (cozinha) cozinha.style.display = salaoVisaoAtual === 'cozinha' ? '' : 'none';
-    if (btnMesas) btnMesas.style.opacity = salaoVisaoAtual === 'mesas' ? '1' : '.72';
-    if (btnCozinha) btnCozinha.style.opacity = salaoVisaoAtual === 'cozinha' ? '1' : '.72';
-    if (salaoVisaoAtual === 'cozinha') salaoRenderizarCozinhaUI();
+    if (mesas)
+        mesas.style.display = salaoVisaoAtual === 'mesas' ? '' : 'none';
+    if (cozinha)
+        cozinha.style.display = salaoVisaoAtual === 'cozinha' ? '' : 'none';
+    if (btnMesas)
+        btnMesas.style.opacity = salaoVisaoAtual === 'mesas' ? '1' : '.72';
+    if (btnCozinha)
+        btnCozinha.style.opacity = salaoVisaoAtual === 'cozinha' ? '1' : '.72';
+    if (salaoVisaoAtual === 'cozinha')
+        salaoRenderizarCozinhaUI();
 }
 
 function salaoRenderizarCozinhaUI() {
     const lista = document.getElementById('salao-cozinha-lista');
-    if (!lista) return;
+    if (!lista)
+        return;
 
-    const itens = salaoItensCache.filter(i => ['ENVIADO','PREPARANDO','PRONTO'].includes(i.estado));
+    const itens = salaoItensCache.filter(i => ['ENVIADO', 'PREPARANDO', 'PRONTO'].includes(i.estado));
     const grupos = new Map();
     itens.forEach(item => {
-        if (!grupos.has(Number(item.comanda_id))) grupos.set(Number(item.comanda_id), []);
+        if (!grupos.has(Number(item.comanda_id)))
+            grupos.set(Number(item.comanda_id), []);
         grupos.get(Number(item.comanda_id)).push(item);
     });
 
@@ -25399,16 +25565,21 @@ function salaoRenderizarCozinhaUI() {
             const temProducao = Number(item.producao_id || 0) > 0;
             let estadoLabel, cor, acao;
             if (item.estado === 'ENVIADO') {
-                estadoLabel = 'Aguardando produção'; cor = '#f59e0b';
+                estadoLabel = 'Aguardando produção';
+                cor = '#f59e0b';
                 acao = `<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;"><button type="button" onclick="salaoIniciarProducaoItemUI(${item.id})" style="padding:7px 9px;background:#1d4ed8;color:#fff;border:0;border-radius:6px;cursor:pointer;">🏭 Conferir insumos e produzir</button><button type="button" onclick="salaoRecusarItemCozinhaUI(${item.id})" title="Recusar este item se não houver ingredientes para o preparo" style="padding:7px 9px;background:#7f1d1d;color:#fee2e2;border:1px solid #b91c1c;border-radius:6px;cursor:pointer;">❌ Recusar item</button></div>`;
             } else if (item.estado === 'PREPARANDO' && !temProducao) {
-                estadoLabel = 'Produção ainda não registrada'; cor = '#fb923c';
+                estadoLabel = 'Produção ainda não registrada';
+                cor = '#fb923c';
                 acao = `<button type="button" onclick="salaoIniciarProducaoItemUI(${item.id})" style="padding:7px 9px;background:#92400e;color:#fff;border:0;border-radius:6px;cursor:pointer;">⚠ Registrar produção</button>`;
             } else if (item.estado === 'PREPARANDO') {
-                estadoLabel = `Produzido · produção #${Number(item.producao_id)}`; cor = '#60a5fa';
+                estadoLabel = `Produzido · produção #${Number(item.producao_id)}`;
+                cor = '#60a5fa';
                 acao = `<button type="button" onclick="salaoAtualizarEstadoCozinhaUI(${item.id},'PRONTO')" style="padding:7px 9px;background:#15803d;color:#fff;border:0;border-radius:6px;cursor:pointer;">✓ Pronto para servir</button>`;
             } else {
-                estadoLabel = 'Pronto para servir'; cor = '#22c55e'; acao = `<span style="color:#86efac;font-size:.82rem;font-weight:700;">✓ Pronto</span>`;
+                estadoLabel = 'Pronto para servir';
+                cor = '#22c55e';
+                acao = `<span style="color:#86efac;font-size:.82rem;font-weight:700;">✓ Pronto</span>`;
             }
             return `<div style="padding:10px 0;border-top:1px solid #353543;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;"><div style="flex:1;"><strong>${Number(item.quantidade)} × ${salaoEscaparHTML(nome)}</strong><div style="color:#a1a1aa;font-size:.78rem;">Rodada ${Number(item.rodada || 1)} · item #${Number(item.id)}</div>${observacao}</div><div style="text-align:right;min-width:150px;"><div style="color:${cor};font-size:.8rem;font-weight:700;margin-bottom:6px;">${estadoLabel}</div>${acao}</div></div></div>`;
         }).join('');
@@ -25418,8 +25589,9 @@ function salaoRenderizarCozinhaUI() {
     const cardsEncomendas = (encomendasCozinhaGlobal || []).map(e => {
         const id = Number(e.id);
         const linhas = Array.isArray(e.itens_encomendas_agendadas) ? e.itens_encomendas_agendadas : [];
-        const pendentes = linhas.filter(i => ['AGUARDANDO','PREPARANDO'].includes(i.status_producao || 'AGUARDANDO'));
-        if (!pendentes.length) return '';
+        const pendentes = linhas.filter(i => ['AGUARDANDO', 'PREPARANDO'].includes(i.status_producao || 'AGUARDANDO'));
+        if (!pendentes.length)
+            return '';
         const itensHTML = linhas.map(item => {
             const estado = item.status_producao || 'AGUARDANDO';
             const modoPreparo = item.modo_preparo || 'PRODUCAO';
@@ -25435,10 +25607,10 @@ function salaoRenderizarCozinhaUI() {
                 acao = `<span style="color:#86efac;font-size:.82rem;font-weight:700;">✓ Pronto</span>`;
             }
             const statusLabel = estado === 'PRONTO' ? 'Pronto' : estado === 'PREPARANDO' ? (modoPreparo === 'ESTOQUE' ? 'Separado do estoque · aguardando liberação' : `Produzido · produção #${Number(item.producao_id || 0)}`) : 'Aguardando produção';
-            return `<div style="padding:10px 0;border-top:1px solid #353543;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;"><div style="flex:1;"><strong>${Number(item.quantidade)} × ${salaoEscaparHTML(item.nome_produto)}</strong><div style="color:#a1a1aa;font-size:.78rem;">Item encomenda #${Number(item.id)} · ${modoPreparo === 'ESTOQUE' ? 'estoque existente' : 'produção'}</div></div><div style="text-align:right;min-width:155px;"><div style="color:${estado==='PRONTO'?'#22c55e':estado==='PREPARANDO'?'#60a5fa':'#f59e0b'};font-size:.8rem;font-weight:700;margin-bottom:6px;">${statusLabel}</div>${acao}</div></div></div>`;
+            return `<div style="padding:10px 0;border-top:1px solid #353543;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;"><div style="flex:1;"><strong>${Number(item.quantidade)} × ${salaoEscaparHTML(item.nome_produto)}</strong><div style="color:#a1a1aa;font-size:.78rem;">Item encomenda #${Number(item.id)} · ${modoPreparo === 'ESTOQUE' ? 'estoque existente' : 'produção'}</div></div><div style="text-align:right;min-width:155px;"><div style="color:${estado === 'PRONTO' ? '#22c55e' : estado === 'PREPARANDO' ? '#60a5fa' : '#f59e0b'};font-size:.8rem;font-weight:700;margin-bottom:6px;">${statusLabel}</div>${acao}</div></div></div>`;
         }).join('');
         const dataTexto = e.data_encomenda ? String(e.data_encomenda).split('-').reverse().join('/') : '-';
-        return `<article style="background:#1d2938;border:1px solid #3b82f6;border-radius:10px;padding:14px;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px;"><div><h3 style="margin:0;">📦 Encomenda #${id}</h3><small style="color:#cbd5e1;">${salaoEscaparHTML(e.cliente_nome || 'Cliente')} · ${dataTexto} às ${String(e.hora_encomenda || '').slice(0,5)} · ${e.tipo==='DELIVERY'?'Entrega':'Retirada'}</small></div><span style="background:#1e3a8a;color:#dbeafe;border-radius:7px;padding:5px 8px;font-size:.8rem;">${linhas.length} item(ns)</span></div><div style="color:#cbd5e1;font-size:.84rem;">${salaoEscaparHTML(e.telefone_cliente || '')}</div>${e.observacao?`<div style="color:#fde68a;font-size:.82rem;margin-top:5px;">Obs.: ${salaoEscaparHTML(e.observacao)}</div>`:''}${itensHTML}</article>`;
+        return `<article style="background:#1d2938;border:1px solid #3b82f6;border-radius:10px;padding:14px;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px;"><div><h3 style="margin:0;">📦 Encomenda #${id}</h3><small style="color:#cbd5e1;">${salaoEscaparHTML(e.cliente_nome || 'Cliente')} · ${dataTexto} às ${String(e.hora_encomenda || '').slice(0, 5)} · ${e.tipo === 'DELIVERY' ? 'Entrega' : 'Retirada'}</small></div><span style="background:#1e3a8a;color:#dbeafe;border-radius:7px;padding:5px 8px;font-size:.8rem;">${linhas.length} item(ns)</span></div><div style="color:#cbd5e1;font-size:.84rem;">${salaoEscaparHTML(e.telefone_cliente || '')}</div>${e.observacao ? `<div style="color:#fde68a;font-size:.82rem;margin-top:5px;">Obs.: ${salaoEscaparHTML(e.observacao)}</div>` : ''}${itensHTML}</article>`;
     }).filter(Boolean);
 
     const cards = [...cardsSalao, ...cardsEncomendas];
@@ -25462,7 +25634,7 @@ async function salaoIniciarProducaoItemUI(itemId) {
         await salaoCarregarDadosUI();
         return;
     }
-    if (!['ENVIADO','PREPARANDO'].includes(item.estado)) {
+    if (!['ENVIADO', 'PREPARANDO'].includes(item.estado)) {
         alert('Este item não está aguardando produção. Atualize a fila.');
         return;
     }
@@ -25497,8 +25669,10 @@ async function salaoIniciarProducaoItemUI(itemId) {
 
         const titulo = modal.querySelector('h2');
         const descricao = modal.querySelector('p');
-        if (titulo) titulo.textContent = `🏭 Produção para Mesa ${mesa?.numero || '?'} · Comanda #${comanda.id}`;
-        if (descricao) descricao.textContent = `Item #${item.id}: ${Number(item.quantidade)} × ${nome}. Confira a ficha técnica e os insumos; a baixa só ocorrerá ao clicar em Produzir.`;
+        if (titulo)
+            titulo.textContent = `🏭 Produção para Mesa ${mesa?.numero || '?'} · Comanda #${comanda.id}`;
+        if (descricao)
+            descricao.textContent = `Item #${item.id}: ${Number(item.quantidade)} × ${nome}. Confira a ficha técnica e os insumos; a baixa só ocorrerá ao clicar em Produzir.`;
         if (campoObservacao) {
             const observacaoOriginal = String(item.observacao || '').trim();
             campoObservacao.value = [
@@ -25514,7 +25688,8 @@ async function salaoIniciarProducaoItemUI(itemId) {
         console.error('Erro ao abrir produção para item do Salão:', err);
         const origemAindaAtiva = Number(producaoOrigemSalaoItemId || 0) > 0;
         fecharModalProducao(false);
-        if (origemAindaAtiva) await alternarAba('salao');
+        if (origemAindaAtiva)
+            await alternarAba('salao');
         salaoAlternarVisaoUI('cozinha');
         alert('Não foi possível abrir a produção deste item: ' + (err?.message || err));
     }
@@ -25525,16 +25700,25 @@ async function salaoIniciarProducaoItemUI(itemId) {
 async function encomendaIniciarProducaoItemUI(itemId, retorno = 'encomendas') {
     const id = Number(itemId);
     let encomenda = (encomendasGlobal || []).find(e => (e.itens_encomendas_agendadas || []).some(i => Number(i.id) === id));
-    if (!encomenda) encomenda = (encomendasCozinhaGlobal || []).find(e => (e.itens_encomendas_agendadas || []).some(i => Number(i.id) === id));
+    if (!encomenda)
+        encomenda = (encomendasCozinhaGlobal || []).find(e => (e.itens_encomendas_agendadas || []).some(i => Number(i.id) === id));
     if (!encomenda) {
         await carregarEncomendas();
         encomenda = (encomendasGlobal || []).find(e => (e.itens_encomendas_agendadas || []).some(i => Number(i.id) === id));
     }
     const item = encomenda?.itens_encomendas_agendadas?.find(i => Number(i.id) === id);
-    if (!encomenda || !item) { alert('Item da encomenda não encontrado. Atualize a fila.'); return; }
-    if (encomenda.status !== 'EM_PRODUCAO') { alert('Libere a encomenda para produção antes de iniciar este item.'); return; }
+    if (!encomenda || !item) {
+        alert('Item da encomenda não encontrado. Atualize a fila.');
+        return;
+    }
+    if (encomenda.status !== 'EM_PRODUCAO') {
+        alert('Libere a encomenda para produção antes de iniciar este item.');
+        return;
+    }
     if ((item.status_producao || 'AGUARDANDO') !== 'AGUARDANDO' || Number(item.producao_id || 0) > 0) {
-        alert('Este item já iniciou a produção. Atualize a lista.'); await carregarEncomendas(); return;
+        alert('Este item já iniciou a produção. Atualize a lista.');
+        await carregarEncomendas();
+        return;
     }
     producaoOrigemEncomendaItemId = id;
     producaoOrigemEncomendaRetorno = retorno === 'cozinha' ? 'cozinha' : 'encomendas';
@@ -25545,17 +25729,22 @@ async function encomendaIniciarProducaoItemUI(itemId, retorno = 'encomendas') {
         const campoQuantidade = document.getElementById('producao-quantidade');
         const campoObservacao = document.getElementById('producao-observacao');
         const modal = document.getElementById('modal-producao');
-        if (!select || !campoQuantidade || !modal || modal.style.display === 'none') throw new Error('Não foi possível abrir a tela de Produção.');
+        if (!select || !campoQuantidade || !modal || modal.style.display === 'none')
+            throw new Error('Não foi possível abrir a tela de Produção.');
         select.value = String(item.produto_id);
-        if (select.value !== String(item.produto_id)) throw new Error(`O produto ${item.nome_produto} não está disponível na lista de produtos ativos.`);
+        if (select.value !== String(item.produto_id))
+            throw new Error(`O produto ${item.nome_produto} não está disponível na lista de produtos ativos.`);
         select.disabled = true;
         campoQuantidade.value = String(Number(item.quantidade));
         campoQuantidade.readOnly = true;
         const titulo = modal.querySelector('h2');
         const descricao = modal.querySelector('p');
-        if (titulo) titulo.textContent = `🏭 Produção para Encomenda #${Number(encomenda.id)}`;
-        if (descricao) descricao.textContent = `Item #${id}: ${Number(item.quantidade)} × ${item.nome_produto}. A produção oficial dará baixa nos insumos e reservará o produto acabado para essa encomenda.`;
-        if (campoObservacao) campoObservacao.value = [`ENCOMENDA #${Number(encomenda.id)} — Item #${id}`, `Cliente: ${encomenda.cliente_nome || ''}`, `Agendada: ${String(encomenda.data_encomenda || '').split('-').reverse().join('/')} ${String(encomenda.hora_encomenda || '').slice(0,5)}`, String(encomenda.observacao || '').trim()].filter(Boolean).join('\n');
+        if (titulo)
+            titulo.textContent = `🏭 Produção para Encomenda #${Number(encomenda.id)}`;
+        if (descricao)
+            descricao.textContent = `Item #${id}: ${Number(item.quantidade)} × ${item.nome_produto}. A produção oficial dará baixa nos insumos e reservará o produto acabado para essa encomenda.`;
+        if (campoObservacao)
+            campoObservacao.value = [`ENCOMENDA #${Number(encomenda.id)} — Item #${id}`, `Cliente: ${encomenda.cliente_nome || ''}`, `Agendada: ${String(encomenda.data_encomenda || '').split('-').reverse().join('/')} ${String(encomenda.hora_encomenda || '').slice(0, 5)}`, String(encomenda.observacao || '').trim()].filter(Boolean).join('\n');
         await carregarDadosProducaoUI();
         atualizarResumoProducaoUI();
     } catch (err) {
@@ -25564,80 +25753,109 @@ async function encomendaIniciarProducaoItemUI(itemId, retorno = 'encomendas') {
         await carregarEncomendas();
         const destino = retorno === 'cozinha' && salaoModuloAtivo ? 'salao' : 'encomendas';
         await alternarAba(destino);
-        if (destino === 'salao') { salaoAlternarVisaoUI('cozinha'); await salaoCarregarDadosUI(); }
+        if (destino === 'salao') {
+            salaoAlternarVisaoUI('cozinha');
+            await salaoCarregarDadosUI();
+        }
         alert('Não foi possível abrir a produção desta encomenda: ' + (err?.message || err));
-    }
+}
 }
 
 async function encomendaLiberarProducaoUI(encomendaId) {
     const id = Number(encomendaId);
     const encomenda = (encomendasGlobal || []).find(e => Number(e.id) === id);
-    if (!encomenda || encomenda.status !== 'ACEITA') { alert('A encomenda precisa estar aceita e aguardando liberação. Atualize a lista.'); return; }
+    if (!encomenda || encomenda.status !== 'ACEITA') {
+        alert('A encomenda precisa estar aceita e aguardando liberação. Atualize a lista.');
+        return;
+    }
     if (!confirm(`Liberar a encomenda #${id} para a fila da cozinha agora?
 
 Cliente: ${encomenda.cliente_nome}
-Data combinada: ${String(encomenda.data_encomenda || '').split('-').reverse().join('/')} às ${String(encomenda.hora_encomenda || '').slice(0,5)}
+Data combinada: ${String(encomenda.data_encomenda || '').split('-').reverse().join('/')} às ${String(encomenda.hora_encomenda || '').slice(0, 5)}
 
-Depois disso, será possível separar do estoque ou iniciar a Produção dos itens.`)) return;
+Depois disso, será possível separar do estoque ou iniciar a Produção dos itens.`))
+        return;
     try {
-        const {data, error} = await _supabase.rpc('encomenda_liberar_para_producao', {p_encomenda_id:id});
-        if (error) throw error;
+        const {data, error} = await _supabase.rpc('encomenda_liberar_para_producao', {p_encomenda_id: id});
+        if (error)
+            throw error;
         await carregarEncomendas();
-        if (salaoModuloAtivo) await salaoCarregarDadosUI();
+        if (salaoModuloAtivo)
+            await salaoCarregarDadosUI();
         alert('✅ Encomenda liberada para a fila de produção.');
     } catch (err) {
         console.error('Erro ao liberar encomenda para produção:', err);
         const msg = String(err?.message || err);
         let amigavel = msg;
-        if (msg.includes('ENCOMENDA_NAO_AGUARDA_LIBERACAO')) amigavel = 'Esta encomenda já foi liberada ou não está mais aguardando liberação. Atualize a lista.';
-        else if (msg.includes('ENCOMENDA_SEM_ITENS')) amigavel = 'A encomenda não possui itens.';
-        else if (msg.includes('USUARIO_NAO_AUTORIZADO')) amigavel = 'Seu usuário não tem permissão para liberar encomendas.';
+        if (msg.includes('ENCOMENDA_NAO_AGUARDA_LIBERACAO'))
+            amigavel = 'Esta encomenda já foi liberada ou não está mais aguardando liberação. Atualize a lista.';
+        else if (msg.includes('ENCOMENDA_SEM_ITENS'))
+            amigavel = 'A encomenda não possui itens.';
+        else if (msg.includes('USUARIO_NAO_AUTORIZADO'))
+            amigavel = 'Seu usuário não tem permissão para liberar encomendas.';
         alert('❌ Não foi possível liberar a encomenda:\n\n' + amigavel);
     }
 }
 
 async function encomendaReservarItemEstoqueUI(itemId) {
     const id = Number(itemId);
-    if (!Number.isInteger(id) || id <= 0) return;
-    if (!confirm(`Separar as unidades já prontas do estoque para o item #${id}? Essa quantidade deixará de aparecer como disponível para outras vendas.`)) return;
+    if (!Number.isInteger(id) || id <= 0)
+        return;
+    if (!confirm(`Separar as unidades já prontas do estoque para o item #${id}? Essa quantidade deixará de aparecer como disponível para outras vendas.`))
+        return;
     try {
-        const {data, error} = await _supabase.rpc('encomenda_reservar_item_estoque', {p_item_id:id});
-        if (error) throw error;
+        const {data, error} = await _supabase.rpc('encomenda_reservar_item_estoque', {p_item_id: id});
+        if (error)
+            throw error;
         await carregarEncomendas();
-        if (salaoModuloAtivo) await salaoCarregarDadosUI();
+        if (salaoModuloAtivo)
+            await salaoCarregarDadosUI();
         alert(`✅ ${Number(data?.quantidade_reservada || 0)} unidade(s) reservada(s) do estoque para a encomenda. Nenhuma produção ou baixa de insumos foi registrada.`);
     } catch (err) {
         console.error('Erro ao reservar estoque existente para encomenda:', err);
         const msg = String(err?.message || err);
         let amigavel = msg;
-        if (msg.includes('ENCOMENDA_NAO_LIBERADA_PRODUCAO')) amigavel = 'Libere a encomenda para produção antes de separar estoque.';
-        else if (msg.includes('ESTOQUE_DISPONIVEL_INSUFICIENTE_ENCOMENDA')) amigavel = 'O estoque livre não é suficiente para separar essa quantidade. Atualize a lista ou use a produção oficial.';
-        else if (msg.includes('ITEM_ENCOMENDA_JA_INICIADO')) amigavel = 'Este item já foi separado ou iniciou a produção. Atualize a lista.';
-        else if (msg.includes('ENCOMENDA_NAO_ACEITA_PRODUCAO')) amigavel = 'A encomenda precisa estar aceita antes de separar estoque.';
-        else if (msg.includes('USUARIO_NAO_AUTORIZADO')) amigavel = 'Seu usuário não tem permissão para reservar estoque para encomendas.';
+        if (msg.includes('ENCOMENDA_NAO_LIBERADA_PRODUCAO'))
+            amigavel = 'Libere a encomenda para produção antes de separar estoque.';
+        else if (msg.includes('ESTOQUE_DISPONIVEL_INSUFICIENTE_ENCOMENDA'))
+            amigavel = 'O estoque livre não é suficiente para separar essa quantidade. Atualize a lista ou use a produção oficial.';
+        else if (msg.includes('ITEM_ENCOMENDA_JA_INICIADO'))
+            amigavel = 'Este item já foi separado ou iniciou a produção. Atualize a lista.';
+        else if (msg.includes('ENCOMENDA_NAO_ACEITA_PRODUCAO'))
+            amigavel = 'A encomenda precisa estar aceita antes de separar estoque.';
+        else if (msg.includes('USUARIO_NAO_AUTORIZADO'))
+            amigavel = 'Seu usuário não tem permissão para reservar estoque para encomendas.';
         alert('❌ Não foi possível separar o estoque:\n\n' + amigavel);
     }
 }
 
 async function encomendaMarcarItemProntoUI(itemId) {
     const id = Number(itemId);
-    if (!Number.isInteger(id) || id <= 0) return;
-    if (!confirm(`Marcar o item #${id} da encomenda como pronto para retirada/entrega?`)) return;
+    if (!Number.isInteger(id) || id <= 0)
+        return;
+    if (!confirm(`Marcar o item #${id} da encomenda como pronto para retirada/entrega?`))
+        return;
     try {
-        const {data, error} = await _supabase.rpc('encomenda_marcar_item_pronto', {p_item_id:id});
-        if (error) throw error;
+        const {data, error} = await _supabase.rpc('encomenda_marcar_item_pronto', {p_item_id: id});
+        if (error)
+            throw error;
         await carregarEncomendas();
-        if (salaoModuloAtivo) await salaoCarregarDadosUI();
+        if (salaoModuloAtivo)
+            await salaoCarregarDadosUI();
         const status = data?.status_encomenda === 'PRONTA' ? 'Todos os itens estão prontos. A encomenda pode ser concluída no caixa.' : 'Item marcado como pronto. Restam outros itens para terminar.';
         alert('✅ ' + status);
     } catch (err) {
         console.error('Erro ao marcar item da encomenda como pronto:', err);
         const msg = String(err?.message || err);
         let amigavel = msg;
-        if (msg.includes('PREPARO_OU_RESERVA_OBRIGATORIA')) amigavel = 'Este item ainda precisa ser produzido ou separado do estoque antes de marcar como pronto.';
-        else if (msg.includes('RESERVA_ENCOMENDA_NAO_ENCONTRADA')) amigavel = 'Não foi encontrada a reserva de estoque para este item. Atualize a lista e confira o banco.';
-        else if (msg.includes('ENCOMENDA_NAO_EM_PRODUCAO')) amigavel = 'A encomenda não está em produção.';
-        else if (msg.includes('USUARIO_NAO_AUTORIZADO')) amigavel = 'Seu usuário não tem permissão para esta operação.';
+        if (msg.includes('PREPARO_OU_RESERVA_OBRIGATORIA'))
+            amigavel = 'Este item ainda precisa ser produzido ou separado do estoque antes de marcar como pronto.';
+        else if (msg.includes('RESERVA_ENCOMENDA_NAO_ENCONTRADA'))
+            amigavel = 'Não foi encontrada a reserva de estoque para este item. Atualize a lista e confira o banco.';
+        else if (msg.includes('ENCOMENDA_NAO_EM_PRODUCAO'))
+            amigavel = 'A encomenda não está em produção.';
+        else if (msg.includes('USUARIO_NAO_AUTORIZADO'))
+            amigavel = 'Seu usuário não tem permissão para esta operação.';
         alert('❌ ' + amigavel);
     }
 }
@@ -25645,18 +25863,26 @@ async function encomendaMarcarItemProntoUI(itemId) {
 async function finalizarEncomendaNoCaixaUI(encomendaId) {
     const id = Number(encomendaId);
     const encomenda = (encomendasGlobal || []).find(e => Number(e.id) === id);
-    if (!encomenda || encomenda.status !== 'PRONTA') { alert('A encomenda precisa estar pronta antes de concluir no caixa. Atualize a lista.'); return; }
+    if (!encomenda || encomenda.status !== 'PRONTA') {
+        alert('A encomenda precisa estar pronta antes de concluir no caixa. Atualize a lista.');
+        return;
+    }
     const total = Number(encomenda.valor_total || 0);
     const formaInformada = prompt('Forma de pagamento para concluir a encomenda:\n\n1 = Dinheiro\n2 = Pix\n3 = Cartão de débito\n4 = Cartão de crédito', String(encomenda.forma_pagamento || 'PIX'));
-    if (formaInformada === null) return;
+    if (formaInformada === null)
+        return;
     const escolha = String(formaInformada).trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s-]+/g, '_');
-    const formas = {'1':'DINHEIRO','DINHEIRO':'DINHEIRO','2':'PIX','PIX':'PIX','3':'CARTAO_DEBITO','CARTAO_DEBITO':'CARTAO_DEBITO','4':'CARTAO_CREDITO','CARTAO_CREDITO':'CARTAO_CREDITO'};
+    const formas = {'1': 'DINHEIRO', 'DINHEIRO': 'DINHEIRO', '2': 'PIX', 'PIX': 'PIX', '3': 'CARTAO_DEBITO', 'CARTAO_DEBITO': 'CARTAO_DEBITO', '4': 'CARTAO_CREDITO', 'CARTAO_CREDITO': 'CARTAO_CREDITO'};
     const forma = formas[escolha];
-    if (!forma) { alert('Forma inválida. Use DINHEIRO, PIX, CARTAO_DEBITO ou CARTAO_CREDITO.'); return; }
+    if (!forma) {
+        alert('Forma inválida. Use DINHEIRO, PIX, CARTAO_DEBITO ou CARTAO_CREDITO.');
+        return;
+    }
     let recebido = null;
     if (forma === 'DINHEIRO') {
-        const texto = prompt(`Total da encomenda: R$ ${total.toFixed(2).replace('.',',')}\nValor recebido em dinheiro:`, total.toFixed(2).replace('.',','));
-        if (texto === null) return;
+        const texto = prompt(`Total da encomenda: R$ ${total.toFixed(2).replace('.', ',')}\nValor recebido em dinheiro:`, total.toFixed(2).replace('.', ','));
+        if (texto === null)
+            return;
         const recebidoTexto = String(texto).trim().replace(/\s/g, '');
         if (recebidoTexto.includes(',') && recebidoTexto.includes('.')) {
             recebido = Number(recebidoTexto.replace(/\./g, '').replace(',', '.'));
@@ -25665,60 +25891,92 @@ async function finalizarEncomendaNoCaixaUI(encomendaId) {
         } else {
             recebido = Number(recebidoTexto);
         }
-        if (!Number.isFinite(recebido) || recebido + 0.0001 < total) { alert('O valor recebido precisa cobrir o total da encomenda.'); return; }
+        if (!Number.isFinite(recebido) || recebido + 0.0001 < total) {
+            alert('O valor recebido precisa cobrir o total da encomenda.');
+            return;
+        }
     }
     const trocoCalculado = forma === 'DINHEIRO' ? Math.max(0, Math.round((recebido - total) * 100) / 100) : 0;
     const resumoDinheiro = forma === 'DINHEIRO'
-        ? `\nValor recebido: R$ ${recebido.toFixed(2).replace('.', ',')}\nTroco a devolver: R$ ${trocoCalculado.toFixed(2).replace('.', ',')}`
-        : '';
-    const confirmar = confirm(`Concluir encomenda #${id} no caixa?\n\nCliente: ${encomenda.cliente_nome}\nItens prontos: ${encomenda.itens_encomendas_agendadas?.length || 0}\nForma de pagamento: ${forma}\nTotal: R$ ${total.toFixed(2).replace('.',',')}${resumoDinheiro}\n\nA reserva será consumida junto com a venda, sem baixa duplicada.`);
-    if (!confirmar) return;
+            ? `\nValor recebido: R$ ${recebido.toFixed(2).replace('.', ',')}\nTroco a devolver: R$ ${trocoCalculado.toFixed(2).replace('.', ',')}`
+            : '';
+    const confirmar = confirm(`Concluir encomenda #${id} no caixa?\n\nCliente: ${encomenda.cliente_nome}\nItens prontos: ${encomenda.itens_encomendas_agendadas?.length || 0}\nForma de pagamento: ${forma}\nTotal: R$ ${total.toFixed(2).replace('.', ',')}${resumoDinheiro}\n\nA reserva será consumida junto com a venda, sem baixa duplicada.`);
+    if (!confirmar)
+        return;
     try {
         const {data, error} = await _supabase.rpc('encomenda_concluir_no_caixa', {
-            p_encomenda_id:id,
-            p_forma_pagamento:forma,
-            p_valor_recebido:recebido
+            p_encomenda_id: id,
+            p_forma_pagamento: forma,
+            p_valor_recebido: recebido
         });
-        if (error) throw error;
-        alert(`✅ Encomenda #${id} concluída.\nVenda #${Number(data?.pedido_id || 0)}\nTotal: R$ ${Number(data?.total || total).toFixed(2).replace('.',',')}`);
+        if (error)
+            throw error;
+        alert(`✅ Encomenda #${id} concluída.\nVenda #${Number(data?.pedido_id || 0)}\nTotal: R$ ${Number(data?.total || total).toFixed(2).replace('.', ',')}`);
         await carregarEncomendas();
-        if (salaoModuloAtivo) await salaoCarregarDadosUI();
+        if (salaoModuloAtivo)
+            await salaoCarregarDadosUI();
     } catch (err) {
         console.error('Erro ao concluir encomenda no caixa:', err);
         const msg = String(err?.message || err);
         let amigavel = msg;
-        if (msg.includes('CAIXA_FECHADO')) amigavel = 'Abra o caixa na Venda de Balcão antes de concluir a encomenda.';
-        else if (msg.includes('VALOR_RECEBIDO_INSUFICIENTE')) amigavel = 'O valor recebido não cobre o total da encomenda.';
-        else if (msg.includes('ESTOQUE_RESERVADO_ENCOMENDAS')) amigavel = 'O estoque está reservado para outra encomenda e não pode ser consumido por esta venda.';
-        else if (msg.includes('PRECO_PRODUTO_ALTERADO')) amigavel = 'O preço de um produto mudou desde a solicitação. Para proteger o valor combinado com o cliente, a venda foi bloqueada; confira os preços antes de continuar.';
-        else if (msg.includes('ENCOMENDA_NAO_PRONTA')) amigavel = 'Todos os itens precisam estar prontos antes de concluir no caixa.';
-        else if (msg.includes('ENCOMENDA_JA_CONCLUIDA')) amigavel = 'Esta encomenda já foi concluída. Atualize a lista.';
-        else if (msg.includes('USUARIO_NAO_AUTORIZADO')) amigavel = 'Seu usuário não tem permissão para concluir esta encomenda.';
+        if (msg.includes('CAIXA_FECHADO'))
+            amigavel = 'Abra o caixa na Venda de Balcão antes de concluir a encomenda.';
+        else if (msg.includes('VALOR_RECEBIDO_INSUFICIENTE'))
+            amigavel = 'O valor recebido não cobre o total da encomenda.';
+        else if (msg.includes('ESTOQUE_RESERVADO_ENCOMENDAS'))
+            amigavel = 'O estoque está reservado para outra encomenda e não pode ser consumido por esta venda.';
+        else if (msg.includes('PRECO_PRODUTO_ALTERADO'))
+            amigavel = 'O preço de um produto mudou desde a solicitação. Para proteger o valor combinado com o cliente, a venda foi bloqueada; confira os preços antes de continuar.';
+        else if (msg.includes('ENCOMENDA_NAO_PRONTA'))
+            amigavel = 'Todos os itens precisam estar prontos antes de concluir no caixa.';
+        else if (msg.includes('ENCOMENDA_JA_CONCLUIDA'))
+            amigavel = 'Esta encomenda já foi concluída. Atualize a lista.';
+        else if (msg.includes('USUARIO_NAO_AUTORIZADO'))
+            amigavel = 'Seu usuário não tem permissão para concluir esta encomenda.';
         alert('❌ Não foi possível concluir a encomenda:\n\n' + amigavel);
     }
 }
 
 async function salaoCriarMesaUI() {
-    if (!salaoEhGerente()) { alert('Somente Gerente/Admin pode cadastrar mesas.'); return; }
+    if (!salaoEhGerente()) {
+        alert('Somente Gerente/Admin pode cadastrar mesas.');
+        return;
+    }
     const numero = prompt('Informe o número ou nome da mesa (ex.: 01, 02, Varanda):');
-    if (numero === null) return;
+    if (numero === null)
+        return;
     const limpo = numero.trim();
-    if (!limpo) { alert('Informe um número ou nome para a mesa.'); return; }
+    if (!limpo) {
+        alert('Informe um número ou nome para a mesa.');
+        return;
+    }
     const valorCapacidade = prompt('Quantas pessoas cabem nesta mesa?', '4');
-    if (valorCapacidade === null) return;
+    if (valorCapacidade === null)
+        return;
     const capacidade = Number(valorCapacidade);
-    if (!Number.isInteger(capacidade) || capacidade < 1 || capacidade > 100) { alert('A capacidade deve ser um número inteiro entre 1 e 100.'); return; }
+    if (!Number.isInteger(capacidade) || capacidade < 1 || capacidade > 100) {
+        alert('A capacidade deve ser um número inteiro entre 1 e 100.');
+        return;
+    }
     try {
-        await salaoRpcUI('salao_criar_mesa', {p_numero:limpo,p_capacidade:capacidade});
+        await salaoRpcUI('salao_criar_mesa', {p_numero: limpo, p_capacidade: capacidade});
         salaoMostrarAlertaUI(`Mesa ${limpo} cadastrada.`);
         await salaoCarregarDadosUI();
-    } catch (err) { alert('❌ ' + salaoInterpretarErro(err)); }
+    } catch (err) {
+        alert('❌ ' + salaoInterpretarErro(err));
+    }
 }
 
 async function salaoEditarMesaUI(mesaId) {
-    if (!salaoEhGerente()) { alert('Somente Gerente/Admin pode editar mesas.'); return; }
+    if (!salaoEhGerente()) {
+        alert('Somente Gerente/Admin pode editar mesas.');
+        return;
+    }
     const mesa = salaoMesasCache.find(m => Number(m.id) === Number(mesaId));
-    if (!mesa) { alert('Mesa não encontrada. Atualize o mapa de mesas.'); return; }
+    if (!mesa) {
+        alert('Mesa não encontrada. Atualize o mapa de mesas.');
+        return;
+    }
     const comandaAtiva = salaoComandasCache.some(c => Number(c.mesa_id) === Number(mesaId));
     if (comandaAtiva) {
         alert('Para evitar alterações durante o atendimento, só é possível editar uma mesa sem comanda ativa.');
@@ -25726,13 +25984,21 @@ async function salaoEditarMesaUI(mesaId) {
     }
 
     const numeroTexto = prompt('Nome ou número da mesa:', String(mesa.numero || ''));
-    if (numeroTexto === null) return;
+    if (numeroTexto === null)
+        return;
     const numero = numeroTexto.trim();
-    if (!numero) { alert('Informe um nome ou número para a mesa.'); return; }
-    if (numero.length > 80) { alert('O nome/número da mesa deve ter no máximo 80 caracteres.'); return; }
+    if (!numero) {
+        alert('Informe um nome ou número para a mesa.');
+        return;
+    }
+    if (numero.length > 80) {
+        alert('O nome/número da mesa deve ter no máximo 80 caracteres.');
+        return;
+    }
 
     const capacidadeTexto = prompt('Capacidade de pessoas:', String(mesa.capacidade || 1));
-    if (capacidadeTexto === null) return;
+    if (capacidadeTexto === null)
+        return;
     const capacidade = Number(capacidadeTexto);
     if (!Number.isInteger(capacidade) || capacidade < 1 || capacidade > 100) {
         alert('A capacidade deve ser um número inteiro entre 1 e 100.');
@@ -25740,9 +26006,13 @@ async function salaoEditarMesaUI(mesaId) {
     }
 
     const observacaoTexto = prompt('Observações da mesa (opcional):', String(mesa.observacao || ''));
-    if (observacaoTexto === null) return;
+    if (observacaoTexto === null)
+        return;
     const observacao = observacaoTexto.trim();
-    if (observacao.length > 500) { alert('As observações devem ter no máximo 500 caracteres.'); return; }
+    if (observacao.length > 500) {
+        alert('As observações devem ter no máximo 500 caracteres.');
+        return;
+    }
 
     try {
         await salaoRpcUI('salao_editar_mesa', {
@@ -25769,53 +26039,75 @@ async function salaoEditarMesaUI(mesaId) {
 
 async function salaoAlterarMesaUI(mesaId, ativo) {
     const mesa = salaoMesasCache.find(m => Number(m.id) === Number(mesaId));
-    if (!mesa) return;
-    if (!confirm(`Deseja ${ativo ? 'reativar' : 'inativar'} a mesa ${mesa.numero}? Os dados históricos serão preservados.`)) return;
+    if (!mesa)
+        return;
+    if (!confirm(`Deseja ${ativo ? 'reativar' : 'inativar'} a mesa ${mesa.numero}? Os dados históricos serão preservados.`))
+        return;
     try {
-        await salaoRpcUI('salao_alterar_mesa', {p_mesa_id:Number(mesaId),p_ativo:Boolean(ativo)});
+        await salaoRpcUI('salao_alterar_mesa', {p_mesa_id: Number(mesaId), p_ativo: Boolean(ativo)});
         await salaoCarregarDadosUI();
-    } catch (err) { alert('❌ ' + salaoInterpretarErro(err)); }
+    } catch (err) {
+        alert('❌ ' + salaoInterpretarErro(err));
+    }
 }
 
 async function salaoAbrirComandaUI(mesaId) {
     const mesa = salaoMesasCache.find(m => Number(m.id) === Number(mesaId));
-    if (!mesa) { alert('Atualize o mapa e selecione uma mesa válida.'); return; }
-    const pessoasTexto = prompt(`Mesa ${mesa.numero}: quantas pessoas?`, String(Math.min(2, Number(mesa.capacidade)||2)));
-    if (pessoasTexto === null) return;
+    if (!mesa) {
+        alert('Atualize o mapa e selecione uma mesa válida.');
+        return;
+    }
+    const pessoasTexto = prompt(`Mesa ${mesa.numero}: quantas pessoas?`, String(Math.min(2, Number(mesa.capacidade) || 2)));
+    if (pessoasTexto === null)
+        return;
     const pessoas = Number(pessoasTexto);
-    if (!Number.isInteger(pessoas) || pessoas < 1 || pessoas > 100) { alert('Informe a quantidade de pessoas (1 a 100).'); return; }
+    if (!Number.isInteger(pessoas) || pessoas < 1 || pessoas > 100) {
+        alert('Informe a quantidade de pessoas (1 a 100).');
+        return;
+    }
     if (pessoas > Number(mesa.capacidade)) {
-        if (!confirm(`Esta mesa comporta ${mesa.capacidade} pessoa(s), mas você informou ${pessoas}. Deseja continuar?`)) return;
+        if (!confirm(`Esta mesa comporta ${mesa.capacidade} pessoa(s), mas você informou ${pessoas}. Deseja continuar?`))
+            return;
     }
     const observacao = prompt('Observação da comanda (opcional):', '') || '';
     try {
-        const comandaId = await salaoRpcUI('salao_abrir_comanda', {p_mesa_id:Number(mesaId),p_pessoas:pessoas,p_observacao:observacao.trim()||null});
+        const comandaId = await salaoRpcUI('salao_abrir_comanda', {p_mesa_id: Number(mesaId), p_pessoas: pessoas, p_observacao: observacao.trim() || null});
         await salaoCarregarDadosUI();
         await salaoAbrirComandaModalUI(Number(comandaId));
-    } catch (err) { alert('❌ ' + salaoInterpretarErro(err)); }
+    } catch (err) {
+        alert('❌ ' + salaoInterpretarErro(err));
+    }
 }
 
 async function salaoCarregarProdutosSelectUI() {
     const select = document.getElementById('salao-produto-select');
-    if (!select) return;
+    if (!select)
+        return;
     if (!salaoProdutosCache.length) {
         select.innerHTML = '<option value="">Nenhum produto ativo</option>';
         return;
     }
     select.innerHTML = '<option value="">Selecione um produto</option>' + salaoProdutosCache.map(p =>
-        `<option value="${Number(p.id)}">${salaoEscaparHTML(p.nome)} — ${salaoMoeda(p.preco)} (estoque ${Number(p.estoque||0)})</option>`
+            `<option value="${Number(p.id)}">${salaoEscaparHTML(p.nome)} — ${salaoMoeda(p.preco)} (estoque ${Number(p.estoque || 0)})</option>`
     ).join('');
 }
 
-function salaoPopularProdutosUI() { salaoCarregarProdutosSelectUI(); }
+function salaoPopularProdutosUI() {
+    salaoCarregarProdutosSelectUI();
+}
 
 async function salaoAbrirComandaModalUI(comandaId) {
     salaoComandaAtualId = Number(comandaId);
     const modal = document.getElementById('modal-comanda-salao');
-    if (!modal) return;
+    if (!modal)
+        return;
     await salaoCarregarDadosUI();
     const comanda = salaoComandasCache.find(c => Number(c.id) === salaoComandaAtualId);
-    if (!comanda) { salaoFecharModalComandaUI(false); alert('Esta comanda foi fechada ou não está mais disponível.'); return; }
+    if (!comanda) {
+        salaoFecharModalComandaUI(false);
+        alert('Esta comanda foi fechada ou não está mais disponível.');
+        return;
+    }
     modal.style.display = 'flex';
     salaoRenderizarModalComandaUI(comanda);
 }
@@ -25824,26 +26116,31 @@ function salaoRenderizarModalComandaUI(comanda) {
     const mesa = salaoMesasCache.find(m => Number(m.id) === Number(comanda.mesa_id)) || {};
     const titulo = document.getElementById('salao-comanda-titulo');
     const subtitulo = document.getElementById('salao-comanda-subtitulo');
-    if (titulo) titulo.textContent = `Mesa ${mesa.numero || '?'} — Comanda #${comanda.id}`;
-    if (subtitulo) subtitulo.textContent = `${comanda.garcom_nome || 'Equipe'} · ${Number(comanda.pessoas || 1)} pessoa(s) · ${{'AGUARDANDO_CONTA':'Aguardando conta','PAGA_AGUARDANDO_LIBERACAO':'Conta paga · aguardando saída','ABERTA':'Aberta'}[comanda.status] || comanda.status}`;
+    if (titulo)
+        titulo.textContent = `Mesa ${mesa.numero || '?'} — Comanda #${comanda.id}`;
+    if (subtitulo)
+        subtitulo.textContent = `${comanda.garcom_nome || 'Equipe'} · ${Number(comanda.pessoas || 1)} pessoa(s) · ${{'AGUARDANDO_CONTA': 'Aguardando conta', 'PAGA_AGUARDANDO_LIBERACAO': 'Conta paga · aguardando saída', 'ABERTA': 'Aberta'}[comanda.status] || comanda.status}`;
     const linhas = salaoItensCache.filter(i => Number(i.comanda_id) === Number(comanda.id));
     const ativos = linhas.filter(i => i.estado !== 'CANCELADO');
-    const total = ativos.reduce((s,i)=>s+Number(i.quantidade||0)*Number(i.preco_unitario||0),0);
+    const total = ativos.reduce((s, i) => s + Number(i.quantidade || 0) * Number(i.preco_unitario || 0), 0);
     const totalEl = document.getElementById('salao-comanda-total');
-    if (totalEl) totalEl.textContent = `Total: ${salaoMoeda(total)}`;
+    if (totalEl)
+        totalEl.textContent = `Total: ${salaoMoeda(total)}`;
     const tbody = document.getElementById('salao-comanda-itens-body');
     if (tbody) {
-        if (!linhas.length) tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:#a1a1aa;">Nenhum item adicionado.</td></tr>';
-        else tbody.innerHTML = linhas.map(item => {
-            const nome = item.produtos?.nome || salaoProdutosCache.find(p=>Number(p.id)===Number(item.produto_id))?.nome || `Produto #${item.produto_id}`;
-            const recusadoPelaCozinha = item.estado === 'CANCELADO' && String(item.observacao || '').includes('Recusado pela cozinha:');
-            const estadoTexto = item.estado === 'PREPARANDO' && Number(item.producao_id || 0) > 0 ? `Produzido · ${Number(item.producao_id)}` : item.estado === 'PREPARANDO' ? 'Produção pendente' : item.estado === 'CANCELADO' && recusadoPelaCozinha ? 'Recusado pela cozinha' : ({RASCUNHO:'Rascunho',ENVIADO:'Aguardando produção',PRONTO:'Pronto',CANCELADO:'Cancelado'}[item.estado] || item.estado);
-            const cor = item.estado==='PRONTO'?'#86efac':item.estado==='PREPARANDO'?'#93c5fd':item.estado==='CANCELADO'?'#fca5a5':item.estado==='ENVIADO'?'#fde68a':'#d4d4d8';
-            return `<tr style="border-top:1px solid #353543;${item.estado==='CANCELADO'?'opacity:.6;':''}"><td style="padding:10px;"><strong>${salaoEscaparHTML(nome)}</strong>${item.observacao?`<div style="color:#fde68a;font-size:.82rem;">${salaoEscaparHTML(item.observacao)}</div>`:''}${Number(item.rodada)>0?`<small style="color:#a1a1aa;">Rodada ${Number(item.rodada)}</small>`:''}</td><td style="padding:10px;text-align:right;">${Number(item.quantidade)}</td><td style="padding:10px;text-align:right;">${salaoMoeda(item.preco_unitario)}</td><td style="padding:10px;text-align:right;">${salaoMoeda(Number(item.quantidade)*Number(item.preco_unitario))}</td><td style="padding:10px;color:${cor};">${estadoTexto}</td><td style="padding:10px;text-align:center;">${item.estado==='RASCUNHO'?`<button type="button" onclick="salaoRemoverItemUI(${item.id})" style="padding:6px 8px;background:#7f1d1d;color:#fecaca;border:0;border-radius:5px;cursor:pointer;">Remover</button>`:'—'}</td></tr>`;
-        }).join('');
+        if (!linhas.length)
+            tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:#a1a1aa;">Nenhum item adicionado.</td></tr>';
+        else
+            tbody.innerHTML = linhas.map(item => {
+                const nome = item.produtos?.nome || salaoProdutosCache.find(p => Number(p.id) === Number(item.produto_id))?.nome || `Produto #${item.produto_id}`;
+                const recusadoPelaCozinha = item.estado === 'CANCELADO' && String(item.observacao || '').includes('Recusado pela cozinha:');
+                const estadoTexto = item.estado === 'PREPARANDO' && Number(item.producao_id || 0) > 0 ? `Produzido · ${Number(item.producao_id)}` : item.estado === 'PREPARANDO' ? 'Produção pendente' : item.estado === 'CANCELADO' && recusadoPelaCozinha ? 'Recusado pela cozinha' : ({RASCUNHO: 'Rascunho', ENVIADO: 'Aguardando produção', PRONTO: 'Pronto', CANCELADO: 'Cancelado'}[item.estado] || item.estado);
+                const cor = item.estado === 'PRONTO' ? '#86efac' : item.estado === 'PREPARANDO' ? '#93c5fd' : item.estado === 'CANCELADO' ? '#fca5a5' : item.estado === 'ENVIADO' ? '#fde68a' : '#d4d4d8';
+                return `<tr style="border-top:1px solid #353543;${item.estado === 'CANCELADO' ? 'opacity:.6;' : ''}"><td style="padding:10px;"><strong>${salaoEscaparHTML(nome)}</strong>${item.observacao ? `<div style="color:#fde68a;font-size:.82rem;">${salaoEscaparHTML(item.observacao)}</div>` : ''}${Number(item.rodada) > 0 ? `<small style="color:#a1a1aa;">Rodada ${Number(item.rodada)}</small>` : ''}</td><td style="padding:10px;text-align:right;">${Number(item.quantidade)}</td><td style="padding:10px;text-align:right;">${salaoMoeda(item.preco_unitario)}</td><td style="padding:10px;text-align:right;">${salaoMoeda(Number(item.quantidade) * Number(item.preco_unitario))}</td><td style="padding:10px;color:${cor};">${estadoTexto}</td><td style="padding:10px;text-align:center;">${item.estado === 'RASCUNHO' ? `<button type="button" onclick="salaoRemoverItemUI(${item.id})" style="padding:6px 8px;background:#7f1d1d;color:#fecaca;border:0;border-radius:5px;cursor:pointer;">Remover</button>` : '—'}</td></tr>`;
+            }).join('');
     }
-    const temRascunho = ativos.some(i=>i.estado==='RASCUNHO');
-    const temEnviado = ativos.some(i=>['ENVIADO','PREPARANDO','PRONTO'].includes(i.estado));
+    const temRascunho = ativos.some(i => i.estado === 'RASCUNHO');
+    const temEnviado = ativos.some(i => ['ENVIADO', 'PREPARANDO', 'PRONTO'].includes(i.estado));
     const adicionar = document.getElementById('salao-comanda-adicionar');
     const botoes = document.getElementById('salao-comanda-acoes');
     const btnEnviar = document.getElementById('btn-salao-enviar-cozinha');
@@ -25857,21 +26154,32 @@ function salaoRenderizarModalComandaUI(comanda) {
         const aplicarTaxa = document.getElementById('salao-aplicar-taxa-servico');
         const percentualTaxa = document.getElementById('salao-taxa-servico-percentual');
         const desconto = document.getElementById('salao-desconto');
-        if (aplicarTaxa) aplicarTaxa.checked = false;
-        if (percentualTaxa) percentualTaxa.value = '10';
-        if (desconto) desconto.value = '0.00';
+        if (aplicarTaxa)
+            aplicarTaxa.checked = false;
+        if (percentualTaxa)
+            percentualTaxa.value = '10';
+        if (desconto)
+            desconto.value = '0.00';
         salaoPagamentoComandaId = null;
         salaoPagamentosUI = [];
     }
     const todosAtivosProntos = ativos.length > 0 && ativos.every(i => i.estado === 'PRONTO');
-    if (adicionar) adicionar.style.display = comanda.status==='ABERTA' ? '' : 'none';
-    if (btnEnviar) btnEnviar.style.display = comanda.status==='ABERTA' && temRascunho ? '' : 'none';
-    if (btnConta) btnConta.style.display = comanda.status==='ABERTA' && !temRascunho && todosAtivosProntos ? '' : 'none';
-    if (botoes) botoes.style.display = comanda.status==='ABERTA' ? 'flex' : 'none';
-    if (ferramentas) ferramentas.style.display = comanda.status==='ABERTA' ? 'flex' : 'none';
-    if (btnTransferir) btnTransferir.style.display = comanda.status==='ABERTA' ? '' : 'none';
-    if (fechar) fechar.style.display = comanda.status==='AGUARDANDO_CONTA' ? 'block' : 'none';
-    if (aguardarLiberacao) aguardarLiberacao.style.display = comanda.status==='PAGA_AGUARDANDO_LIBERACAO' ? 'block' : 'none';
+    if (adicionar)
+        adicionar.style.display = comanda.status === 'ABERTA' ? '' : 'none';
+    if (btnEnviar)
+        btnEnviar.style.display = comanda.status === 'ABERTA' && temRascunho ? '' : 'none';
+    if (btnConta)
+        btnConta.style.display = comanda.status === 'ABERTA' && !temRascunho && todosAtivosProntos ? '' : 'none';
+    if (botoes)
+        botoes.style.display = comanda.status === 'ABERTA' ? 'flex' : 'none';
+    if (ferramentas)
+        ferramentas.style.display = comanda.status === 'ABERTA' ? 'flex' : 'none';
+    if (btnTransferir)
+        btnTransferir.style.display = comanda.status === 'ABERTA' ? '' : 'none';
+    if (fechar)
+        fechar.style.display = comanda.status === 'AGUARDANDO_CONTA' ? 'block' : 'none';
+    if (aguardarLiberacao)
+        aguardarLiberacao.style.display = comanda.status === 'PAGA_AGUARDANDO_LIBERACAO' ? 'block' : 'none';
     if (comanda.status === 'AGUARDANDO_CONTA' && salaoPagamentoComandaId !== Number(comanda.id)) {
         salaoIniciarPagamentosUI(Number(comanda.id));
     }
@@ -25885,9 +26193,13 @@ async function salaoLiberarMesaUI() {
         alert('Esta mesa não está aguardando liberação. Atualize o mapa.');
         return;
     }
-    if (!confirm(`Confirma que os clientes da comanda #${comanda.id} já saíram da mesa? A mesa ficará disponível para novos clientes.`)) return;
+    if (!confirm(`Confirma que os clientes da comanda #${comanda.id} já saíram da mesa? A mesa ficará disponível para novos clientes.`))
+        return;
     const botao = document.getElementById('btn-salao-liberar-mesa');
-    if (botao) { botao.disabled = true; botao.textContent = 'Liberando mesa...'; }
+    if (botao) {
+        botao.disabled = true;
+        botao.textContent = 'Liberando mesa...';
+    }
     try {
         await salaoRpcUI('salao_liberar_mesa_v2', {p_comanda_id: Number(comanda.id)});
         salaoFecharModalComandaUI();
@@ -25897,61 +26209,95 @@ async function salaoLiberarMesaUI() {
         console.error('Erro ao liberar mesa:', err);
         alert('Não foi possível liberar a mesa: ' + salaoInterpretarErro(err));
     } finally {
-        if (botao) { botao.disabled = false; botao.textContent = '✅ Confirmar saída e liberar mesa'; }
+        if (botao) {
+            botao.disabled = false;
+            botao.textContent = '✅ Confirmar saída e liberar mesa';
+        }
     }
 }
 
 function salaoFecharModalComandaUI(limpar = true) {
     const modal = document.getElementById('modal-comanda-salao');
-    if (modal) modal.style.display = 'none';
-    if (limpar) salaoComandaAtualId = null;
+    if (modal)
+        modal.style.display = 'none';
+    if (limpar)
+        salaoComandaAtualId = null;
     salaoMostrarAlertaUI('');
 }
 
 async function salaoAdicionarItemUI() {
-    if (!salaoComandaAtualId) return;
+    if (!salaoComandaAtualId)
+        return;
     const produtoId = Number(document.getElementById('salao-produto-select')?.value || 0);
     const quantidade = Number(document.getElementById('salao-item-quantidade')?.value || 0);
     const observacao = document.getElementById('salao-item-observacao')?.value?.trim() || '';
-    if (!produtoId) { alert('Selecione um produto.'); return; }
-    if (!Number.isInteger(quantidade) || quantidade < 1) { alert('Informe uma quantidade inteira maior que zero.'); return; }
+    if (!produtoId) {
+        alert('Selecione um produto.');
+        return;
+    }
+    if (!Number.isInteger(quantidade) || quantidade < 1) {
+        alert('Informe uma quantidade inteira maior que zero.');
+        return;
+    }
     const botao = document.getElementById('btn-salao-adicionar-item');
-    if (botao) { botao.disabled = true; botao.textContent = 'Adicionando...'; }
+    if (botao) {
+        botao.disabled = true;
+        botao.textContent = 'Adicionando...';
+    }
     try {
-        await salaoRpcUI('salao_adicionar_item',{p_comanda_id:salaoComandaAtualId,p_produto_id:produtoId,p_quantidade:quantidade,p_observacao:observacao||null});
-        const qtd = document.getElementById('salao-item-quantidade'); if (qtd) qtd.value='1';
-        const obs = document.getElementById('salao-item-observacao'); if (obs) obs.value='';
+        await salaoRpcUI('salao_adicionar_item', {p_comanda_id: salaoComandaAtualId, p_produto_id: produtoId, p_quantidade: quantidade, p_observacao: observacao || null});
+        const qtd = document.getElementById('salao-item-quantidade');
+        if (qtd)
+            qtd.value = '1';
+        const obs = document.getElementById('salao-item-observacao');
+        if (obs)
+            obs.value = '';
         await salaoCarregarDadosUI();
         salaoMostrarAlertaUI('Item adicionado à comanda. Envie os itens à cozinha quando a rodada estiver pronta.');
-    } catch (err) { alert('❌ ' + salaoInterpretarErro(err)); }
-    finally { if (botao) { botao.disabled=false; botao.textContent='Adicionar à comanda'; } }
+    } catch (err) {
+        alert('❌ ' + salaoInterpretarErro(err));
+    } finally {
+        if (botao) {
+            botao.disabled = false;
+            botao.textContent = 'Adicionar à comanda';
+        }
+    }
 }
 
 async function salaoRemoverItemUI(itemId) {
-    if (!confirm('Remover este item que ainda não foi enviado à cozinha?')) return;
+    if (!confirm('Remover este item que ainda não foi enviado à cozinha?'))
+        return;
     try {
-        await salaoRpcUI('salao_remover_item',{p_item_id:Number(itemId)});
+        await salaoRpcUI('salao_remover_item', {p_item_id: Number(itemId)});
         await salaoCarregarDadosUI();
-    } catch (err) { alert('❌ ' + salaoInterpretarErro(err)); }
+    } catch (err) {
+        alert('❌ ' + salaoInterpretarErro(err));
+    }
 }
 
 async function salaoEnviarCozinhaUI() {
-    if (!salaoComandaAtualId) return;
-    if (!confirm('Enviar os itens em rascunho desta rodada para a cozinha? Depois do envio, não será possível removê-los diretamente da comanda.')) return;
+    if (!salaoComandaAtualId)
+        return;
+    if (!confirm('Enviar os itens em rascunho desta rodada para a cozinha? Depois do envio, não será possível removê-los diretamente da comanda.'))
+        return;
     try {
-        const resultado = await salaoRpcUI('salao_enviar_cozinha',{p_comanda_id:salaoComandaAtualId});
+        const resultado = await salaoRpcUI('salao_enviar_cozinha', {p_comanda_id: salaoComandaAtualId});
         await salaoCarregarDadosUI();
         salaoAlternarVisaoUI('mesas');
         salaoMostrarAlertaUI(`✅ Rodada ${resultado.rodada} enviada à cozinha (${resultado.itens} item(ns)).`);
-    } catch (err) { alert('❌ ' + salaoInterpretarErro(err)); }
+    } catch (err) {
+        alert('❌ ' + salaoInterpretarErro(err));
+    }
 }
 
 async function salaoAtualizarEstadoCozinhaUI(itemId, estado) {
     try {
-        await salaoRpcUI('salao_atualizar_item_cozinha',{p_item_id:Number(itemId),p_novo_estado:estado});
+        await salaoRpcUI('salao_atualizar_item_cozinha', {p_item_id: Number(itemId), p_novo_estado: estado});
         await salaoCarregarDadosUI();
         salaoAlternarVisaoUI('cozinha');
-    } catch (err) { alert('❌ ' + salaoInterpretarErro(err)); }
+    } catch (err) {
+        alert('❌ ' + salaoInterpretarErro(err));
+    }
 }
 
 // Recusa apenas o item ainda não produzido. Itens em produção ou prontos
@@ -25971,12 +26317,13 @@ async function salaoRecusarItemCozinhaUI(itemId) {
 
     const nome = item.produtos?.nome || salaoProdutosCache.find(p => Number(p.id) === Number(item.produto_id))?.nome || `Produto #${item.produto_id}`;
     const motivoDigitado = prompt(
-        `Recusar ${Number(item.quantidade)} × ${nome}.
+            `Recusar ${Number(item.quantidade)} × ${nome}.
 
 Informe o motivo da recusa (obrigatório):`,
-        'Falta de ingredientes disponíveis para produção.'
-    );
-    if (motivoDigitado === null) return;
+            'Falta de ingredientes disponíveis para produção.'
+            );
+    if (motivoDigitado === null)
+        return;
     const motivo = motivoDigitado.trim();
     if (motivo.length < 5) {
         alert('Informe um motivo com pelo menos 5 caracteres.');
@@ -25988,10 +26335,11 @@ Informe o motivo da recusa (obrigatório):`,
     }
     if (!confirm(`Confirmar a recusa de ${Number(item.quantidade)} × ${nome}?
 
-O item será marcado como cancelado, sairá da fila da cozinha e deixará de compor o total da comanda. Nenhum estoque será baixado ou estornado.`)) return;
+O item será marcado como cancelado, sairá da fila da cozinha e deixará de compor o total da comanda. Nenhum estoque será baixado ou estornado.`))
+        return;
 
     try {
-        await salaoRpcUI('salao_recusar_item_cozinha', {p_item_id:Number(item.id), p_motivo:motivo});
+        await salaoRpcUI('salao_recusar_item_cozinha', {p_item_id: Number(item.id), p_motivo: motivo});
         await salaoCarregarDadosUI();
         salaoAlternarVisaoUI('cozinha');
         alert(`Item recusado: ${nome}.
@@ -26016,28 +26364,44 @@ async function salaoTransferirMesaUI() {
     }
     const opcoes = destinos.map(m => `${m.numero} (capacidade ${m.capacidade})`).join('\n');
     const escolha = prompt(`Transferir a comanda #${comanda.id} da mesa ${mesaAtual?.numero || '?'} para qual mesa livre?\n\nMesas disponíveis:\n${opcoes}\n\nDigite o número/nome exato da mesa:`, destinos[0].numero);
-    if (escolha === null) return;
+    if (escolha === null)
+        return;
     const destino = destinos.find(m => String(m.numero).trim().toLocaleLowerCase('pt-BR') === String(escolha).trim().toLocaleLowerCase('pt-BR'));
-    if (!destino) { alert('Não encontrei essa mesa na lista de mesas livres.'); return; }
-    if (!confirm(`Confirmar transferência da comanda #${comanda.id} da mesa ${mesaAtual?.numero || '?'} para a mesa ${destino.numero}? Os itens e a fila da cozinha serão preservados.`)) return;
+    if (!destino) {
+        alert('Não encontrei essa mesa na lista de mesas livres.');
+        return;
+    }
+    if (!confirm(`Confirmar transferência da comanda #${comanda.id} da mesa ${mesaAtual?.numero || '?'} para a mesa ${destino.numero}? Os itens e a fila da cozinha serão preservados.`))
+        return;
     try {
-        await salaoRpcUI('salao_transferir_comanda', {p_comanda_id:Number(comanda.id),p_mesa_destino_id:Number(destino.id)});
+        await salaoRpcUI('salao_transferir_comanda', {p_comanda_id: Number(comanda.id), p_mesa_destino_id: Number(destino.id)});
         await salaoCarregarDadosUI();
         salaoMostrarAlertaUI(`Comanda #${comanda.id} transferida para a mesa ${destino.numero}.`);
-    } catch (err) { alert('❌ ' + salaoInterpretarErro(err)); }
+    } catch (err) {
+        alert('❌ ' + salaoInterpretarErro(err));
+    }
 }
 
 function salaoImprimirPreContaUI() {
     const comanda = salaoComandasCache.find(c => Number(c.id) === Number(salaoComandaAtualId));
-    if (!comanda) { alert('Abra uma comanda válida antes de imprimir a pré-conta.'); return; }
+    if (!comanda) {
+        alert('Abra uma comanda válida antes de imprimir a pré-conta.');
+        return;
+    }
     const mesa = salaoMesasCache.find(m => Number(m.id) === Number(comanda.mesa_id)) || {};
     const linhas = salaoItensCache.filter(i => Number(i.comanda_id) === Number(comanda.id) && i.estado !== 'CANCELADO');
-    if (!linhas.length) { alert('Não há itens para imprimir na pré-conta.'); return; }
+    if (!linhas.length) {
+        alert('Não há itens para imprimir na pré-conta.');
+        return;
+    }
     const subtotal = Math.round(salaoTotalComandaUI(comanda.id) * 100) / 100;
     const taxa = salaoObterTaxaServicoUI(subtotal);
     const descontoRaw = Number(document.getElementById('salao-desconto')?.value || 0);
     const desconto = Number.isFinite(descontoRaw) && descontoRaw > 0 ? Math.round(descontoRaw * 100) / 100 : 0;
-    if (desconto >= subtotal) { alert('O desconto informado deve ser menor que o subtotal.'); return; }
+    if (desconto >= subtotal) {
+        alert('O desconto informado deve ser menor que o subtotal.');
+        return;
+    }
     const total = Math.max(0, Math.round((subtotal + taxa.valor - desconto) * 100) / 100);
     const itensHtml = linhas.map(item => {
         const nome = item.produtos?.nome || salaoProdutosCache.find(p => Number(p.id) === Number(item.produto_id))?.nome || `Produto #${item.produto_id}`;
@@ -26045,7 +26409,10 @@ function salaoImprimirPreContaUI() {
         return `<tr><td>${salaoEscaparHTML(nome)}${item.observacao ? `<small>Obs.: ${salaoEscaparHTML(item.observacao)}</small>` : ''}</td><td>${Number(item.quantidade)}</td><td>${salaoMoeda(item.preco_unitario)}</td><td>${salaoMoeda(itemTotal)}</td></tr>`;
     }).join('');
     const janela = window.open('', '_blank', 'width=760,height=800');
-    if (!janela) { alert('O navegador bloqueou a janela de impressão. Permita pop-ups para imprimir a pré-conta.'); return; }
+    if (!janela) {
+        alert('O navegador bloqueou a janela de impressão. Permita pop-ups para imprimir a pré-conta.');
+        return;
+    }
     janela.document.open();
     janela.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pré-conta - Mesa ${salaoEscaparHTML(mesa.numero || '?')}</title><style>body{font:14px Arial,sans-serif;color:#111;margin:24px;max-width:760px}h1,h2,p{margin:0 0 8px}h1{text-align:center;font-size:21px}small{display:block;color:#555;margin-top:3px}table{width:100%;border-collapse:collapse;margin:15px 0}th,td{padding:8px 4px;border-bottom:1px solid #ddd;text-align:left}th:nth-child(n+2),td:nth-child(n+2){text-align:right}.resumo{margin-left:auto;max-width:300px}.linha{display:flex;justify-content:space-between;padding:4px 0}.total{font-size:18px;font-weight:bold;border-top:2px solid #111;padding-top:8px}.aviso{text-align:center;border:1px dashed #777;padding:9px;margin-top:18px;font-weight:bold;font-size:12px}@media print{button{display:none}body{margin:10mm}}</style></head><body><h1>${salaoEscaparHTML(window.usuarioAtual?.nome_loja || 'Pré-conta')}</h1><p style="text-align:center">PRÉ-CONTA · NÃO QUITADA</p><hr><p><strong>Mesa:</strong> ${salaoEscaparHTML(mesa.numero || '?')} &nbsp; <strong>Comanda:</strong> #${Number(comanda.id)}</p><p><strong>Pessoas:</strong> ${Number(comanda.pessoas || 1)} &nbsp; <strong>Atendente:</strong> ${salaoEscaparHTML(comanda.garcom_nome || 'Equipe')}</p><p><strong>Emitida:</strong> ${new Date().toLocaleString('pt-BR')}</p><table><thead><tr><th>Item</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody>${itensHtml}</tbody></table><div class="resumo"><div class="linha"><span>Subtotal</span><strong>${salaoMoeda(subtotal)}</strong></div><div class="linha"><span>Taxa de serviço${taxa.percentual ? ` (${taxa.percentual}%)` : ''}</span><strong>${salaoMoeda(taxa.valor)}</strong></div><div class="linha"><span>Desconto</span><strong>− ${salaoMoeda(desconto)}</strong></div><div class="linha total"><span>TOTAL</span><span>${salaoMoeda(total)}</span></div><div class="linha"><span>Por pessoa (${Number(comanda.pessoas || 1)})</span><strong>${salaoMoeda(total / Math.max(1, Number(comanda.pessoas || 1)))}</strong></div></div><div class="aviso">ESTA É UMA PRÉ-CONTA, NÃO É COMPROVANTE DE PAGAMENTO NEM DOCUMENTO FISCAL.</div><p style="text-align:center;margin-top:15px">Obrigado pela preferência!</p><button onclick="window.print()" style="padding:10px 14px">Imprimir</button></body></html>`);
     janela.document.close();
@@ -26053,13 +26420,19 @@ function salaoImprimirPreContaUI() {
 
 function salaoImprimirQrMesaUI(mesaId) {
     const mesa = salaoMesasCache.find(m => Number(m.id) === Number(mesaId));
-    if (!mesa || mesa.ativo === false) { alert('Mesa inexistente ou inativa.'); return; }
+    if (!mesa || mesa.ativo === false) {
+        alert('Mesa inexistente ou inativa.');
+        return;
+    }
     const urlCardapio = new URL('index.html', window.location.href);
     urlCardapio.searchParams.set('salao_consulta', '1');
     urlCardapio.searchParams.set('mesa', String(mesa.numero));
     const url = urlCardapio.toString();
     const janela = window.open('', '_blank', 'width=600,height=720');
-    if (!janela) { alert('O navegador bloqueou a janela do QR Code. Permita pop-ups e tente novamente.'); return; }
+    if (!janela) {
+        alert('O navegador bloqueou a janela do QR Code. Permita pop-ups e tente novamente.');
+        return;
+    }
     janela.document.open();
     janela.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QR Cardápio - Mesa ${salaoEscaparHTML(mesa.numero)}</title><style>body{font:16px Arial,sans-serif;text-align:center;margin:24px;color:#111}h1{font-size:25px;margin-bottom:5px}#qrcode{display:flex;justify-content:center;align-items:center;margin:24px auto;min-height:260px}code{display:block;overflow-wrap:anywhere;font-size:11px;color:#444;margin:18px 0}.nota{border:1px dashed #777;padding:10px;font-size:12px;line-height:1.5;margin-top:18px}@media print{button{display:none}body{margin:10mm}}</style><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script></head><body><h1>🍽️ Cardápio da casa</h1><h2>Mesa ${salaoEscaparHTML(mesa.numero)}</h2><p>Leia o QR Code com a câmera do celular.</p><div id="qrcode"></div><code>${salaoEscaparHTML(url)}</code><div class="nota">Este QR Code abre o cardápio online para consulta. Nesta etapa, o pedido ainda precisa ser lançado na comanda pela equipe.</div><button onclick="window.print()" style="padding:10px 14px">Imprimir QR Code</button><script>window.addEventListener('load',()=>{if(typeof QRCode==='undefined'){document.getElementById('qrcode').textContent='Não foi possível carregar o gerador do QR Code. Verifique a conexão com a internet.';return;}new QRCode(document.getElementById('qrcode'),{text:${JSON.stringify(url)},width:260,height:260,correctLevel:QRCode.CorrectLevel.M});});</script></body></html>`);
     janela.document.close();
@@ -26072,7 +26445,8 @@ function salaoObterTaxaServicoUI(subtotal) {
     const percentual = ativa && Number.isFinite(raw) ? Math.max(0, Math.min(20, Math.round(raw * 100) / 100)) : 0;
     const valor = Math.round(Number(subtotal || 0) * percentual) / 100;
     const aviso = document.getElementById('salao-taxa-servico-valor');
-    if (aviso) aviso.textContent = `Taxa: ${salaoMoeda(valor)}`;
+    if (aviso)
+        aviso.textContent = `Taxa: ${salaoMoeda(valor)}`;
     return {ativa, percentual, valor};
 }
 
@@ -26081,11 +26455,11 @@ function salaoTotalPagarUI() {
     const taxa = salaoObterTaxaServicoUI(subtotal);
     const descontoDigitado = Number(document.getElementById('salao-desconto')?.value || 0);
     const desconto = Number.isFinite(descontoDigitado) && descontoDigitado > 0 ? Math.round(descontoDigitado * 100) / 100 : 0;
-    return {subtotal:Math.round(subtotal*100)/100, taxa, desconto, total:Math.round((subtotal + taxa.valor - desconto)*100)/100};
+    return {subtotal: Math.round(subtotal * 100) / 100, taxa, desconto, total: Math.round((subtotal + taxa.valor - desconto) * 100) / 100};
 }
 
-function salaoCriarLinhaPagamentoUI(forma='PIX', valor=0, recebido='') {
-    return {id:salaoPagamentoProximoId++, forma, valor:Number(valor||0), recebido:recebido === '' ? '' : Number(recebido)};
+function salaoCriarLinhaPagamentoUI(forma = 'PIX', valor = 0, recebido = '') {
+    return {id: salaoPagamentoProximoId++, forma, valor: Number(valor || 0), recebido: recebido === '' ? '' : Number(recebido)};
 }
 
 function salaoIniciarPagamentosUI(comandaId) {
@@ -26096,22 +26470,26 @@ function salaoIniciarPagamentosUI(comandaId) {
 
 function salaoRenderizarPagamentosUI() {
     const el = document.getElementById('salao-pagamentos-lista');
-    if (!el) return;
-    if (!salaoPagamentosUI.length) salaoPagamentosUI = [salaoCriarLinhaPagamentoUI('PIX', salaoTotalPagarUI().total, '')];
+    if (!el)
+        return;
+    if (!salaoPagamentosUI.length)
+        salaoPagamentosUI = [salaoCriarLinhaPagamentoUI('PIX', salaoTotalPagarUI().total, '')];
     el.innerHTML = salaoPagamentosUI.map((linha, idx) => {
         const unica = salaoPagamentosUI.length === 1;
-        const opcoes = `<option value="PIX" ${linha.forma==='PIX'?'selected':''}>PIX</option><option value="DINHEIRO" ${linha.forma==='DINHEIRO'?'selected':''}>Dinheiro</option><option value="CARTAO_DEBITO" ${linha.forma==='CARTAO_DEBITO'?'selected':''}>Cartão de débito</option><option value="CARTAO_CREDITO" ${linha.forma==='CARTAO_CREDITO'?'selected':''}>Cartão de crédito</option>`;
-        return `<div style="display:grid;grid-template-columns:minmax(145px,1fr) minmax(120px,.9fr) minmax(130px,.9fr) auto;gap:8px;align-items:end;padding:9px 0;border-bottom:1px solid #353543;"><label style="display:block;color:#d4d4d8;font-size:.82rem;">Pagamento ${idx+1}<select class="input-table" onchange="salaoAtualizarPagamentoLinhaUI(${linha.id},'forma',this.value)" style="width:100%;margin-top:4px;">${opcoes}</select></label><label style="display:block;color:#d4d4d8;font-size:.82rem;">Valor da parte (R$)<input id="salao-pagamento-valor-${linha.id}" class="input-table" type="number" min="0.01" step="0.01" value="${Number(linha.valor||0).toFixed(2)}" ${unica?'readonly':''} oninput="salaoAtualizarPagamentoLinhaUI(${linha.id},'valor',this.value)" style="width:100%;margin-top:4px;${unica?'background:#30303a;':''}"></label>${linha.forma==='DINHEIRO'?`<label style="display:block;color:#d4d4d8;font-size:.82rem;">Dinheiro recebido (R$)<input id="salao-pagamento-recebido-${linha.id}" class="input-table" type="number" min="0" step="0.01" value="${linha.recebido===''?'':Number(linha.recebido).toFixed(2)}" oninput="salaoAtualizarPagamentoLinhaUI(${linha.id},'recebido',this.value)" style="width:100%;margin-top:4px;"></label>`:`<div style="color:#a1a1aa;font-size:.8rem;padding:9px 0;">Valor exato desta parte</div>`}<div style="display:flex;gap:5px;padding-bottom:1px;"><button type="button" onclick="salaoUsarRestantePagamentoUI(${linha.id})" title="Preencher com o que falta" style="padding:7px 9px;border:0;border-radius:6px;background:#334155;color:white;cursor:pointer;">Restante</button>${!unica?`<button type="button" onclick="salaoRemoverPagamentoUI(${linha.id})" title="Remover esta parte" style="padding:7px 9px;border:0;border-radius:6px;background:#7f1d1d;color:white;cursor:pointer;">✕</button>`:''}</div></div>`;
+        const opcoes = `<option value="PIX" ${linha.forma === 'PIX' ? 'selected' : ''}>PIX</option><option value="DINHEIRO" ${linha.forma === 'DINHEIRO' ? 'selected' : ''}>Dinheiro</option><option value="CARTAO_DEBITO" ${linha.forma === 'CARTAO_DEBITO' ? 'selected' : ''}>Cartão de débito</option><option value="CARTAO_CREDITO" ${linha.forma === 'CARTAO_CREDITO' ? 'selected' : ''}>Cartão de crédito</option>`;
+        return `<div style="display:grid;grid-template-columns:minmax(145px,1fr) minmax(120px,.9fr) minmax(130px,.9fr) auto;gap:8px;align-items:end;padding:9px 0;border-bottom:1px solid #353543;"><label style="display:block;color:#d4d4d8;font-size:.82rem;">Pagamento ${idx + 1}<select class="input-table" onchange="salaoAtualizarPagamentoLinhaUI(${linha.id},'forma',this.value)" style="width:100%;margin-top:4px;">${opcoes}</select></label><label style="display:block;color:#d4d4d8;font-size:.82rem;">Valor da parte (R$)<input id="salao-pagamento-valor-${linha.id}" class="input-table" type="number" min="0.01" step="0.01" value="${Number(linha.valor || 0).toFixed(2)}" ${unica ? 'readonly' : ''} oninput="salaoAtualizarPagamentoLinhaUI(${linha.id},'valor',this.value)" style="width:100%;margin-top:4px;${unica ? 'background:#30303a;' : ''}"></label>${linha.forma === 'DINHEIRO' ? `<label style="display:block;color:#d4d4d8;font-size:.82rem;">Dinheiro recebido (R$)<input id="salao-pagamento-recebido-${linha.id}" class="input-table" type="number" min="0" step="0.01" value="${linha.recebido === '' ? '' : Number(linha.recebido).toFixed(2)}" oninput="salaoAtualizarPagamentoLinhaUI(${linha.id},'recebido',this.value)" style="width:100%;margin-top:4px;"></label>` : `<div style="color:#a1a1aa;font-size:.8rem;padding:9px 0;">Valor exato desta parte</div>`}<div style="display:flex;gap:5px;padding-bottom:1px;"><button type="button" onclick="salaoUsarRestantePagamentoUI(${linha.id})" title="Preencher com o que falta" style="padding:7px 9px;border:0;border-radius:6px;background:#334155;color:white;cursor:pointer;">Restante</button>${!unica ? `<button type="button" onclick="salaoRemoverPagamentoUI(${linha.id})" title="Remover esta parte" style="padding:7px 9px;border:0;border-radius:6px;background:#7f1d1d;color:white;cursor:pointer;">✕</button>` : ''}</div></div>`;
     }).join('');
     salaoAtualizarResumoPagamentoUI(false);
 }
 
 function salaoAtualizarPagamentoLinhaUI(id, campo, valor) {
     const linha = salaoPagamentosUI.find(p => Number(p.id) === Number(id));
-    if (!linha) return;
+    if (!linha)
+        return;
     if (campo === 'forma') {
         linha.forma = String(valor || 'PIX');
-        if (linha.forma !== 'DINHEIRO') linha.recebido = '';
+        if (linha.forma !== 'DINHEIRO')
+            linha.recebido = '';
         salaoRenderizarPagamentosUI();
         return;
     }
@@ -26124,49 +26502,63 @@ function salaoDistribuirValoresPagamentosUI() {
     const n = Math.max(1, salaoPagamentosUI.length);
     const base = Math.floor(total / n);
     const resto = total - base * n;
-    salaoPagamentosUI.forEach((linha, idx) => { linha.valor = (base + (idx < resto ? 1 : 0)) / 100; });
+    salaoPagamentosUI.forEach((linha, idx) => {
+        linha.valor = (base + (idx < resto ? 1 : 0)) / 100;
+    });
     salaoRenderizarPagamentosUI();
 }
 
 function salaoAdicionarPagamentoUI() {
-    if (salaoPagamentosUI.length >= 4) { alert('Nesta versão é possível registrar até quatro partes de pagamento por conta.'); return; }
+    if (salaoPagamentosUI.length >= 4) {
+        alert('Nesta versão é possível registrar até quatro partes de pagamento por conta.');
+        return;
+    }
     salaoPagamentosUI.push(salaoCriarLinhaPagamentoUI('PIX', 0, ''));
     salaoDistribuirValoresPagamentosUI();
 }
 
 function salaoRedistribuirPagamentosUI() {
-    if (!salaoPagamentosUI.length) salaoPagamentosUI = [salaoCriarLinhaPagamentoUI()];
+    if (!salaoPagamentosUI.length)
+        salaoPagamentosUI = [salaoCriarLinhaPagamentoUI()];
     salaoDistribuirValoresPagamentosUI();
 }
 
 function salaoRemoverPagamentoUI(id) {
-    if (salaoPagamentosUI.length <= 1) return;
+    if (salaoPagamentosUI.length <= 1)
+        return;
     salaoPagamentosUI = salaoPagamentosUI.filter(p => Number(p.id) !== Number(id));
-    if (salaoPagamentosUI.length === 1) salaoPagamentosUI[0].valor = salaoTotalPagarUI().total;
+    if (salaoPagamentosUI.length === 1)
+        salaoPagamentosUI[0].valor = salaoTotalPagarUI().total;
     salaoRenderizarPagamentosUI();
 }
 
 function salaoUsarRestantePagamentoUI(id) {
     const linha = salaoPagamentosUI.find(p => Number(p.id) === Number(id));
-    if (!linha) return;
+    if (!linha)
+        return;
     const totalCents = Math.round(salaoTotalPagarUI().total * 100);
-    const outrosCents = salaoPagamentosUI.filter(p => Number(p.id) !== Number(id)).reduce((s,p) => s + Math.round(Number(p.valor || 0) * 100), 0);
+    const outrosCents = salaoPagamentosUI.filter(p => Number(p.id) !== Number(id)).reduce((s, p) => s + Math.round(Number(p.valor || 0) * 100), 0);
     linha.valor = Math.max(0, totalCents - outrosCents) / 100;
     salaoRenderizarPagamentosUI();
 }
 
 async function salaoSolicitarContaUI() {
-    if (!salaoComandaAtualId) return;
-    if (!confirm('Confirmar que os clientes solicitaram a conta? A comanda ficará aguardando o fechamento no caixa.')) return;
+    if (!salaoComandaAtualId)
+        return;
+    if (!confirm('Confirmar que os clientes solicitaram a conta? A comanda ficará aguardando o fechamento no caixa.'))
+        return;
     try {
-        const resultado = await salaoRpcUI('salao_solicitar_conta',{p_comanda_id:salaoComandaAtualId});
+        const resultado = await salaoRpcUI('salao_solicitar_conta', {p_comanda_id: salaoComandaAtualId});
         const campoDesconto = document.getElementById('salao-desconto');
-        if (campoDesconto) campoDesconto.value = '0.00';
+        if (campoDesconto)
+            campoDesconto.value = '0.00';
         salaoPagamentoComandaId = null;
         await salaoCarregarDadosUI();
         salaoAtualizarResumoPagamentoUI();
         salaoMostrarAlertaUI(`Conta solicitada. Total atual: ${salaoMoeda(resultado.total)}. Confira taxa opcional, desconto e distribuição dos pagamentos.`);
-    } catch (err) { alert('❌ ' + salaoInterpretarErro(err)); }
+    } catch (err) {
+        alert('❌ ' + salaoInterpretarErro(err));
+    }
 }
 
 function salaoAtualizarCampoDinheiroUI() {
@@ -26181,7 +26573,8 @@ function salaoAtualizarResumoPagamentoUI(ajustarLinhaUnica = true) {
     const desconto = valores.desconto;
     const totalPagar = valores.total;
     const recebidoTroco = salaoPagamentosUI.reduce((acc, p) => {
-        if (p.forma !== 'DINHEIRO') return acc;
+        if (p.forma !== 'DINHEIRO')
+            return acc;
         const recebido = Number(p.recebido);
         const valor = Number(p.valor || 0);
         return acc + (Number.isFinite(recebido) && recebido > valor ? recebido - valor : 0);
@@ -26192,25 +26585,31 @@ function salaoAtualizarResumoPagamentoUI(ajustarLinhaUnica = true) {
     const elDesconto = document.getElementById('salao-fechamento-desconto');
     const elTotal = document.getElementById('salao-fechamento-total');
     const elTroco = document.getElementById('salao-troco-valor');
-    if (elSubtotal) elSubtotal.textContent = salaoMoeda(totalBruto);
-    if (elTaxa) elTaxa.textContent = salaoMoeda(taxa.valor);
-    if (elDesconto) elDesconto.textContent = '− ' + salaoMoeda(desconto);
-    if (elTotal) elTotal.textContent = salaoMoeda(totalPagar);
-    if (elTroco) elTroco.textContent = salaoMoeda(recebidoTroco);
+    if (elSubtotal)
+        elSubtotal.textContent = salaoMoeda(totalBruto);
+    if (elTaxa)
+        elTaxa.textContent = salaoMoeda(taxa.valor);
+    if (elDesconto)
+        elDesconto.textContent = '− ' + salaoMoeda(desconto);
+    if (elTotal)
+        elTotal.textContent = salaoMoeda(totalPagar);
+    if (elTroco)
+        elTroco.textContent = salaoMoeda(recebidoTroco);
 
     if (salaoPagamentosUI.length === 1 && ajustarLinhaUnica) {
         salaoPagamentosUI[0].valor = totalPagar;
         const campoParte = document.getElementById(`salao-pagamento-valor-${salaoPagamentosUI[0].id}`);
-        if (campoParte) campoParte.value = totalPagar.toFixed(2);
+        if (campoParte)
+            campoParte.value = totalPagar.toFixed(2);
     }
 
-    const somaPagamentos = salaoPagamentosUI.reduce((s,p) => s + (Number.isFinite(Number(p.valor)) ? Math.round(Number(p.valor) * 100) : 0), 0) / 100;
+    const somaPagamentos = salaoPagamentosUI.reduce((s, p) => s + (Number.isFinite(Number(p.valor)) ? Math.round(Number(p.valor) * 100) : 0), 0) / 100;
     const somaEl = document.getElementById('salao-pagamentos-soma');
     const falta = Math.round((totalPagar - somaPagamentos) * 100) / 100;
     if (somaEl) {
         const texto = Math.abs(falta) <= 0.01
-            ? `Distribuído: ${salaoMoeda(somaPagamentos)} — total conferido.`
-            : falta > 0
+                ? `Distribuído: ${salaoMoeda(somaPagamentos)} — total conferido.`
+                : falta > 0
                 ? `Distribuído: ${salaoMoeda(somaPagamentos)} — falta ${salaoMoeda(falta)}.`
                 : `Distribuído: ${salaoMoeda(somaPagamentos)} — excede em ${salaoMoeda(Math.abs(falta))}.`;
         somaEl.textContent = texto;
@@ -26234,31 +26633,34 @@ function salaoAtualizarResumoPagamentoUI(ajustarLinhaUnica = true) {
                 ajuda.textContent = 'Em cada parte paga em dinheiro, informe o valor recebido igual ou maior que a parte. O troco total aparece acima.';
                 ajuda.style.color = '#fcd34d';
             } else {
-                ajuda.textContent = `Total conferido. Referência por pessoa (${salaoComandasCache.find(c=>Number(c.id)===Number(salaoComandaAtualId))?.pessoas || 1}): ${salaoMoeda(totalPagar / Math.max(1, Number(salaoComandasCache.find(c=>Number(c.id)===Number(salaoComandaAtualId))?.pessoas || 1)))}.`;
+                ajuda.textContent = `Total conferido. Referência por pessoa (${salaoComandasCache.find(c => Number(c.id) === Number(salaoComandaAtualId))?.pessoas || 1}): ${salaoMoeda(totalPagar / Math.max(1, Number(salaoComandasCache.find(c => Number(c.id) === Number(salaoComandaAtualId))?.pessoas || 1)))}.`;
                 ajuda.style.color = '#a1a1aa';
             }
         }
-    }
+}
 }
 
 // Busca o caixa aberto diretamente no banco antes de fechar a comanda.
 async function salaoObterCaixaAbertoParaFechamentoUI() {
     const {data, error} = await _supabase
-        .from('caixa_diario')
-        .select('*')
-        .eq('status', 'ABERTO')
-        .order('id', {ascending: false})
-        .limit(1);
-    if (error) throw error;
+            .from('caixa_diario')
+            .select('*')
+            .eq('status', 'ABERTO')
+            .order('id', {ascending: false})
+            .limit(1);
+    if (error)
+        throw error;
     caixaAtual = Array.isArray(data) && data.length > 0 ? data[0] : null;
     return caixaAtual;
 }
 
 async function salaoFecharComandaUI() {
-    if (!salaoComandaAtualId) return;
+    if (!salaoComandaAtualId)
+        return;
     let caixaParaFechamento;
-    try { caixaParaFechamento = await salaoObterCaixaAbertoParaFechamentoUI(); }
-    catch (erroCaixa) {
+    try {
+        caixaParaFechamento = await salaoObterCaixaAbertoParaFechamentoUI();
+    } catch (erroCaixa) {
         console.error('Erro ao consultar caixa aberto para fechar comanda:', erroCaixa);
         alert('Não foi possível verificar o caixa no banco. Atualize a tela Caixa e tente novamente.\n\n' + (erroCaixa?.message || erroCaixa));
         return;
@@ -26267,61 +26669,97 @@ async function salaoFecharComandaUI() {
         alert('Não encontrei um caixa com status ABERTO no banco. Confira o status em Venda de Balcão e tente novamente.');
         return;
     }
-    const comanda = salaoComandasCache.find(c=>Number(c.id)===Number(salaoComandaAtualId));
-    if (!comanda || comanda.status!=='AGUARDANDO_CONTA') { alert('Solicite a conta antes de registrar o pagamento.'); return; }
+    const comanda = salaoComandasCache.find(c => Number(c.id) === Number(salaoComandaAtualId));
+    if (!comanda || comanda.status !== 'AGUARDANDO_CONTA') {
+        alert('Solicite a conta antes de registrar o pagamento.');
+        return;
+    }
     const valores = salaoTotalPagarUI();
     const total = valores.subtotal;
     const desconto = valores.desconto;
     const taxa = valores.taxa;
     const totalPagar = valores.total;
-    if (!Number.isFinite(Number(document.getElementById('salao-desconto')?.value)) || Number(document.getElementById('salao-desconto')?.value) < 0 || desconto < 0 || desconto >= total) { alert('Informe um desconto válido, maior ou igual a zero e menor que o subtotal da conta.'); return; }
-    if (taxa.percentual < 0 || taxa.percentual > 20) { alert('A taxa de serviço deve estar entre 0% e 20%.'); return; }
-    if (!salaoPagamentosUI.length || salaoPagamentosUI.length > 4) { alert('Adicione de uma a quatro partes de pagamento.'); return; }
+    if (!Number.isFinite(Number(document.getElementById('salao-desconto')?.value)) || Number(document.getElementById('salao-desconto')?.value) < 0 || desconto < 0 || desconto >= total) {
+        alert('Informe um desconto válido, maior ou igual a zero e menor que o subtotal da conta.');
+        return;
+    }
+    if (taxa.percentual < 0 || taxa.percentual > 20) {
+        alert('A taxa de serviço deve estar entre 0% e 20%.');
+        return;
+    }
+    if (!salaoPagamentosUI.length || salaoPagamentosUI.length > 4) {
+        alert('Adicione de uma a quatro partes de pagamento.');
+        return;
+    }
     const pagamentos = salaoPagamentosUI.map(p => ({
-        forma_pagamento: String(p.forma || '').toUpperCase(),
-        valor: Math.round(Number(p.valor || 0) * 100) / 100,
-        valor_recebido: p.forma === 'DINHEIRO' ? Math.round(Number(p.recebido || 0) * 100) / 100 : null
-    }));
-    if (pagamentos.some(p => !['DINHEIRO','PIX','CARTAO_DEBITO','CARTAO_CREDITO'].includes(p.forma_pagamento) || !Number.isFinite(p.valor) || p.valor <= 0)) { alert('Confira todas as formas de pagamento e informe valores maiores que zero.'); return; }
-    const soma = Math.round(pagamentos.reduce((s,p)=>s+p.valor,0)*100)/100;
-    if (Math.abs(soma-totalPagar)>0.01) { alert(`A soma dos pagamentos (${salaoMoeda(soma)}) precisa ser igual ao total (${salaoMoeda(totalPagar)}).`); return; }
+            forma_pagamento: String(p.forma || '').toUpperCase(),
+            valor: Math.round(Number(p.valor || 0) * 100) / 100,
+            valor_recebido: p.forma === 'DINHEIRO' ? Math.round(Number(p.recebido || 0) * 100) / 100 : null
+        }));
+    if (pagamentos.some(p => !['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'].includes(p.forma_pagamento) || !Number.isFinite(p.valor) || p.valor <= 0)) {
+        alert('Confira todas as formas de pagamento e informe valores maiores que zero.');
+        return;
+    }
+    const soma = Math.round(pagamentos.reduce((s, p) => s + p.valor, 0) * 100) / 100;
+    if (Math.abs(soma - totalPagar) > 0.01) {
+        alert(`A soma dos pagamentos (${salaoMoeda(soma)}) precisa ser igual ao total (${salaoMoeda(totalPagar)}).`);
+        return;
+    }
     for (const p of pagamentos) {
         if (p.forma_pagamento === 'DINHEIRO' && (!Number.isFinite(p.valor_recebido) || p.valor_recebido < p.valor)) {
             alert(`O valor recebido em dinheiro precisa cobrir a parte de ${salaoMoeda(p.valor)}.`); return;
         }
-        if (p.forma_pagamento !== 'DINHEIRO') p.valor_recebido = null;
+        if (p.forma_pagamento !== 'DINHEIRO')
+            p.valor_recebido = null;
     }
-    const troco = Math.round(pagamentos.reduce((s,p)=>p.forma_pagamento==='DINHEIRO'?s+Math.max(0,(p.valor_recebido||0)-p.valor):s,0)*100)/100;
-    const listaPagamento = pagamentos.map(p=>`${p.forma_pagamento}: ${salaoMoeda(p.valor)}`+(p.forma_pagamento==='DINHEIRO'?` (recebido ${salaoMoeda(p.valor_recebido)})`:'' )).join('\n');
-    const mensagemConfirmacao = `Confirmar fechamento da comanda #${comanda.id}?\n\nSubtotal: ${salaoMoeda(total)}\nTaxa de serviço: ${salaoMoeda(taxa.valor)}${taxa.percentual?` (${taxa.percentual}%)`:''}\nDesconto: ${salaoMoeda(desconto)}\nTOTAL A PAGAR: ${salaoMoeda(totalPagar)}\n\n${listaPagamento}${troco>0?`\nTroco total: ${salaoMoeda(troco)}`:''}`;
-    if (!confirm(mensagemConfirmacao)) return;
+    const troco = Math.round(pagamentos.reduce((s, p) => p.forma_pagamento === 'DINHEIRO' ? s + Math.max(0, (p.valor_recebido || 0) - p.valor) : s, 0) * 100) / 100;
+    const listaPagamento = pagamentos.map(p => `${p.forma_pagamento}: ${salaoMoeda(p.valor)}` + (p.forma_pagamento === 'DINHEIRO' ? ` (recebido ${salaoMoeda(p.valor_recebido)})` : '')).join('\n');
+    const mensagemConfirmacao = `Confirmar fechamento da comanda #${comanda.id}?\n\nSubtotal: ${salaoMoeda(total)}\nTaxa de serviço: ${salaoMoeda(taxa.valor)}${taxa.percentual ? ` (${taxa.percentual}%)` : ''}\nDesconto: ${salaoMoeda(desconto)}\nTOTAL A PAGAR: ${salaoMoeda(totalPagar)}\n\n${listaPagamento}${troco > 0 ? `\nTroco total: ${salaoMoeda(troco)}` : ''}`;
+    if (!confirm(mensagemConfirmacao))
+        return;
     const botao = document.getElementById('btn-salao-fechar-conta');
-    if (botao) { botao.disabled=true; botao.textContent='Processando pagamento...'; }
+    if (botao) {
+        botao.disabled = true;
+        botao.textContent = 'Processando pagamento...';
+    }
     try {
-        const resultado = await salaoRpcUI('salao_fechar_comanda_v2',{
-            p_comanda_id:Number(comanda.id), p_caixa_id:Number(caixaParaFechamento.id),
-            p_desconto:desconto, p_taxa_servico_percentual:taxa.percentual, p_pagamentos:pagamentos
+        const resultado = await salaoRpcUI('salao_fechar_comanda_v2', {
+            p_comanda_id: Number(comanda.id), p_caixa_id: Number(caixaParaFechamento.id),
+            p_desconto: desconto, p_taxa_servico_percentual: taxa.percentual, p_pagamentos: pagamentos
         });
         const idFechado = salaoComandaAtualId;
         salaoFecharModalComandaUI();
         await salaoCarregarDadosUI();
         await exibirPainelCaixaAberto();
         await carregarHistoricoVendas();
-        alert(`✅ Pagamento da comanda #${idFechado} registrado.\nPedido de venda: #${resultado.pedido_id}\nSubtotal: ${salaoMoeda(resultado.subtotal)}\nTaxa de serviço: ${salaoMoeda(resultado.taxa_servico)}\nDesconto: ${salaoMoeda(resultado.desconto)}\nTotal pago: ${salaoMoeda(resultado.total)}\n${listaPagamento}${troco>0?`\nTroco: ${salaoMoeda(troco)}`:''}\n\nA mesa continua ocupada. Quando os clientes saírem, abra a comanda e clique em “Confirmar saída e liberar mesa”.`);
+        alert(`✅ Pagamento da comanda #${idFechado} registrado.\nPedido de venda: #${resultado.pedido_id}\nSubtotal: ${salaoMoeda(resultado.subtotal)}\nTaxa de serviço: ${salaoMoeda(resultado.taxa_servico)}\nDesconto: ${salaoMoeda(resultado.desconto)}\nTotal pago: ${salaoMoeda(resultado.total)}\n${listaPagamento}${troco > 0 ? `\nTroco: ${salaoMoeda(troco)}` : ''}\n\nA mesa continua ocupada. Quando os clientes saírem, abra a comanda e clique em “Confirmar saída e liberar mesa”.`);
     } catch (err) {
-        console.error('Erro ao fechar comanda de salão V2:',err);
+        console.error('Erro ao fechar comanda de salão V2:', err);
         alert('❌ Não foi possível fechar a conta: ' + salaoInterpretarErro(err));
     } finally {
-        if (botao) { botao.disabled=false; botao.textContent='✅ Confirmar pagamento'; }
+        if (botao) {
+            botao.disabled = false;
+            botao.textContent = '✅ Confirmar pagamento';
+        }
     }
 }
 
 // Atualização automática da cozinha/mesas quando o banco sinaliza mudanças.
 function salaoIniciarRealtimeUI() {
-    if (salaoRealtimeCanal || !_supabase || !salaoModuloAtivo) return;
+    if (salaoRealtimeCanal || !_supabase || !salaoModuloAtivo)
+        return;
     salaoRealtimeCanal = _supabase.channel('salao-mesas-realtime')
-        .on('postgres_changes',{event:'*',schema:'public',table:'mesas_salao'},()=>{ if(salaoModuloAtivo) salaoCarregarDadosUI(); })
-        .on('postgres_changes',{event:'*',schema:'public',table:'comandas_salao'},()=>{ if(salaoModuloAtivo) salaoCarregarDadosUI(); })
-        .on('postgres_changes',{event:'*',schema:'public',table:'itens_comanda_salao'},()=>{ if(salaoModuloAtivo) salaoCarregarDadosUI(); })
-        .subscribe();
+            .on('postgres_changes', {event: '*', schema: 'public', table: 'mesas_salao'}, () => {
+                if (salaoModuloAtivo)
+                    salaoCarregarDadosUI();
+            })
+            .on('postgres_changes', {event: '*', schema: 'public', table: 'comandas_salao'}, () => {
+                if (salaoModuloAtivo)
+                    salaoCarregarDadosUI();
+            })
+            .on('postgres_changes', {event: '*', schema: 'public', table: 'itens_comanda_salao'}, () => {
+                if (salaoModuloAtivo)
+                    salaoCarregarDadosUI();
+            })
+            .subscribe();
 }
