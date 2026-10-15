@@ -4,7 +4,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Painel PDV - Gestão de Pedidos & Estoque</title>
-        <link rel="stylesheet" href="css/pdv.css">
+        <link rel="stylesheet" href="css/pdv.css?v=config-horarios-layout-20261014">
 
         <style>
             /* Enquanto a sessão e as permissões estão sendo verificadas,
@@ -418,7 +418,7 @@
                                 <th>Margem (%)</th>
                                 <th>Venda (R$)</th>
                                 <th>Estoque</th>
-                                <th>Status</th>
+                                                                <th>Status</th>
                                 <th>Ação</th>
                             </tr>
                         </thead>
@@ -4204,6 +4204,24 @@
                                 </select>
                             </div>
 
+                            <div style="background:#1e1e24;border:1px solid #484858;border-radius:8px;padding:16px;">
+                                <h4 style="margin:0 0 8px;">🕒 Horário de funcionamento da loja online</h4>
+                                <p style="color:#aaa;line-height:1.5;margin:0 0 12px;">Quando o status estiver em <strong>Loja Aberta</strong>, o site aceitará pedidos somente nos dias e horários abaixo. Se o status estiver em <strong>Loja Fechada</strong>, nenhum pedido novo será aceito, mesmo dentro do horário. Esta regra vale para pronta entrega e encomendas.</p>
+                                <div class="form-group" style="margin-bottom:12px;">
+                                    <label>Programação por dia da semana</label>
+                                    <div id="cfg-horarios-funcionamento-online" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:9px;margin-top:8px;">
+                                        <div class="cfg-dia-horario" style="display:grid;grid-template-columns:minmax(80px,1fr) 75px 14px 75px;gap:5px;align-items:center;background:#292933;padding:9px;border-radius:7px;"><label style="display:flex;align-items:center;gap:6px;font-weight:700;"><input type="checkbox" data-loja-dia="1" checked> Segunda</label><input aria-label="Abertura segunda-feira" type="time" data-loja-dia-inicio="1" class="input-table" style="width:100%;"><span style="text-align:center;color:#aaa;">às</span><input aria-label="Fechamento segunda-feira" type="time" data-loja-dia-fim="1" class="input-table" style="width:100%;"></div>
+                                        <div class="cfg-dia-horario" style="display:grid;grid-template-columns:minmax(80px,1fr) 75px 14px 75px;gap:5px;align-items:center;background:#292933;padding:9px;border-radius:7px;"><label style="display:flex;align-items:center;gap:6px;font-weight:700;"><input type="checkbox" data-loja-dia="2" checked> Terça</label><input aria-label="Abertura terça-feira" type="time" data-loja-dia-inicio="2" class="input-table" style="width:100%;"><span style="text-align:center;color:#aaa;">às</span><input aria-label="Fechamento terça-feira" type="time" data-loja-dia-fim="2" class="input-table" style="width:100%;"></div>
+                                        <div class="cfg-dia-horario" style="display:grid;grid-template-columns:minmax(80px,1fr) 75px 14px 75px;gap:5px;align-items:center;background:#292933;padding:9px;border-radius:7px;"><label style="display:flex;align-items:center;gap:6px;font-weight:700;"><input type="checkbox" data-loja-dia="3" checked> Quarta</label><input aria-label="Abertura quarta-feira" type="time" data-loja-dia-inicio="3" class="input-table" style="width:100%;"><span style="text-align:center;color:#aaa;">às</span><input aria-label="Fechamento quarta-feira" type="time" data-loja-dia-fim="3" class="input-table" style="width:100%;"></div>
+                                        <div class="cfg-dia-horario" style="display:grid;grid-template-columns:minmax(80px,1fr) 75px 14px 75px;gap:5px;align-items:center;background:#292933;padding:9px;border-radius:7px;"><label style="display:flex;align-items:center;gap:6px;font-weight:700;"><input type="checkbox" data-loja-dia="4" checked> Quinta</label><input aria-label="Abertura quinta-feira" type="time" data-loja-dia-inicio="4" class="input-table" style="width:100%;"><span style="text-align:center;color:#aaa;">às</span><input aria-label="Fechamento quinta-feira" type="time" data-loja-dia-fim="4" class="input-table" style="width:100%;"></div>
+                                        <div class="cfg-dia-horario" style="display:grid;grid-template-columns:minmax(80px,1fr) 75px 14px 75px;gap:5px;align-items:center;background:#292933;padding:9px;border-radius:7px;"><label style="display:flex;align-items:center;gap:6px;font-weight:700;"><input type="checkbox" data-loja-dia="5" checked> Sexta</label><input aria-label="Abertura sexta-feira" type="time" data-loja-dia-inicio="5" class="input-table" style="width:100%;"><span style="text-align:center;color:#aaa;">às</span><input aria-label="Fechamento sexta-feira" type="time" data-loja-dia-fim="5" class="input-table" style="width:100%;"></div>
+                                        <div class="cfg-dia-horario" style="display:grid;grid-template-columns:minmax(80px,1fr) 75px 14px 75px;gap:5px;align-items:center;background:#292933;padding:9px;border-radius:7px;"><label style="display:flex;align-items:center;gap:6px;font-weight:700;"><input type="checkbox" data-loja-dia="6" checked> Sábado</label><input aria-label="Abertura sábado" type="time" data-loja-dia-inicio="6" class="input-table" style="width:100%;"><span style="text-align:center;color:#aaa;">às</span><input aria-label="Fechamento sábado" type="time" data-loja-dia-fim="6" class="input-table" style="width:100%;"></div>
+                                        <div class="cfg-dia-horario" style="display:grid;grid-template-columns:minmax(80px,1fr) 75px 14px 75px;gap:5px;align-items:center;background:#292933;padding:9px;border-radius:7px;"><label style="display:flex;align-items:center;gap:6px;font-weight:700;"><input type="checkbox" data-loja-dia="0" checked> Domingo</label><input aria-label="Abertura domingo" type="time" data-loja-dia-inicio="0" class="input-table" style="width:100%;"><span style="text-align:center;color:#aaa;">às</span><input aria-label="Fechamento domingo" type="time" data-loja-dia-fim="0" class="input-table" style="width:100%;"></div>
+                                    </div>
+                                </div>
+                                <small style="display:block;color:#aaa;line-height:1.5;margin-top:8px;">Marque os dias em que a loja abre e informe o horário de cada dia. Exemplo: sábado 08:00 às 12:00. Se os dois horários de um dia aberto ficarem vazios, esse dia funciona o dia todo. A faixa pode atravessar a meia-noite; horários iguais não são permitidos.</small>
+                            </div>
+
                             <div class="form-group">
                                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                                     <input type="checkbox" id="cfg-encomendas-ativas" style="width: 18px; height: 18px; cursor: pointer;">
@@ -4238,8 +4256,50 @@
                                 </small>
                             </div>
 
+                            <div style="background:#1e1e24;border:1px solid #484858;border-radius:8px;padding:16px;margin-top:4px;">
+                                <h4 style="margin:0 0 8px;">📞 Informações públicas da loja</h4>
+                                <p style="color:#aaa;line-height:1.45;margin:0 0 12px;">Esses dados aparecem no botão “Horários e contato” do catálogo online. Deixe em branco o que não quiser exibir.</p>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+                                    <div class="form-group"><label for="cfg-contato-telefone">Telefone da loja</label><input id="cfg-contato-telefone" type="tel" maxlength="40" class="input-table" style="width:100%;" placeholder="(11) 3333-3333"></div>
+                                    <div class="form-group"><label for="cfg-contato-whatsapp">WhatsApp da loja</label><input id="cfg-contato-whatsapp" type="tel" maxlength="40" class="input-table" style="width:100%;" placeholder="(11) 99999-9999"></div>
+                                    <div class="form-group"><label for="cfg-contato-email">E-mail</label><input id="cfg-contato-email" type="email" maxlength="160" class="input-table" style="width:100%;" placeholder="contato@loja.com.br"></div>
+                                    <div class="form-group"><label for="cfg-contato-endereco">Endereço da loja</label><input id="cfg-contato-endereco" type="text" maxlength="240" class="input-table" style="width:100%;" placeholder="Rua, número, bairro e cidade"></div>
+                                </div>
+                            </div>
+
                             <button class="btn-save-prod" id="btn-salvar-cfg" onclick="salvarConfiguracoes()" style="padding: 12px; margin-top: 10px;">💾 Salvar Configurações</button>
                         </div>
+                    </div>
+
+                    <!-- LIMITES E HORÁRIOS DAS ENCOMENDAS AGENDADAS -->
+                    <div style="background:#2a2a35;padding:20px;border-radius:8px;border:1px solid #3d3d4e;margin-top:16px;">
+                        <h3 style="margin-top:0;">📅 Regras para Encomendas Agendadas</h3>
+                        <p style="color:#aaa;line-height:1.55;margin-top:0;">Defina a capacidade da loja e o intervalo de horários permitido para receber encomendas. Essas regras são verificadas pelo banco de dados ao registrar cada solicitação.</p>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;">
+                            <div class="form-group">
+                                <label for="cfg-encomenda-limite-horario">Limite de encomendas por horário</label>
+                                <input type="number" id="cfg-encomenda-limite-horario" min="0" step="1" value="0" class="input-table" style="width:100%;">
+                                <small style="display:block;color:#aaa;margin-top:5px;">0 = sem limite por horário.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="cfg-encomenda-limite-dia">Limite de encomendas por dia</label>
+                                <input type="number" id="cfg-encomenda-limite-dia" min="0" step="1" value="0" class="input-table" style="width:100%;">
+                                <small style="display:block;color:#aaa;margin-top:5px;">0 = sem limite diário.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="cfg-encomenda-hora-inicio">Horário inicial permitido</label>
+                                <input type="time" id="cfg-encomenda-hora-inicio" class="input-table" style="width:100%;">
+                            </div>
+                            <div class="form-group">
+                                <label for="cfg-encomenda-hora-fim">Horário final permitido</label>
+                                <input type="time" id="cfg-encomenda-hora-fim" class="input-table" style="width:100%;">
+                            </div>
+                        </div>
+                        <div style="background:#1e1e24;border-left:4px solid #f59e0b;padding:11px 13px;border-radius:5px;color:#d4d4d8;font-size:.9rem;line-height:1.5;margin-top:6px;">
+                            Deixe os dois horários vazios para permitir qualquer horário. Preencha os dois para limitar a faixa; o sistema também aceita uma faixa que atravesse a meia-noite. Os limites contam solicitações de encomenda, não unidades de produtos.
+                        </div>
+                        <small id="cfg-encomendas-agendadas-status" role="status" style="display:block;color:#aaa;margin-top:12px;">Carregando regras de encomendas...</small>
+                        <button type="button" class="btn-save-prod" id="btn-salvar-config-encomendas" onclick="salvarConfiguracoesEncomendasAgendadas()" style="padding:12px;margin-top:12px;">💾 Salvar regras de encomendas</button>
                     </div>
                 </div>
 
@@ -5657,6 +5717,23 @@
                             💡 Ajuda desta tela
                         </button>
 
+                        <button
+                            type="button"
+                            id="btn-ajuda-sobre-sistema"
+                            onclick="abrirSobreSistemaPDV()"
+                            style="
+                            padding:9px 14px;
+                            border-radius:7px;
+                            border:1px solid #3d3d4e;
+                            background:#1e1e24;
+                            color:#aaa;
+                            cursor:pointer;
+                            font-weight:bold;
+                            "
+                            >
+                            ℹ️ Sobre o sistema
+                        </button>
+
                     </div>
 
                     <div
@@ -5847,7 +5924,7 @@
                     <button type="button"
                             onclick="fecharModalCategoriaUI()"
                             style="padding:10px 18px; background:#555; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:inline-flex; align-items:center; justify-content:center; line-height:1; white-space:nowrap;">
-                        ❌ Cancelar
+                       ❌ Cancelar
                     </button>
 
                     <button
@@ -6057,7 +6134,7 @@
             </div>
         </div>
 
-        <script src="js/pdv.js?v=encomendas-v2-producao-integrada-20261014"></script>
+        <script src="js/pdv.js?v=horarios-por-dia-contatos-v2-20261014"></script>
 
     </body>
 </html>

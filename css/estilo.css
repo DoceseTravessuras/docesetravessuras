@@ -406,3 +406,14 @@ body {
     gap: 20px;
     width: 100%;
 }
+
+
+/* Botão de informações públicas da loja, ao lado do carrinho */
+.store-info-btn { transition: transform .18s, box-shadow .18s; white-space: nowrap; }
+.store-info-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+@media (max-width: 640px) {
+  .header { padding: 12px !important; gap: 10px; flex-wrap: wrap; }
+  .header-actions { width: 100%; justify-content: flex-end !important; }
+  .store-info-btn { font-size: .78rem; padding: 9px 11px !important; }
+  .header-actions .cart-btn { padding: 9px 12px !important; }
+}

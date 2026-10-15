@@ -221,6 +221,85 @@ body {
     color: #ffffff;
 }
 
+
+/* ============================================================
+   CONFIGURAÇÕES — ROLAGEM COMPLETA E HORÁRIOS RESPONSIVOS
+   Garante que a área de Configurações tenha rolagem própria e
+   que os campos de abertura/fechamento não sejam cortados.
+   ============================================================ */
+.config-manager {
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.config-manager > div {
+    width: 100%;
+    min-width: 0;
+}
+
+/* A grade dos sete dias pode quebrar para uma coluna em telas estreitas. */
+#cfg-horarios-funcionamento-online {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)) !important;
+    min-width: 0;
+}
+
+.cfg-dia-horario {
+    grid-template-columns: minmax(68px, 1fr) minmax(0, 76px) 14px minmax(0, 76px) !important;
+    gap: 4px !important;
+    min-width: 0;
+}
+
+.cfg-dia-horario > label {
+    min-width: 0;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+}
+
+.cfg-dia-horario input[type="time"] {
+    display: block;
+    min-width: 0 !important;
+    max-width: 100%;
+    width: 100% !important;
+    padding-left: 3px !important;
+    padding-right: 3px !important;
+    font-size: 0.88rem;
+}
+
+@media (max-width: 520px) {
+    #aba-config {
+        padding: 12px !important;
+    }
+
+    #aba-config > div {
+        max-width: 100% !important;
+    }
+
+    #aba-config .sub-tabs-nav {
+        flex-wrap: wrap;
+        overflow: visible;
+    }
+
+    #aba-config .sub-tabs-nav .btn-sub-tab {
+        flex: 1 1 145px;
+        min-width: 0;
+        padding: 9px 10px !important;
+        white-space: normal;
+    }
+
+    #cfg-horarios-funcionamento-online {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .cfg-dia-horario {
+        grid-template-columns: minmax(76px, 1fr) minmax(0, 80px) 14px minmax(0, 80px) !important;
+    }
+}
+
 /* --- TELA DE GERENCIAMENTO DE PRODUTOS --- */
 .products-manager {
     padding: 20px;
