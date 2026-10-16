@@ -1487,6 +1487,8 @@ async function finalizarEncomenda(event) {
             ['HORARIO_ENCOMENDA_FORA_ATENDIMENTO', 'O horário escolhido está fora da faixa permitida para encomendas. Escolha outro horário.'],
             ['LIMITE_ENCOMENDAS_HORARIO', 'A loja já atingiu o limite de encomendas para esse horário. Escolha outro horário.'],
             ['LIMITE_ENCOMENDAS_DIA', 'A loja já atingiu o limite de encomendas para essa data. Escolha outro dia.'],
+            ['LIMITE_UNIDADES_ENCOMENDA', 'A quantidade total de unidades desta encomenda ultrapassa o limite permitido pela loja. Reduza as quantidades e tente novamente.'],
+            ['LIMITE_UNIDADES_DIA', 'A capacidade total de produção para essa data foi atingida. Escolha outra data ou reduza as quantidades.'],
             ['CIDADE_NAO_DISPONIVEL', 'A cidade selecionada não está disponível para entrega.'],
             ['ENDERECO_INCOMPLETO', 'Preencha todos os dados obrigatórios de entrega.'],
             ['TELEFONE_INVALIDO', 'Informe um telefone válido com DDD.'],

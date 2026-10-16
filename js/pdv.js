@@ -12807,10 +12807,12 @@ async function carregarConfiguracoesEncomendasAgendadas() {
     const campos = {
         horario: document.getElementById('cfg-encomenda-limite-horario'),
         dia: document.getElementById('cfg-encomenda-limite-dia'),
+        unidadesEncomenda: document.getElementById('cfg-encomenda-limite-unidades-encomenda'),
+        unidadesDia: document.getElementById('cfg-encomenda-limite-unidades-dia'),
         inicio: document.getElementById('cfg-encomenda-hora-inicio'),
         fim: document.getElementById('cfg-encomenda-hora-fim')
     };
-    if (!campos.horario || !campos.dia || !campos.inicio || !campos.fim)
+    if (!campos.horario || !campos.dia || !campos.unidadesEncomenda || !campos.unidadesDia || !campos.inicio || !campos.fim)
         return;
 
     try {
@@ -12823,6 +12825,8 @@ async function carregarConfiguracoesEncomendasAgendadas() {
 
         campos.horario.value = String(Math.max(0, Number(cfg.limite_por_horario ?? 0)));
         campos.dia.value = String(Math.max(0, Number(cfg.limite_por_dia ?? 0)));
+        campos.unidadesEncomenda.value = String(Math.max(0, Number(cfg.limite_unidades_por_encomenda ?? 0)));
+        campos.unidadesDia.value = String(Math.max(0, Number(cfg.limite_unidades_por_dia ?? 0)));
         campos.inicio.value = cfg.hora_inicio_permitida ? String(cfg.hora_inicio_permitida).slice(0, 5) : '';
         campos.fim.value = cfg.hora_fim_permitida ? String(cfg.hora_fim_permitida).slice(0, 5) : '';
         if (status) {
@@ -12843,21 +12847,35 @@ async function salvarConfiguracoesEncomendasAgendadas() {
     const status = document.getElementById('cfg-encomendas-agendadas-status');
     const campoHorario = document.getElementById('cfg-encomenda-limite-horario');
     const campoDia = document.getElementById('cfg-encomenda-limite-dia');
+    const campoUnidadesEncomenda = document.getElementById('cfg-encomenda-limite-unidades-encomenda');
+    const campoUnidadesDia = document.getElementById('cfg-encomenda-limite-unidades-dia');
     const campoInicio = document.getElementById('cfg-encomenda-hora-inicio');
     const campoFim = document.getElementById('cfg-encomenda-hora-fim');
-    if (!btn || !campoHorario || !campoDia || !campoInicio || !campoFim)
+    if (!btn || !campoHorario || !campoDia || !campoUnidadesEncomenda || !campoUnidadesDia || !campoInicio || !campoFim)
         return;
 
     const limiteHorario = Number(campoHorario.value);
     const limiteDia = Number(campoDia.value);
+    const limiteUnidadesEncomenda = Number(campoUnidadesEncomenda.value);
+    const limiteUnidadesDia = Number(campoUnidadesDia.value);
     if (!Number.isInteger(limiteHorario) || limiteHorario < 0) {
         alert('Informe um limite por horário inteiro e igual ou maior que zero.');
         campoHorario.focus();
         return;
     }
     if (!Number.isInteger(limiteDia) || limiteDia < 0) {
-        alert('Informe um limite diário inteiro e igual ou maior que zero.');
+        alert('Informe um limite diário de encomendas inteiro e igual ou maior que zero.');
         campoDia.focus();
+        return;
+    }
+    if (!Number.isInteger(limiteUnidadesEncomenda) || limiteUnidadesEncomenda < 0) {
+        alert('Informe um limite total de unidades por encomenda inteiro e igual ou maior que zero.');
+        campoUnidadesEncomenda.focus();
+        return;
+    }
+    if (!Number.isInteger(limiteUnidadesDia) || limiteUnidadesDia < 0) {
+        alert('Informe um limite total de unidades por dia inteiro e igual ou maior que zero.');
+        campoUnidadesDia.focus();
         return;
     }
     if ((campoInicio.value && !campoFim.value) || (!campoInicio.value && campoFim.value)) {
@@ -12878,6 +12896,8 @@ async function salvarConfiguracoesEncomendasAgendadas() {
         const {data, error} = await _supabase.rpc('salvar_configuracoes_encomendas_agendadas', {
             p_limite_por_horario: limiteHorario,
             p_limite_por_dia: limiteDia,
+            p_limite_unidades_por_encomenda: limiteUnidadesEncomenda,
+            p_limite_unidades_por_dia: limiteUnidadesDia,
             p_hora_inicio_permitida: campoInicio.value || null,
             p_hora_fim_permitida: campoFim.value || null
         });

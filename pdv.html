@@ -4284,7 +4284,17 @@
                             <div class="form-group">
                                 <label for="cfg-encomenda-limite-dia">Limite de encomendas por dia</label>
                                 <input type="number" id="cfg-encomenda-limite-dia" min="0" step="1" value="0" class="input-table" style="width:100%;">
-                                <small style="display:block;color:#aaa;margin-top:5px;">0 = sem limite diário.</small>
+                                <small style="display:block;color:#aaa;margin-top:5px;">0 = sem limite diário de encomendas.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="cfg-encomenda-limite-unidades-encomenda">Limite total de unidades por encomenda</label>
+                                <input type="number" id="cfg-encomenda-limite-unidades-encomenda" min="0" step="1" value="0" class="input-table" style="width:100%;">
+                                <small style="display:block;color:#aaa;margin-top:5px;">Soma as unidades de todos os produtos. 0 = sem limite.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="cfg-encomenda-limite-unidades-dia">Limite total de unidades por dia</label>
+                                <input type="number" id="cfg-encomenda-limite-unidades-dia" min="0" step="1" value="0" class="input-table" style="width:100%;">
+                                <small style="display:block;color:#aaa;margin-top:5px;">Soma as unidades de todas as encomendas da data. 0 = sem limite.</small>
                             </div>
                             <div class="form-group">
                                 <label for="cfg-encomenda-hora-inicio">Horário inicial permitido</label>
@@ -4296,7 +4306,7 @@
                             </div>
                         </div>
                         <div style="background:#1e1e24;border-left:4px solid #f59e0b;padding:11px 13px;border-radius:5px;color:#d4d4d8;font-size:.9rem;line-height:1.5;margin-top:6px;">
-                            Deixe os dois horários vazios para permitir qualquer horário. Preencha os dois para limitar a faixa; o sistema também aceita uma faixa que atravesse a meia-noite. Os limites contam solicitações de encomenda, não unidades de produtos.
+                            Deixe os dois horários vazios para permitir qualquer horário. Preencha os dois para limitar a faixa; o sistema também aceita uma faixa que atravesse a meia-noite. Os limites de encomendas contam pedidos; os limites de unidades somam as quantidades de todos os produtos. Encomendas canceladas ou recusadas liberam capacidade diária.
                         </div>
                         <small id="cfg-encomendas-agendadas-status" role="status" style="display:block;color:#aaa;margin-top:12px;">Carregando regras de encomendas...</small>
                         <button type="button" class="btn-save-prod" id="btn-salvar-config-encomendas" onclick="salvarConfiguracoesEncomendasAgendadas()" style="padding:12px;margin-top:12px;">💾 Salvar regras de encomendas</button>
