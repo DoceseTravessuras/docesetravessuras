@@ -5,8 +5,10 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let listaPedidosGlobal = [];
+let pedidoCozinhaFocoId = null;
 let encomendasGlobal = [];
 let encomendasCozinhaGlobal = [];
+let pedidosCozinhaGlobal = [];
 let producaoOrigemEncomendaItemId = null;
 let producaoOrigemEncomendaRetorno = 'encomendas';
 let somAtivado = false;
@@ -3329,6 +3331,12 @@ function renderizarKanban(pedidos) {
 
         const card = document.createElement('div');
         card.className = 'order-card';
+        card.id = `pedido-card-${Number(p.id)}`;
+        if (Number(pedidoCozinhaFocoId) === Number(p.id)) {
+            card.style.outline = '3px solid #f59e0b';
+            card.style.outlineOffset = '2px';
+            card.style.boxShadow = '0 0 22px rgba(245,158,11,.28)';
+        }
         card.innerHTML = `
             <div class="card-top">
                 <span class="card-id">#${p.id}</span>
@@ -3362,6 +3370,13 @@ function renderizarKanban(pedidos) {
     Object.keys(contadores).forEach(c => {
         document.getElementById(`count-${c.toLowerCase()}`).textContent = contadores[c];
     });
+
+    if (pedidoCozinhaFocoId !== null) {
+        const pedidoAlvo = document.getElementById(`pedido-card-${Number(pedidoCozinhaFocoId)}`);
+        if (pedidoAlvo)
+            pedidoAlvo.scrollIntoView({behavior: 'smooth', block: 'center'});
+        pedidoCozinhaFocoId = null;
+    }
 }
 
 function formatarTelefoneExibicao(telefone) {
@@ -3653,7 +3668,7 @@ async function alternarAba(nomeAba) {
     if (nomeAba === 'pedidos') {
         abaPedidos.style.display = 'grid';
         btnPedidos.classList.add('active');
-        carregarPedidos();
+        await carregarPedidos();
     } else if (nomeAba === 'encomendas') {
         if (abaEncomendas)
             abaEncomendas.style.display = 'block';
@@ -7444,7 +7459,7 @@ function limparFichaTecnicaUI() {
 // ============================================================
 // COMPRAS - INTERFACE
 // ============================================================
-const comprasRecebimentoEmAndamento = new Set();
+const comprasOperacaoEmAndamento = new Set();
 
 async function carregarInterfaceCompras() {
     const dataAtual = new Date().toISOString().split('T')[0];
@@ -7715,6 +7730,9 @@ async function carregarComprasAbertasUI() {
                 </div>
 
                 <div style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
                     text-align: right;
                     min-width: 180px;
                 ">
@@ -7750,8 +7768,31 @@ async function carregarComprasAbertasUI() {
                             line-height: 1;
                             box-sizing: border-box;
                             white-space: nowrap;
+                            margin-bottom: 8px;
                         ">
                         📦 Receber Mercadoria
+                    </button>
+
+                    <button
+                        type="button"
+                        onclick="cancelarCompraUI(${compra.id})"
+                        style="
+                            width: 180px;
+                            min-width: 180px;
+                            height: 38px;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            line-height: 1;
+                            box-sizing: border-box;
+                            white-space: nowrap;
+                            background:#a52834;
+                            border:1px solid #d64550;
+                            border-radius:6px;
+                            color:#fff;
+                            cursor:pointer;
+                        ">
+                        ✖ Cancelar Compra
                     </button>
                 </div>
             </div>
@@ -7771,6 +7812,10 @@ async function carregarHistoricoComprasUI() {
     if (!tbody) {
         return;
     }
+
+    // Evita manter um total antigo enquanto os filtros são recarregados.
+    historicoComprasUI = [];
+    filtrarHistoricoComprasUI();
 
     tbody.innerHTML = `
         <tr>
@@ -7960,6 +8005,7 @@ function renderizarHistoricoComprasUI() {
             </tr>
         `;
 
+        filtrarHistoricoComprasUI();
         return;
     }
 
@@ -8113,60 +8159,51 @@ function renderizarHistoricoComprasUI() {
 
         tbody.appendChild(tr);
     });
+
+    filtrarHistoricoComprasUI();
 }
 
 function filtrarHistoricoComprasUI() {
-
-    const campo =
-            document.getElementById(
-                    'filtro-compras-texto'
-                    );
-
-    const termo =
-            (campo?.value || '')
+    const termo = (document.getElementById('filtro-compras-texto')?.value || '')
             .trim()
             .toLowerCase();
 
-    const linhas =
-            document.querySelectorAll(
-                    '#historico-compras-body tr[data-compra-id]'
-                    );
+    let quantidadeEncontrada = 0;
+    let totalEncontrado = 0;
 
-    historicoComprasUI.forEach(compra => {
+    (Array.isArray(historicoComprasUI) ? historicoComprasUI : []).forEach(compra => {
+        const fornecedor = String(compra.fornecedores?.nome || '').toLowerCase();
+        const nota = String(compra.numero_nota || '').toLowerCase();
+        const numero = String(compra.id || '').toLowerCase();
+        const corresponde = !termo || fornecedor.includes(termo) || nota.includes(termo) || numero.includes(termo);
 
-        const fornecedor =
-                String(
-                        compra.fornecedores?.nome || ''
-                        ).toLowerCase();
-
-        const nota =
-                String(
-                        compra.numero_nota || ''
-                        ).toLowerCase();
-
-        const numero =
-                String(
-                        compra.id
-                        );
-
-        const corresponde =
-                !termo ||
-                fornecedor.includes(termo) ||
-                nota.includes(termo) ||
-                numero.includes(termo);
-
-        const linha =
-                document.querySelector(
-                        `#historico-compras-body tr[data-compra-id="${compra.id}"]`
-                        );
+        const linha = document.querySelector(
+                `#historico-compras-body tr[data-compra-id="${compra.id}"]`
+                );
 
         if (linha) {
-            linha.style.display =
-                    corresponde
-                    ? ''
-                    : 'none';
+            linha.style.display = corresponde ? '' : 'none';
+        }
+
+        if (corresponde) {
+            quantidadeEncontrada += 1;
+            totalEncontrado += Number(compra.total || 0);
         }
     });
+
+    const contagem = document.getElementById('historico-compras-contagem');
+    const total = document.getElementById('historico-compras-total');
+
+    if (contagem) {
+        contagem.textContent = `${quantidadeEncontrada} ${quantidadeEncontrada === 1 ? 'compra' : 'compras'} no resultado`;
+    }
+
+    if (total) {
+        total.textContent = `R$ ${totalEncontrado.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        })}`;
+    }
 }
 
 function abrirDetalhesCompraUI(compraId) {
@@ -8549,6 +8586,69 @@ function fecharDetalhesCompraUI() {
     }
 }
 
+async function cancelarCompraUI(compraId) {
+    const id = Number(compraId);
+
+    if (!Number.isInteger(id) || id <= 0) {
+        alert('❌ ID de compra inválido.');
+        return;
+    }
+
+    if (comprasOperacaoEmAndamento.has(id)) {
+        return;
+    }
+
+    const confirmar = confirm(
+            `✖ Cancelar a compra #${id}?\n\n` +
+            `Ela será marcada como CANCELADA e sairá da lista de compras em aberto. ` +
+            `O estoque não será alterado, pois o recebimento ainda não foi registrado.\n\n` +
+            `Essa ação não poderá ser desfeita por esta tela.`
+            );
+
+    if (!confirmar) {
+        return;
+    }
+
+    comprasOperacaoEmAndamento.add(id);
+
+    try {
+        const {data, error} = await _supabase
+                .from('compras')
+                .update({status: 'CANCELADA'})
+                .eq('id', id)
+                .eq('status', 'ABERTA')
+                .select('id')
+                .maybeSingle();
+
+        if (error) {
+            throw error;
+        }
+
+        if (!data) {
+            alert(
+                    `⚠️ A compra #${id} não foi cancelada porque não está mais aberta. ` +
+                    `Atualizarei as listas para mostrar o status atual.`
+                    );
+            await carregarComprasAbertasUI();
+            await carregarHistoricoComprasUI();
+            return;
+        }
+
+        alert(`✅ Compra #${id} cancelada. O registro foi mantido no Histórico de Compras.`);
+        await carregarComprasAbertasUI();
+        await carregarHistoricoComprasUI();
+
+    } catch (err) {
+        console.error('Erro ao cancelar compra:', err);
+        alert(
+                '❌ Não foi possível cancelar a compra. Verifique sua conexão e as permissões do sistema.\n\n' +
+                (err?.message || String(err))
+                );
+    } finally {
+        comprasOperacaoEmAndamento.delete(id);
+    }
+}
+
 async function receberCompraUI(compraId) {
     const id = Number(compraId);
 
@@ -8557,7 +8657,7 @@ async function receberCompraUI(compraId) {
         return;
     }
 
-    if (comprasRecebimentoEmAndamento.has(id)) {
+    if (comprasOperacaoEmAndamento.has(id)) {
         return;
     }
 
@@ -8572,7 +8672,7 @@ async function receberCompraUI(compraId) {
         return;
     }
 
-    comprasRecebimentoEmAndamento.add(id);
+    comprasOperacaoEmAndamento.add(id);
 
     try {
         const {
@@ -8656,7 +8756,7 @@ async function receberCompraUI(compraId) {
                 );
 
     } finally {
-        comprasRecebimentoEmAndamento.delete(id);
+        comprasOperacaoEmAndamento.delete(id);
     }
 }
 
@@ -25431,11 +25531,12 @@ async function salaoCarregarDadosUI() {
     }
     salaoMostrarAlertaUI('Atualizando mesas e comandas...');
     try {
-        const [mesasRes, comandasRes, produtosRes, encomendasRes] = await Promise.all([
+        const [mesasRes, comandasRes, produtosRes, encomendasRes, pedidosRes] = await Promise.all([
             _supabase.from('mesas_salao').select('id,numero,capacidade,observacao,ativo').order('numero'),
             _supabase.from('comandas_salao').select('id,mesa_id,status,garcom_nome,pessoas,observacao,criado_em,total_snapshot,pedido_fechamento_id,paga_em').in('status', ['ABERTA', 'AGUARDANDO_CONTA', 'PAGA_AGUARDANDO_LIBERACAO']).order('criado_em', {ascending: false}),
             _supabase.from('produtos').select('id,nome,preco,estoque,estoque_reservado_encomendas,ativo').eq('ativo', true).order('nome'),
-            _supabase.from('encomendas_agendadas').select('*, itens_encomendas_agendadas(*, produtos(id,estoque,estoque_reservado_encomendas))').in('status', ['EM_PRODUCAO']).order('data_encomenda', {ascending: true}).order('hora_encomenda', {ascending: true})
+            _supabase.from('encomendas_agendadas').select('*, itens_encomendas_agendadas(*, produtos(id,estoque,estoque_reservado_encomendas))').in('status', ['EM_PRODUCAO']).order('data_encomenda', {ascending: true}).order('hora_encomenda', {ascending: true}),
+            _supabase.from('pedidos').select('id,criado_em,status,tipo,telefone_cliente,endereco_snapshot,valor_total,clientes(nome,telefone),itens_pedido(quantidade,produtos(nome))').in('status', ['PENDENTE', 'PREPARANDO']).order('criado_em', {ascending: true})
         ]);
         if (mesasRes.error)
             throw mesasRes.error;
@@ -25445,10 +25546,13 @@ async function salaoCarregarDadosUI() {
             throw produtosRes.error;
         if (encomendasRes.error)
             throw encomendasRes.error;
+        if (pedidosRes.error)
+            throw pedidosRes.error;
         salaoMesasCache = mesasRes.data || [];
         salaoComandasCache = comandasRes.data || [];
         salaoProdutosCache = produtosRes.data || [];
         encomendasCozinhaGlobal = encomendasRes.data || [];
+        pedidosCozinhaGlobal = pedidosRes.data || [];
         const ids = salaoComandasCache.map(c => Number(c.id));
         if (ids.length) {
             const itensRes = await _supabase.from('itens_comanda_salao')
@@ -25568,6 +25672,13 @@ function salaoRenderizarCozinhaUI() {
     if (!lista)
         return;
 
+    const timestampFila = valor => {
+        if (!valor)
+            return Number.MAX_SAFE_INTEGER;
+        const timestamp = new Date(valor).getTime();
+        return Number.isFinite(timestamp) ? timestamp : Number.MAX_SAFE_INTEGER;
+    };
+
     const itens = salaoItensCache.filter(i => ['ENVIADO', 'PREPARANDO', 'PRONTO'].includes(i.estado));
     const grupos = new Map();
     itens.forEach(item => {
@@ -25579,6 +25690,9 @@ function salaoRenderizarCozinhaUI() {
     const cardsSalao = [...grupos.entries()].map(([comandaId, linhas]) => {
         const comanda = salaoComandasCache.find(c => Number(c.id) === comandaId) || {};
         const mesa = salaoMesasCache.find(m => Number(m.id) === Number(comanda.mesa_id)) || {};
+        const itensAtivos = linhas.filter(item => ['ENVIADO', 'PREPARANDO'].includes(item.estado));
+        const linhasParaOrdenacao = itensAtivos.length ? itensAtivos : linhas;
+        const ordemEm = Math.min(...linhasParaOrdenacao.map(item => timestampFila(item.enviado_em || item.criado_em)));
         const itensHTML = linhas.map(item => {
             const nome = item.produtos?.nome || salaoProdutosCache.find(p => Number(p.id) === Number(item.produto_id))?.nome || `Produto #${item.produto_id}`;
             const observacao = item.observacao ? `<div style="color:#fde68a;font-size:.82rem;margin-top:3px;">Obs.: ${salaoEscaparHTML(item.observacao)}</div>` : '';
@@ -25603,7 +25717,31 @@ function salaoRenderizarCozinhaUI() {
             }
             return `<div style="padding:10px 0;border-top:1px solid #353543;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;"><div style="flex:1;"><strong>${Number(item.quantidade)} × ${salaoEscaparHTML(nome)}</strong><div style="color:#a1a1aa;font-size:.78rem;">Rodada ${Number(item.rodada || 1)} · item #${Number(item.id)}</div>${observacao}</div><div style="text-align:right;min-width:150px;"><div style="color:${cor};font-size:.8rem;font-weight:700;margin-bottom:6px;">${estadoLabel}</div>${acao}</div></div></div>`;
         }).join('');
-        return `<article style="background:#202029;border:1px solid #353543;border-radius:10px;padding:14px;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px;"><div><h3 style="margin:0;">🪑 Mesa ${salaoEscaparHTML(mesa.numero || '?')}</h3><small style="color:#a1a1aa;">Comanda #${comandaId} · ${salaoEscaparHTML(comanda.garcom_nome || 'Equipe')}</small></div><span style="background:#312e81;color:#ddd6fe;border-radius:7px;padding:5px 8px;font-size:.8rem;">${linhas.length} item(ns)</span></div>${itensHTML}</article>`;
+        return {
+            ordemEm,
+            html: `<article style="background:#202029;border:1px solid #353543;border-radius:10px;padding:14px;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px;"><div><h3 style="margin:0;">🪑 Mesa ${salaoEscaparHTML(mesa.numero || '?')}</h3><small style="color:#a1a1aa;">Comanda #${comandaId} · ${salaoEscaparHTML(comanda.garcom_nome || 'Equipe')}</small></div><span style="background:#312e81;color:#ddd6fe;border-radius:7px;padding:5px 8px;font-size:.8rem;">${linhas.length} item(ns)</span></div>${itensHTML}</article>`
+        };
+    });
+
+    // Pedidos online comuns (não são encomendas agendadas) entram na mesma
+    // sequência dos itens enviados pelo salão, usando o horário de recebimento.
+    const cardsPedidosOnline = (pedidosCozinhaGlobal || []).map(p => {
+        const id = Number(p.id);
+        const linhas = Array.isArray(p.itens_pedido) ? p.itens_pedido : [];
+        const horaRecebimento = p.criado_em
+                ? new Date(p.criado_em).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})
+                : '--:--';
+        const nomeCliente = p.clientes?.nome || 'Cliente online';
+        const modalidade = p.tipo === 'DELIVERY' ? 'Entrega' : p.tipo === 'RETIRADA' ? 'Retirada' : (p.tipo || 'Online');
+        const statusLabel = p.status === 'PREPARANDO' ? 'Em preparo no quadro de pedidos' : 'Novo · aguardando atendimento';
+        const itensHTML = linhas.length
+                ? `<div style="font-size:.86rem;color:#dbeafe;margin:8px 0;">${linhas.map(item => `<div>${Number(item.quantidade || 0)} × ${salaoEscaparHTML(item.produtos?.nome || 'Item')}</div>`).join('')}</div>`
+                : '';
+        const telefone = p.telefone_cliente || p.clientes?.telefone || '';
+        return {
+            ordemEm: timestampFila(p.criado_em),
+            html: `<article style="background:#202b3a;border:1px solid #60a5fa;border-left:5px solid #60a5fa;border-radius:10px;padding:14px;color:#f3f4f6;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;"><div><h3 style="margin:0;">🌐 Pedido online #${id}</h3><small style="color:#bfdbfe;">Recebido às ${horaRecebimento} · ${salaoEscaparHTML(modalidade)}</small></div><span style="background:#1e3a8a;color:#dbeafe;border-radius:7px;padding:5px 8px;font-size:.78rem;white-space:nowrap;">${p.status === 'PREPARANDO' ? 'Em preparo' : 'Novo pedido'}</span></div><div style="color:#e5e7eb;font-size:.9rem;"><strong>Cliente:</strong> ${salaoEscaparHTML(nomeCliente)}${telefone ? `<br><strong>Telefone:</strong> ${salaoEscaparHTML(formatarTelefoneExibicao(telefone))}` : ''}</div>${itensHTML}<div style="color:#93c5fd;font-size:.8rem;margin:8px 0 10px;">${statusLabel}</div><button type="button" onclick="salaoAbrirPedidoOnlineUI(${id})" style="width:100%;padding:9px 12px;background:#2563eb;color:#fff;border:0;border-radius:7px;cursor:pointer;font-weight:700;">📋 Abrir pedido #${id}</button></article>`
+        };
     });
 
     const cardsEncomendas = (encomendasCozinhaGlobal || []).map(e => {
@@ -25633,12 +25771,27 @@ function salaoRenderizarCozinhaUI() {
         return `<article style="background:#1d2938;border:1px solid #3b82f6;border-radius:10px;padding:14px;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px;"><div><h3 style="margin:0;">📦 Encomenda #${id}</h3><small style="color:#cbd5e1;">${salaoEscaparHTML(e.cliente_nome || 'Cliente')} · ${dataTexto} às ${String(e.hora_encomenda || '').slice(0, 5)} · ${e.tipo === 'DELIVERY' ? 'Entrega' : 'Retirada'}</small></div><span style="background:#1e3a8a;color:#dbeafe;border-radius:7px;padding:5px 8px;font-size:.8rem;">${linhas.length} item(ns)</span></div><div style="color:#cbd5e1;font-size:.84rem;">${salaoEscaparHTML(e.telefone_cliente || '')}</div>${e.observacao ? `<div style="color:#fde68a;font-size:.82rem;margin-top:5px;">Obs.: ${salaoEscaparHTML(e.observacao)}</div>` : ''}${itensHTML}</article>`;
     }).filter(Boolean);
 
-    const cards = [...cardsSalao, ...cardsEncomendas];
+    // Intercala salão e pedidos online pelo horário em que chegaram à cozinha.
+    // Encomendas agendadas mantêm o bloco e a ordem atuais de sua programação.
+    const cardsOperacionais = [...cardsSalao, ...cardsPedidosOnline]
+            .sort((a, b) => a.ordemEm - b.ordemEm)
+            .map(card => card.html);
+    const cards = [...cardsOperacionais, ...cardsEncomendas];
     if (!cards.length) {
-        lista.innerHTML = `<div style="grid-column:1/-1;padding:24px;text-align:center;color:#a1a1aa;background:#202029;border:1px dashed #4b5563;border-radius:10px;">Nenhum item de mesa ou encomenda aguardando produção.</div>`;
+        lista.innerHTML = `<div style="grid-column:1/-1;padding:24px;text-align:center;color:#a1a1aa;background:#202029;border:1px dashed #4b5563;border-radius:10px;">Nenhum item de mesa, pedido online ou encomenda aguardando produção.</div>`;
         return;
     }
     lista.innerHTML = cards.join('');
+}
+
+async function salaoAbrirPedidoOnlineUI(pedidoId) {
+    const id = Number(pedidoId);
+    if (!Number.isInteger(id) || id <= 0) {
+        alert('Não foi possível identificar o pedido online. Atualize a fila da cozinha.');
+        return;
+    }
+    pedidoCozinhaFocoId = id;
+    await alternarAba('pedidos');
 }
 
 // Abre a tela de Produção existente com produto/quantidade travados para o
@@ -26778,6 +26931,10 @@ function salaoIniciarRealtimeUI() {
                     salaoCarregarDadosUI();
             })
             .on('postgres_changes', {event: '*', schema: 'public', table: 'itens_comanda_salao'}, () => {
+                if (salaoModuloAtivo)
+                    salaoCarregarDadosUI();
+            })
+            .on('postgres_changes', {event: '*', schema: 'public', table: 'pedidos'}, () => {
                 if (salaoModuloAtivo)
                     salaoCarregarDadosUI();
             })

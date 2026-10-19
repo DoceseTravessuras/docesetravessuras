@@ -303,8 +303,8 @@
 
                 <section id="salao-visao-cozinha" style="display:none;">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
-                        <h3 style="margin:0;">👨‍🍳 Fila da cozinha · Mesas e Encomendas</h3>
-                        <span style="color:#a1a1aa;font-size:.88rem;">Fluxo por item: conferir insumos → produzir pela ficha técnica → marcar pronto. Produtos acabados de encomendas ficam reservados.</span>
+                        <h3 style="margin:0;">👨‍🍳 Fila da cozinha · Salão, Pedidos Online e Encomendas</h3>
+                        <span style="color:#a1a1aa;font-size:.88rem;">Pedidos online aparecem pela ordem de recebimento com atalho para abrir o pedido. Itens de salão e encomendas mantêm seus fluxos de produção.</span>
                     </div>
                     <div id="salao-cozinha-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;"><div style="padding:24px;text-align:center;color:#a1a1aa;">Carregando fila da cozinha...</div></div>
                 </section>
@@ -323,7 +323,7 @@
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0;">
                     <label for="filtro-encomendas-status">Mostrar:</label>
-                    <select id="filtro-encomendas-status" class="input-table" onchange="renderizarEncomendas(encomendasGlobal)" style="max-width:260px;">
+                    <select id="filtro-encomendas-status" class="input-table" onchange="renderizarEncomendas(encomendasGlobal)" style="max-width:260px; width: 100%">
                         <option value="TODAS" selected>Todas as encomendas</option>
                         <option value="AGUARDANDO">Aguardando confirmação</option>
                         <option value="ACEITA">Aceitas · aguardando produção</option>
@@ -3792,6 +3792,36 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- RESUMO DO HISTÓRICO (respeita status, período e busca) -->
+                <div
+                    id="historico-compras-resumo"
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        flex-wrap:wrap;
+                        gap:12px;
+                        margin-top:14px;
+                        padding:14px 16px;
+                        background:#1e1e24;
+                        border:1px solid #3d3d4e;
+                        border-radius:8px;
+                    ">
+                    <span
+                        id="historico-compras-contagem"
+                        style="color:#bbb;">
+                        0 compras no resultado
+                    </span>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="color:#bbb;">Total das compras listadas:</span>
+                        <strong
+                            id="historico-compras-total"
+                            style="font-size:1.25rem;color:#2ed573;">
+                            R$ 0,00
+                        </strong>
+                    </div>
                 </div>
             </div>
 
