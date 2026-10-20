@@ -3361,6 +3361,7 @@ function renderizarKanban(pedidos) {
                 <button class="btn-action btn-print" onclick="imprimirPedido(${p.id})">🖨️ Imprimir</button>
                 ${p.status !== 'CONCLUIDO' ? `<button class="btn-action btn-next" onclick="mudarStatus(${p.id}, '${proximoStatus}')">${textoBotao}</button>` : ''}
                 ${p.status === 'PENDENTE' ? `<button class="btn-action btn-cancel" onclick="cancelarPedido(${p.id})">❌ Cancelar</button>` : ''}
+                ${p.status !== 'CANCELADO' && String(p.tipo || '').toUpperCase() !== 'BALCAO' && !String(p.endereco_snapshot || '').startsWith('Salão / Mesa') ? `<button class="btn-action" style="background:#6d28d9;color:#fff;" onclick="abrirAlterarPagamentoPedidoUI(${Number(p.id)})">💳 Alterar pagamento</button>` : ''}
             </div>`;
 
         container.appendChild(card);
@@ -3377,6 +3378,188 @@ function renderizarKanban(pedidos) {
             pedidoAlvo.scrollIntoView({behavior: 'smooth', block: 'center'});
         pedidoCozinhaFocoId = null;
     }
+}
+
+
+// ============================================================
+// ALTERAÇÃO DE PAGAMENTO DE PEDIDO ONLINE NO PDV
+// FIADO nunca é exposto no formulário do site: esta ação é interna.
+// ============================================================
+let timerBuscaClientePagamentoPedidoUI = null;
+
+function dataIsoVencimentoFiadoUI(dias = 30) {
+    const d = new Date();
+    d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() + Number(dias || 0));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+async function abrirAlterarPagamentoPedidoUI(pedidoId) {
+    const pedido = (Array.isArray(listaPedidosGlobal) ? listaPedidosGlobal : [])
+        .find(p => Number(p.id) === Number(pedidoId));
+    if (!pedido || String(pedido.status || '').toUpperCase() === 'CANCELADO') {
+        alert('Este pedido não pode ter a forma de pagamento alterada.');
+        return;
+    }
+    document.getElementById('modal-pagamento-pedido-pdv')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'modal-pagamento-pedido-pdv';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML = `
+      <section role="dialog" aria-modal="true" aria-labelledby="titulo-pagamento-pedido-pdv" style="width:min(560px,100%);max-height:92vh;overflow:auto;background:#22222c;color:#f4f4f5;border:1px solid #48485b;border-radius:14px;padding:20px;box-shadow:0 20px 70px rgba(0,0,0,.55);">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;margin-bottom:14px;">
+          <div><h3 id="titulo-pagamento-pedido-pdv" style="margin:0 0 5px;">💳 Alterar pagamento — Pedido #${Number(pedido.id)}</h3><p style="margin:0;color:#a1a1aa;font-size:.88rem;">Total: R$ ${Number(pedido.valor_total || 0).toFixed(2).replace('.', ',')}</p></div>
+          <button type="button" data-fechar-pagamento-pedido style="background:#3f3f50;border:0;color:#fff;border-radius:7px;padding:6px 10px;cursor:pointer;">✕</button>
+        </div>
+        <label style="display:block;margin:12px 0;color:#e4e4e7;font-size:.9rem;">Nova forma de pagamento
+          <select id="pagamento-pedido-forma" class="input-table" style="display:block;width:100%;margin-top:6px;padding:10px;">
+            <option value="PIX">PIX</option><option value="DINHEIRO">Dinheiro</option><option value="CARTAO_DEBITO">Cartão de débito</option><option value="CARTAO_CREDITO">Cartão de crédito</option><option value="FIADO">Fiado (somente equipe do PDV)</option>
+          </select>
+        </label>
+        <div id="pagamento-pedido-fiado-campos" style="display:none;border:1px solid #6d28d9;background:#2b2140;padding:12px;border-radius:9px;margin-top:12px;">
+          <p style="margin:0 0 10px;color:#ddd6fe;font-size:.86rem;line-height:1.45;">O Fiado exige cliente cadastrado, vencimento e autorização do gerente. A conta será criada quando o pedido estiver concluído.</p>
+          <label style="display:block;margin:10px 0;font-size:.88rem;">Buscar cliente por nome, CPF ou telefone
+            <input id="pagamento-pedido-cliente-busca" class="input-table" type="search" autocomplete="off" placeholder="Digite para pesquisar" style="display:block;width:100%;margin-top:5px;padding:9px;">
+          </label>
+          <label style="display:block;margin:10px 0;font-size:.88rem;">Cliente cadastrado
+            <select id="pagamento-pedido-cliente-id" class="input-table" style="display:block;width:100%;margin-top:5px;padding:9px;"><option value="">Pesquise e selecione o cliente...</option></select>
+          </label>
+          <label style="display:block;margin:10px 0;font-size:.88rem;">Vencimento
+            <input id="pagamento-pedido-vencimento" type="date" min="${dataIsoVencimentoFiadoUI(0)}" value="${dataIsoVencimentoFiadoUI(30)}" class="input-table" style="display:block;width:100%;margin-top:5px;padding:9px;">
+          </label>
+          <label style="display:block;margin:10px 0;font-size:.88rem;">PIN do gerente (4 a 6 números)
+            <input id="pagamento-pedido-pin-gerente" type="password" inputmode="numeric" maxlength="6" autocomplete="off" class="input-table" style="display:block;width:100%;margin-top:5px;padding:9px;">
+          </label>
+          <p id="pagamento-pedido-cliente-status" style="margin:4px 0;color:#c4b5fd;font-size:.82rem;" aria-live="polite">Pesquise para selecionar um cliente existente.</p>
+        </div>
+        <p id="pagamento-pedido-erro" style="display:none;color:#fca5a5;font-size:.87rem;margin:10px 0;" aria-live="polite"></p>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap;">
+          <button type="button" data-fechar-pagamento-pedido style="background:#3f3f50;color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;">Voltar</button>
+          <button type="button" id="btn-salvar-pagamento-pedido" style="background:#6d28d9;color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;">Salvar pagamento</button>
+        </div>
+      </section>`;
+    document.body.appendChild(overlay);
+
+    const forma = overlay.querySelector('#pagamento-pedido-forma');
+    const camposFiado = overlay.querySelector('#pagamento-pedido-fiado-campos');
+    const buscarInput = overlay.querySelector('#pagamento-pedido-cliente-busca');
+    const selectCliente = overlay.querySelector('#pagamento-pedido-cliente-id');
+    const vencimento = overlay.querySelector('#pagamento-pedido-vencimento');
+    const pin = overlay.querySelector('#pagamento-pedido-pin-gerente');
+    const statusCliente = overlay.querySelector('#pagamento-pedido-cliente-status');
+    const erroEl = overlay.querySelector('#pagamento-pedido-erro');
+    const btnSalvar = overlay.querySelector('#btn-salvar-pagamento-pedido');
+
+    const formaAtual = String(pedido.forma_pagamento || 'PIX').toUpperCase();
+    forma.value = ['PIX', 'DINHEIRO', 'CARTAO_DEBITO', 'CARTAO_CREDITO', 'FIADO'].includes(formaAtual) ? formaAtual : 'PIX';
+    const fechar = () => {
+        clearTimeout(timerBuscaClientePagamentoPedidoUI);
+        overlay.remove();
+    };
+    overlay.querySelectorAll('[data-fechar-pagamento-pedido]').forEach(b => b.addEventListener('click', fechar));
+    overlay.addEventListener('click', ev => { if (ev.target === overlay) fechar(); });
+
+    function atualizarCamposFiado() {
+        const ativo = forma.value === 'FIADO';
+        camposFiado.style.display = ativo ? 'block' : 'none';
+        if (ativo && pedido.cliente_id && pedido.clientes?.nome && !buscarInput.value.trim()) {
+            buscarInput.value = pedido.clientes.nome;
+            buscarClientesParaPedido(buscarInput.value, Number(pedido.cliente_id));
+        }
+    }
+    async function buscarClientesParaPedido(valor, preferidoId = null) {
+        clearTimeout(timerBuscaClientePagamentoPedidoUI);
+        const termo = String(valor || '').trim();
+        if (!termo) {
+            selectCliente.innerHTML = '<option value="">Digite o nome, CPF ou telefone...</option>';
+            statusCliente.textContent = 'Pesquise para selecionar um cliente existente.';
+            return;
+        }
+        selectCliente.innerHTML = '<option value="">Buscando clientes...</option>';
+        statusCliente.textContent = 'Buscando clientes...';
+        timerBuscaClientePagamentoPedidoUI = setTimeout(async () => {
+            try {
+                const {data, error} = await _supabase.rpc('buscar_clientes_fiado', {p_busca: termo});
+                if (error) throw error;
+                const clientes = Array.isArray(data) ? data : [];
+                selectCliente.innerHTML = '';
+                const inicial = document.createElement('option');
+                inicial.value = '';
+                inicial.textContent = clientes.length ? 'Selecione o cliente encontrado...' : 'Nenhum cliente encontrado';
+                selectCliente.appendChild(inicial);
+                clientes.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = String(c.id);
+                    const detalhes = [c.documento, c.telefone].filter(Boolean).join(' · ');
+                    opt.textContent = `${c.nome || 'Cliente'}${detalhes ? ' — ' + detalhes : ''}`;
+                    if (preferidoId && Number(c.id) === Number(preferidoId)) opt.selected = true;
+                    selectCliente.appendChild(opt);
+                });
+                statusCliente.textContent = clientes.length ? `${clientes.length} cliente(s) encontrado(s).` : 'Confira o nome, CPF ou telefone informado.';
+            } catch (err) {
+                console.error('Erro ao buscar cliente para Fiado do pedido:', err);
+                selectCliente.innerHTML = '<option value="">Não foi possível carregar clientes</option>';
+                statusCliente.textContent = 'Erro ao pesquisar clientes. Tente novamente.';
+            }
+        }, 250);
+    }
+    forma.addEventListener('change', atualizarCamposFiado);
+    buscarInput.addEventListener('input', () => buscarClientesParaPedido(buscarInput.value));
+    btnSalvar.addEventListener('click', async () => {
+        erroEl.style.display = 'none';
+        const metodo = forma.value;
+        const clienteId = metodo === 'FIADO' ? Number(selectCliente.value || 0) : null;
+        const dataVencimento = metodo === 'FIADO' ? vencimento.value : null;
+        const pinGerente = metodo === 'FIADO' ? pin.value.trim() : null;
+        if (metodo === 'FIADO') {
+            if (!Number.isInteger(clienteId) || clienteId <= 0) {
+                erroEl.textContent = 'Selecione um cliente cadastrado para registrar o Fiado.'; erroEl.style.display = 'block'; return;
+            }
+            if (!dataVencimento || dataVencimento < dataIsoVencimentoFiadoUI(0)) {
+                erroEl.textContent = 'Informe uma data de vencimento válida, igual ou posterior a hoje.'; erroEl.style.display = 'block'; return;
+            }
+            if (!/^\d{4,6}$/.test(pinGerente || '')) {
+                erroEl.textContent = 'Informe o PIN do gerente com 4 a 6 números.'; erroEl.style.display = 'block'; return;
+            }
+        }
+        btnSalvar.disabled = true; btnSalvar.textContent = 'Salvando...';
+        try {
+            const {data, error} = await _supabase.rpc('alterar_pedido_forma_pagamento_pdv', {
+                p_pedido_id: Number(pedido.id),
+                p_forma_pagamento: metodo,
+                p_cliente_id: clienteId,
+                p_pin_gerente: pinGerente,
+                p_data_vencimento: dataVencimento
+            });
+            if (error) throw error;
+            fechar();
+            await carregarPedidos();
+            if (metodo === 'FIADO') {
+                const contaJaExiste = Boolean(data?.ja_registrado && data?.conta_receber_id);
+                alert(data?.conta_criada || contaJaExiste
+                    ? `✅ Pedido #${pedido.id} atualizado para FIADO. A conta a receber ${contaJaExiste ? 'já está registrada' : 'foi criada'}${data?.data_vencimento || dataVencimento ? ` com vencimento em ${data?.data_vencimento || dataVencimento}` : ''}.`
+                    : `✅ Pedido #${pedido.id} atualizado para FIADO. A conta a receber será criada quando o pedido for concluído.`);
+            } else {
+                alert(`✅ Forma de pagamento do pedido #${pedido.id} atualizada para ${metodo}.`);
+            }
+        } catch (err) {
+            console.error('Erro ao alterar forma de pagamento do pedido:', err);
+            const msg = String(err?.message || err || '');
+            let mensagem = `Não foi possível alterar o pagamento: ${msg}`;
+            if (msg.includes('PIN_GERENTE_INVALIDO') || msg.includes('AUTORIZACAO_GERENTE_NECESSARIA')) mensagem = 'Autorização do gerente inválida ou necessária para Fiado.';
+            else if (msg.includes('CLIENTE_OBRIGATORIO_FIADO')) mensagem = 'Selecione um cliente cadastrado para registrar o Fiado.';
+            else if (msg.includes('CLIENTE_NAO_ENCONTRADO')) mensagem = 'O cliente selecionado não foi encontrado.';
+            else if (msg.includes('DATA_VENCIMENTO_INVALIDA')) mensagem = 'A data de vencimento não pode ser anterior a hoje.';
+            else if (msg.includes('PEDIDO_COM_CONTA_RECEBER_EXISTENTE')) mensagem = 'Este pedido já possui uma conta a receber. Regularize essa conta antes de alterar a forma de pagamento.';
+            else if (msg.includes('PEDIDO_CANCELADO')) mensagem = 'Pedidos cancelados não podem ter o pagamento alterado.';
+            else if (msg.includes('ALTERACAO_APENAS_PEDIDO_ONLINE')) mensagem = 'A alteração por este botão está disponível somente para pedidos online.';
+            erroEl.textContent = mensagem; erroEl.style.display = 'block';
+        } finally {
+            btnSalvar.disabled = false; btnSalvar.textContent = 'Salvar pagamento';
+        }
+    });
+    atualizarCamposFiado();
 }
 
 function formatarTelefoneExibicao(telefone) {
@@ -16665,278 +16848,216 @@ async function carregarFinancas() {
 // 1. Calcula os totais (Faturamento, CMV, Despesas e Lucro Líquido)
 async function carregarResumoFinanceiro() {
     let faturamento = 0;
-
     let cmvTotal = 0;
     let cmvRealTotal = 0;
     let cmvEstimadoTotal = 0;
-
     let totalDespesas = 0;
-
     const contagemPagamentos = {};
     let totalVendasValidas = 0;
+    const errosCarregamento = [];
+
+    const elementoStatus = document.getElementById('fin-status-carregamento');
+    if (elementoStatus) {
+        elementoStatus.hidden = true;
+        elementoStatus.textContent = '';
+    }
 
     const filtroPeriodo =
-            document.getElementById('fin-filtro-periodo')?.value
-            || 'todos';
-
+            document.getElementById('fin-filtro-periodo')?.value || 'todos';
     const agora = new Date();
-
     let inicioPeriodo = null;
 
     if (filtroPeriodo === 'hoje') {
-
-        inicioPeriodo = new Date(
-                agora.getFullYear(),
-                agora.getMonth(),
-                agora.getDate()
-                );
-
+        inicioPeriodo = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
     } else if (filtroPeriodo === '7dias') {
-
-        inicioPeriodo = new Date(
-                agora
-                );
-
-        inicioPeriodo.setDate(
-                inicioPeriodo.getDate() - 7
-                );
-
+        inicioPeriodo = new Date(agora);
+        inicioPeriodo.setDate(inicioPeriodo.getDate() - 7);
     } else if (filtroPeriodo === 'mes') {
-
-        inicioPeriodo = new Date(
-                agora.getFullYear(),
-                agora.getMonth(),
-                1
-                );
+        inicioPeriodo = new Date(agora.getFullYear(), agora.getMonth(), 1);
     }
 
-    const inicioPeriodoISO =
-            inicioPeriodo
-            ? inicioPeriodo.toISOString()
-            : null;
+    const inicioPeriodoISO = inicioPeriodo ? inicioPeriodo.toISOString() : null;
+    const formatarReais = valor => `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
 
+    // 1) Busca as vendas sem dependência da relação de itens/custos.
+    // Assim, uma falha no cálculo de CMV não zera o faturamento e os lucros.
+    let vendas = [];
     try {
-        // Busca apenas colunas reais da tabela pedidos (forma_pagamento e valor_total)
         let queryVendas = _supabase
                 .from('pedidos')
-                .select(`
-        id,
-        status,
-        forma_pagamento,
-        valor_total,
-        criado_em,
-        itens_pedido (
-            quantidade,
-            custo_medio_unitario,
-            produtos (
-                preco_custo
-            )
-        )
-    `)
+                .select('id,status,forma_pagamento,valor_total,criado_em')
                 .eq('status', 'CONCLUIDO');
 
         if (inicioPeriodoISO) {
-            queryVendas = queryVendas.gte(
-                    'criado_em',
-                    inicioPeriodoISO
-                    );
+            queryVendas = queryVendas.gte('criado_em', inicioPeriodoISO);
         }
 
-        const {data: vendas, error: errVendas} =
-                await queryVendas;
-
-        let parcelasFinanceiro = [];
-        let idsPedidosComParcelasFinanceiro = new Set();
-        let queryParcelasFinanceiro = _supabase.from('salao_pagamentos_v2').select('pedido_id,forma_pagamento,criado_em');
-        if (inicioPeriodoISO)
-            queryParcelasFinanceiro = queryParcelasFinanceiro.gte('criado_em', inicioPeriodoISO);
-        const {data: parcelasCarregadas, error: erroParcelasFinanceiro} = await queryParcelasFinanceiro;
-        if (erroParcelasFinanceiro)
-            console.error('Erro ao carregar parcelas de pagamentos do salão:', erroParcelasFinanceiro);
-        else {
-            parcelasFinanceiro = parcelasCarregadas || [];
-            idsPedidosComParcelasFinanceiro = new Set(parcelasFinanceiro.map(p => Number(p.pedido_id)));
+        const {data, error} = await queryVendas;
+        if (error) {
+            throw error;
         }
-
-        if (errVendas) {
-            console.error('Erro na consulta de vendas:', errVendas);
-        } else if (vendas && vendas.length > 0) {
-            vendas.forEach(venda => {
-                // Faturamento
-                const valor = parseFloat(venda.valor_total || 0);
-                faturamento += valor;
-
-                // CMV
-                const listaItens = venda.itens_pedido || [];
-
-                if (Array.isArray(listaItens)) {
-
-                    listaItens.forEach(item => {
-
-                        const qtd =
-                                parseInt(item.quantidade || 1);
-
-                        const custoSnapshot =
-                                item.custo_medio_unitario;
-
-                        let custoUnitario;
-
-                        if (
-                                custoSnapshot !== null &&
-                                custoSnapshot !== undefined
-                                ) {
-
-                            // CMV REAL:
-                            // custo congelado no momento da venda.
-                            custoUnitario =
-                                    parseFloat(custoSnapshot || 0);
-
-                            cmvRealTotal +=
-                                    custoUnitario * qtd;
-
-                        } else {
-
-                            // CMV ESTIMADO:
-                            // venda antiga sem snapshot.
-                            custoUnitario =
-                                    parseFloat(
-                                            item.produtos?.preco_custo || 0
-                                            );
-
-                            cmvEstimadoTotal +=
-                                    custoUnitario * qtd;
-                        }
-
-                        cmvTotal +=
-                                custoUnitario * qtd;
-                    });
-                }
-
-                // Contagem da Forma de Pagamento
-                if (venda.forma_pagamento && !idsPedidosComParcelasFinanceiro.has(Number(venda.id))) {
-                    const metodo = String(venda.forma_pagamento).toUpperCase().trim();
-                    contagemPagamentos[metodo] = (contagemPagamentos[metodo] || 0) + 1;
-                    totalVendasValidas++;
-                }
-            });
-        }
-    } catch (e) {
-        console.error('Exceção ao calcular faturamento/CMV:', e);
+        vendas = data || [];
+        vendas.forEach(venda => {
+            faturamento += Number(venda.valor_total || 0);
+        });
+    } catch (erro) {
+        errosCarregamento.push('vendas/faturamento');
+        console.error('Erro ao carregar vendas para o resumo financeiro:', erro);
     }
 
+    // 2) Busca as parcelas em uma consulta independente. Se a tabela não estiver
+    // disponível, isso não impede faturamento, CMV e despesas de serem exibidos.
+    let parcelasFinanceiro = [];
     try {
-        // Busca as despesas
-        let queryDespesas = _supabase
-                .from('despesas')
-                .select('valor');
-
+        let queryParcelasFinanceiro = _supabase
+                .from('salao_pagamentos_v2')
+                .select('pedido_id,forma_pagamento,criado_em');
         if (inicioPeriodoISO) {
-            queryDespesas = queryDespesas.gte(
-                    'created_at',
-                    inicioPeriodoISO
-                    );
+            queryParcelasFinanceiro = queryParcelasFinanceiro.gte('criado_em', inicioPeriodoISO);
         }
 
-        const {data: despesas, error: errDesp} =
-                await queryDespesas;
-
-        if (!errDesp && despesas) {
-            totalDespesas = despesas.reduce((acc, d) => acc + parseFloat(d.valor || 0), 0);
+        const {data, error} = await queryParcelasFinanceiro;
+        if (error) {
+            throw error;
         }
-    } catch (e) {
-        console.error('Exceção ao consultar despesas:', e);
+        parcelasFinanceiro = data || [];
+    } catch (erro) {
+        errosCarregamento.push('formas de pagamento');
+        console.error('Erro ao carregar parcelas de pagamentos do salão:', erro);
     }
 
-    // Inclui cada parcela dos pedidos divididos sem contar novamente o meio primário do pedido.
-    (parcelasFinanceiro || []).forEach(p => {
-        const metodo = String(p.forma_pagamento || '').toUpperCase().trim();
+    const idsPedidosComParcelasFinanceiro = new Set(
+            parcelasFinanceiro.map(p => Number(p.pedido_id))
+    );
+
+    vendas.forEach(venda => {
+        if (venda.forma_pagamento && !idsPedidosComParcelasFinanceiro.has(Number(venda.id))) {
+            const metodo = String(venda.forma_pagamento).toUpperCase().trim();
+            contagemPagamentos[metodo] = (contagemPagamentos[metodo] || 0) + 1;
+            totalVendasValidas++;
+        }
+    });
+
+    // 3) Carrega o CMV separadamente. Tenta primeiro o custo congelado no pedido;
+    // se a coluna ainda não existir no banco, usa o custo atual como estimativa.
+    const idsVendas = vendas.map(v => v.id).filter(id => id !== null && id !== undefined);
+    let pedidosComItens = [];
+    let usaCustoSnapshot = true;
+
+    if (idsVendas.length) {
+        try {
+            const {data, error} = await _supabase
+                    .from('pedidos')
+                    .select('id,itens_pedido(quantidade,custo_medio_unitario,produtos(preco_custo))')
+                    .in('id', idsVendas);
+            if (error) {
+                throw error;
+            }
+            pedidosComItens = data || [];
+        } catch (erroSnapshot) {
+            usaCustoSnapshot = false;
+            console.warn('Não foi possível carregar CMV com custo congelado; tentando custo estimado:', erroSnapshot);
+            try {
+                const {data, error} = await _supabase
+                        .from('pedidos')
+                        .select('id,itens_pedido(quantidade,produtos(preco_custo))')
+                        .in('id', idsVendas);
+                if (error) {
+                    throw error;
+                }
+                pedidosComItens = data || [];
+            } catch (erroEstimado) {
+                errosCarregamento.push('custo dos produtos (CMV)');
+                console.error('Erro ao carregar os itens para calcular CMV:', erroEstimado);
+            }
+        }
+    }
+
+    pedidosComItens.forEach(pedido => {
+        (pedido.itens_pedido || []).forEach(item => {
+            const qtd = Number(item.quantidade || 1);
+            const custoSnapshot = item.custo_medio_unitario;
+            const temSnapshot = usaCustoSnapshot && custoSnapshot !== null && custoSnapshot !== undefined && custoSnapshot !== '';
+            const custoUnitario = temSnapshot
+                    ? Number(custoSnapshot || 0)
+                    : Number(item.produtos?.preco_custo || 0);
+
+            if (temSnapshot) {
+                cmvRealTotal += custoUnitario * qtd;
+            } else {
+                cmvEstimadoTotal += custoUnitario * qtd;
+            }
+            cmvTotal += custoUnitario * qtd;
+        });
+    });
+
+    // Inclui as parcelas sem contar novamente o meio de pagamento principal do pedido.
+    parcelasFinanceiro.forEach(parcela => {
+        const metodo = String(parcela.forma_pagamento || '').toUpperCase().trim();
         if (metodo) {
             contagemPagamentos[metodo] = (contagemPagamentos[metodo] || 0) + 1;
             totalVendasValidas++;
         }
     });
 
-    // Identifica o método de pagamento mais usado
     let formaDominante = 'Sem dados';
     let maxQtd = 0;
-
     for (const [metodo, qtd] of Object.entries(contagemPagamentos)) {
         if (qtd > maxQtd) {
             maxQtd = qtd;
             formaDominante = metodo;
         }
     }
-
     const porcentagem = totalVendasValidas > 0
             ? Math.round((maxQtd / totalVendasValidas) * 100)
             : 0;
 
-    // Cálculos DRE
+    // 4) Busca as despesas independentemente das consultas de venda/CMV.
+    try {
+        let queryDespesas = _supabase.from('despesas').select('valor');
+        if (inicioPeriodoISO) {
+            queryDespesas = queryDespesas.gte('created_at', inicioPeriodoISO);
+        }
+        const {data, error} = await queryDespesas;
+        if (error) {
+            throw error;
+        }
+        totalDespesas = (data || []).reduce((acc, despesa) => acc + Number(despesa.valor || 0), 0);
+    } catch (erro) {
+        errosCarregamento.push('despesas');
+        console.error('Erro ao consultar despesas para o resumo financeiro:', erro);
+    }
+
     const lucroBruto = faturamento - cmvTotal;
-
-    console.log('📊 CMV REAL:', cmvRealTotal);
-    console.log('📊 CMV ESTIMADO:', cmvEstimadoTotal);
-    console.log('📊 CMV TOTAL:', cmvTotal);
-
     const lucroLiquido = lucroBruto - totalDespesas;
+    const margemBruta = faturamento > 0 ? (lucroBruto / faturamento) * 100 : 0;
+    const margemLiquida = faturamento > 0 ? (lucroLiquido / faturamento) * 100 : 0;
 
-// Margens sobre o faturamento
-    const margemBruta = faturamento > 0
-            ? (lucroBruto / faturamento) * 100
-            : 0;
+    // Atualiza os cards mesmo que uma das consultas opcionais tenha falhado.
+    const atualizarTexto = (id, texto) => {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.innerText = texto;
+        return elemento;
+    };
 
-    const margemLiquida = faturamento > 0
-            ? (lucroLiquido / faturamento) * 100
-            : 0;
+    atualizarTexto('fin-faturamento', formatarReais(faturamento));
+    atualizarTexto('fin-cmv', formatarReais(cmvTotal));
+    atualizarTexto('fin-cmv-real', formatarReais(cmvRealTotal));
+    atualizarTexto('fin-cmv-estimado', formatarReais(cmvEstimadoTotal));
+    atualizarTexto('fin-lucro-bruto', formatarReais(lucroBruto));
+    atualizarTexto('fin-lucro-bruto-percentual', `${margemBruta.toFixed(2).replace('.', ',')}%`);
+    atualizarTexto('fin-despesas', formatarReais(totalDespesas));
 
-    // Atualização dos cards na interface
-    document.getElementById('fin-faturamento').innerText = `R$ ${faturamento.toFixed(2).replace('.', ',')}`;
-    document.getElementById('fin-cmv').innerText = `R$ ${cmvTotal.toFixed(2).replace('.', ',')}`;
-    const elemCmvReal =
-            document.getElementById('fin-cmv-real');
-
-    const elemCmvEstimado =
-            document.getElementById('fin-cmv-estimado');
-
-    if (elemCmvReal) {
-        elemCmvReal.innerText =
-                `R$ ${cmvRealTotal.toFixed(2).replace('.', ',')}`;
+    const elemLucro = atualizarTexto('fin-lucro', formatarReais(lucroLiquido));
+    if (elemLucro) {
+        elemLucro.style.color = lucroLiquido >= 0 ? '#2ed573' : '#ff4757';
     }
+    atualizarTexto('fin-lucro-percentual', `${margemLiquida.toFixed(2).replace('.', ',')}%`);
+    atualizarTexto('fin-pagamento-dominante', maxQtd > 0 ? `${formaDominante} (${porcentagem}%)` : 'Sem dados');
 
-    if (elemCmvEstimado) {
-        elemCmvEstimado.innerText =
-                `R$ ${cmvEstimadoTotal.toFixed(2).replace('.', ',')}`;
-    }
-    document.getElementById('fin-lucro-bruto').innerText = `R$ ${lucroBruto.toFixed(2).replace('.', ',')}`;
-
-    const elemLucroBrutoPercentual =
-            document.getElementById('fin-lucro-bruto-percentual');
-
-    if (elemLucroBrutoPercentual) {
-        elemLucroBrutoPercentual.innerText =
-                `${margemBruta.toFixed(2).replace('.', ',')}%`;
-    }
-
-    document.getElementById('fin-despesas').innerText =
-            `R$ ${totalDespesas.toFixed(2).replace('.', ',')}`;
-
-    document.getElementById('fin-despesas').innerText = `R$ ${totalDespesas.toFixed(2).replace('.', ',')}`;
-
-    const elemLucro = document.getElementById('fin-lucro');
-    elemLucro.innerText = `R$ ${lucroLiquido.toFixed(2).replace('.', ',')}`;
-    elemLucro.style.color = lucroLiquido >= 0 ? '#2ed573' : '#ff4757';
-
-    const elemLucroPercentual =
-            document.getElementById('fin-lucro-percentual');
-
-    if (elemLucroPercentual) {
-        elemLucroPercentual.innerText =
-                `${margemLiquida.toFixed(2).replace('.', ',')}%`;
-    }
-
-    const elemDominante = document.getElementById('fin-pagamento-dominante');
-    if (elemDominante) {
-        elemDominante.innerText = maxQtd > 0 ? `${formaDominante} (${porcentagem}%)` : 'Sem dados';
+    if (elementoStatus && errosCarregamento.length) {
+        elementoStatus.hidden = false;
+        elementoStatus.textContent = `⚠️ Alguns dados não puderam ser carregados: ${[...new Set(errosCarregamento)].join(', ')}. Verifique a conexão e as permissões do banco.`;
     }
 }
 
@@ -26638,7 +26759,69 @@ function salaoCriarLinhaPagamentoUI(forma = 'PIX', valor = 0, recebido = '') {
 function salaoIniciarPagamentosUI(comandaId) {
     salaoPagamentoComandaId = Number(comandaId);
     salaoPagamentosUI = [salaoCriarLinhaPagamentoUI('PIX', salaoTotalPagarUI().total, '')];
+    const buscaFiado = document.getElementById('salao-fiado-cliente-busca');
+    const clienteFiado = document.getElementById('salao-fiado-cliente-id');
+    const pinFiado = document.getElementById('salao-fiado-pin-gerente');
+    const vencimentoFiado = document.getElementById('salao-fiado-vencimento');
+    if (buscaFiado) buscaFiado.value = '';
+    if (clienteFiado) clienteFiado.innerHTML = '<option value="">Pesquise e selecione o cliente...</option>';
+    if (pinFiado) pinFiado.value = '';
+    if (vencimentoFiado) vencimentoFiado.value = dataIsoVencimentoFiadoUI(30);
     salaoRenderizarPagamentosUI();
+}
+
+let timerBuscaClienteFiadoSalaoUI = null;
+
+function salaoAtualizarCamposFiadoUI() {
+    const box = document.getElementById('salao-fiado-dados');
+    if (!box) return;
+    const precisaFiado = salaoPagamentosUI.some(p => String(p.forma || '').toUpperCase() === 'FIADO');
+    box.style.display = precisaFiado ? 'grid' : 'none';
+    if (!precisaFiado) {
+        const pin = document.getElementById('salao-fiado-pin-gerente');
+        if (pin) pin.value = '';
+    }
+    const data = document.getElementById('salao-fiado-vencimento');
+    if (precisaFiado && data && !data.value) data.value = dataIsoVencimentoFiadoUI(30);
+}
+
+function salaoBuscarClienteFiadoUI(valor) {
+    clearTimeout(timerBuscaClienteFiadoSalaoUI);
+    const busca = String(valor || '').trim();
+    const select = document.getElementById('salao-fiado-cliente-id');
+    const status = document.getElementById('salao-fiado-cliente-status');
+    if (!select) return;
+    if (!busca) {
+        select.innerHTML = '<option value="">Digite nome, CPF ou telefone...</option>';
+        if (status) status.textContent = 'Pesquise para selecionar um cliente cadastrado.';
+        return;
+    }
+    select.innerHTML = '<option value="">Buscando clientes...</option>';
+    if (status) status.textContent = 'Buscando clientes...';
+    timerBuscaClienteFiadoSalaoUI = setTimeout(async () => {
+        try {
+            const {data, error} = await _supabase.rpc('buscar_clientes_fiado', {p_busca: busca});
+            if (error) throw error;
+            const clientes = Array.isArray(data) ? data : [];
+            select.innerHTML = '';
+            const primeiro = document.createElement('option');
+            primeiro.value = '';
+            primeiro.textContent = clientes.length ? 'Selecione o cliente encontrado...' : 'Nenhum cliente encontrado';
+            select.appendChild(primeiro);
+            clientes.forEach(cliente => {
+                const option = document.createElement('option');
+                option.value = String(cliente.id);
+                const info = [cliente.documento, cliente.telefone].filter(Boolean).join(' · ');
+                option.textContent = `${cliente.nome || 'Cliente'}${info ? ' — ' + info : ''}`;
+                select.appendChild(option);
+            });
+            if (status) status.textContent = clientes.length ? `${clientes.length} cliente(s) encontrado(s).` : 'Confira a busca e tente novamente.';
+        } catch (err) {
+            console.error('Erro ao buscar cliente Fiado do Salão:', err);
+            select.innerHTML = '<option value="">Erro ao carregar clientes</option>';
+            if (status) status.textContent = 'Não foi possível buscar clientes. Tente novamente.';
+        }
+    }, 250);
 }
 
 function salaoRenderizarPagamentosUI() {
@@ -26649,9 +26832,10 @@ function salaoRenderizarPagamentosUI() {
         salaoPagamentosUI = [salaoCriarLinhaPagamentoUI('PIX', salaoTotalPagarUI().total, '')];
     el.innerHTML = salaoPagamentosUI.map((linha, idx) => {
         const unica = salaoPagamentosUI.length === 1;
-        const opcoes = `<option value="PIX" ${linha.forma === 'PIX' ? 'selected' : ''}>PIX</option><option value="DINHEIRO" ${linha.forma === 'DINHEIRO' ? 'selected' : ''}>Dinheiro</option><option value="CARTAO_DEBITO" ${linha.forma === 'CARTAO_DEBITO' ? 'selected' : ''}>Cartão de débito</option><option value="CARTAO_CREDITO" ${linha.forma === 'CARTAO_CREDITO' ? 'selected' : ''}>Cartão de crédito</option>`;
+        const opcoes = `<option value="PIX" ${linha.forma === 'PIX' ? 'selected' : ''}>PIX</option><option value="DINHEIRO" ${linha.forma === 'DINHEIRO' ? 'selected' : ''}>Dinheiro</option><option value="CARTAO_DEBITO" ${linha.forma === 'CARTAO_DEBITO' ? 'selected' : ''}>Cartão de débito</option><option value="CARTAO_CREDITO" ${linha.forma === 'CARTAO_CREDITO' ? 'selected' : ''}>Cartão de crédito</option><option value="FIADO" ${linha.forma === 'FIADO' ? 'selected' : ''}>Fiado</option>`;
         return `<div style="display:grid;grid-template-columns:minmax(145px,1fr) minmax(120px,.9fr) minmax(130px,.9fr) auto;gap:8px;align-items:end;padding:9px 0;border-bottom:1px solid #353543;"><label style="display:block;color:#d4d4d8;font-size:.82rem;">Pagamento ${idx + 1}<select class="input-table" onchange="salaoAtualizarPagamentoLinhaUI(${linha.id},'forma',this.value)" style="width:100%;margin-top:4px;">${opcoes}</select></label><label style="display:block;color:#d4d4d8;font-size:.82rem;">Valor da parte (R$)<input id="salao-pagamento-valor-${linha.id}" class="input-table" type="number" min="0.01" step="0.01" value="${Number(linha.valor || 0).toFixed(2)}" ${unica ? 'readonly' : ''} oninput="salaoAtualizarPagamentoLinhaUI(${linha.id},'valor',this.value)" style="width:100%;margin-top:4px;${unica ? 'background:#30303a;' : ''}"></label>${linha.forma === 'DINHEIRO' ? `<label style="display:block;color:#d4d4d8;font-size:.82rem;">Dinheiro recebido (R$)<input id="salao-pagamento-recebido-${linha.id}" class="input-table" type="number" min="0" step="0.01" value="${linha.recebido === '' ? '' : Number(linha.recebido).toFixed(2)}" oninput="salaoAtualizarPagamentoLinhaUI(${linha.id},'recebido',this.value)" style="width:100%;margin-top:4px;"></label>` : `<div style="color:#a1a1aa;font-size:.8rem;padding:9px 0;">Valor exato desta parte</div>`}<div style="display:flex;gap:5px;padding-bottom:1px;"><button type="button" onclick="salaoUsarRestantePagamentoUI(${linha.id})" title="Preencher com o que falta" style="padding:7px 9px;border:0;border-radius:6px;background:#334155;color:white;cursor:pointer;">Restante</button>${!unica ? `<button type="button" onclick="salaoRemoverPagamentoUI(${linha.id})" title="Remover esta parte" style="padding:7px 9px;border:0;border-radius:6px;background:#7f1d1d;color:white;cursor:pointer;">✕</button>` : ''}</div></div>`;
     }).join('');
+    salaoAtualizarCamposFiadoUI();
     salaoAtualizarResumoPagamentoUI(false);
 }
 
@@ -26869,7 +27053,7 @@ async function salaoFecharComandaUI() {
             valor: Math.round(Number(p.valor || 0) * 100) / 100,
             valor_recebido: p.forma === 'DINHEIRO' ? Math.round(Number(p.recebido || 0) * 100) / 100 : null
         }));
-    if (pagamentos.some(p => !['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'].includes(p.forma_pagamento) || !Number.isFinite(p.valor) || p.valor <= 0)) {
+    if (pagamentos.some(p => !['DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO', 'FIADO'].includes(p.forma_pagamento) || !Number.isFinite(p.valor) || p.valor <= 0)) {
         alert('Confira todas as formas de pagamento e informe valores maiores que zero.');
         return;
     }
@@ -26885,6 +27069,19 @@ async function salaoFecharComandaUI() {
         if (p.forma_pagamento !== 'DINHEIRO')
             p.valor_recebido = null;
     }
+    const temFiado = pagamentos.some(p => p.forma_pagamento === 'FIADO');
+    const clienteFiadoId = temFiado ? Number(document.getElementById('salao-fiado-cliente-id')?.value || 0) : null;
+    const dataVencimentoFiado = temFiado ? (document.getElementById('salao-fiado-vencimento')?.value || '') : null;
+    const pinGerenteFiado = temFiado ? (document.getElementById('salao-fiado-pin-gerente')?.value || '').trim() : null;
+    if (temFiado && (!Number.isInteger(clienteFiadoId) || clienteFiadoId <= 0)) {
+        alert('Selecione um cliente cadastrado para registrar o Fiado.'); return;
+    }
+    if (temFiado && (!dataVencimentoFiado || dataVencimentoFiado < dataIsoVencimentoFiadoUI(0))) {
+        alert('Informe uma data de vencimento válida, igual ou posterior a hoje.'); return;
+    }
+    if (temFiado && !/^\d{4,6}$/.test(pinGerenteFiado || '')) {
+        alert('Informe o PIN do gerente com 4 a 6 números para autorizar o Fiado.'); return;
+    }
     const troco = Math.round(pagamentos.reduce((s, p) => p.forma_pagamento === 'DINHEIRO' ? s + Math.max(0, (p.valor_recebido || 0) - p.valor) : s, 0) * 100) / 100;
     const listaPagamento = pagamentos.map(p => `${p.forma_pagamento}: ${salaoMoeda(p.valor)}` + (p.forma_pagamento === 'DINHEIRO' ? ` (recebido ${salaoMoeda(p.valor_recebido)})` : '')).join('\n');
     const mensagemConfirmacao = `Confirmar fechamento da comanda #${comanda.id}?\n\nSubtotal: ${salaoMoeda(total)}\nTaxa de serviço: ${salaoMoeda(taxa.valor)}${taxa.percentual ? ` (${taxa.percentual}%)` : ''}\nDesconto: ${salaoMoeda(desconto)}\nTOTAL A PAGAR: ${salaoMoeda(totalPagar)}\n\n${listaPagamento}${troco > 0 ? `\nTroco total: ${salaoMoeda(troco)}` : ''}`;
@@ -26898,14 +27095,19 @@ async function salaoFecharComandaUI() {
     try {
         const resultado = await salaoRpcUI('salao_fechar_comanda_v2', {
             p_comanda_id: Number(comanda.id), p_caixa_id: Number(caixaParaFechamento.id),
-            p_desconto: desconto, p_taxa_servico_percentual: taxa.percentual, p_pagamentos: pagamentos
+            p_desconto: desconto, p_taxa_servico_percentual: taxa.percentual, p_pagamentos: pagamentos,
+            p_cliente_id: clienteFiadoId, p_pin_gerente: pinGerenteFiado, p_data_vencimento: dataVencimentoFiado
         });
         const idFechado = salaoComandaAtualId;
+        const campoBuscaFiadoSalao = document.getElementById('salao-fiado-cliente-busca');
+        const campoPinFiadoSalao = document.getElementById('salao-fiado-pin-gerente');
+        if (campoBuscaFiadoSalao) campoBuscaFiadoSalao.value = '';
+        if (campoPinFiadoSalao) campoPinFiadoSalao.value = '';
         salaoFecharModalComandaUI();
         await salaoCarregarDadosUI();
         await exibirPainelCaixaAberto();
         await carregarHistoricoVendas();
-        alert(`✅ Pagamento da comanda #${idFechado} registrado.\nPedido de venda: #${resultado.pedido_id}\nSubtotal: ${salaoMoeda(resultado.subtotal)}\nTaxa de serviço: ${salaoMoeda(resultado.taxa_servico)}\nDesconto: ${salaoMoeda(resultado.desconto)}\nTotal pago: ${salaoMoeda(resultado.total)}\n${listaPagamento}${troco > 0 ? `\nTroco: ${salaoMoeda(troco)}` : ''}\n\nA mesa continua ocupada. Quando os clientes saírem, abra a comanda e clique em “Confirmar saída e liberar mesa”.`);
+        alert(`✅ Fechamento da comanda #${idFechado} registrado.\nPedido de venda: #${resultado.pedido_id}\nSubtotal: ${salaoMoeda(resultado.subtotal)}\nTaxa de serviço: ${salaoMoeda(resultado.taxa_servico)}\nDesconto: ${salaoMoeda(resultado.desconto)}\nTotal da conta: ${salaoMoeda(resultado.total)}${Number(resultado.valor_fiado || 0) > 0 ? `\nValor em Fiado / Contas a Receber: ${salaoMoeda(resultado.valor_fiado)}\nVencimento: ${resultado.data_vencimento || dataVencimentoFiado}` : ''}\n${listaPagamento}${troco > 0 ? `\nTroco: ${salaoMoeda(troco)}` : ''}\n\nA mesa continua ocupada. Quando os clientes saírem, abra a comanda e clique em “Confirmar saída e liberar mesa”.`);
     } catch (err) {
         console.error('Erro ao fechar comanda de salão V2:', err);
         alert('❌ Não foi possível fechar a conta: ' + salaoInterpretarErro(err));

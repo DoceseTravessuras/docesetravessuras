@@ -4959,6 +4959,8 @@
                 </select>
             </div>
 
+            <div id="fin-status-carregamento" role="status" aria-live="polite" hidden style="margin: -6px 0 18px; padding: 10px 12px; border-radius: 6px; background: #3a2f15; border: 1px solid #8a6d1d; color: #ffe08a; font-size: 0.85rem;"></div>
+
             <div style="max-width: 1200px; margin: 0 auto;">
 
                 <!-- CARDS DE RESUMO FINANCEIRO -->
@@ -6161,6 +6163,14 @@
                     <section style="background:#202029;border:1px solid #3d3d4e;border-radius:8px;padding:12px;margin-bottom:12px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><h4 style="margin:0;">💳 Pagamentos da conta</h4><div style="display:flex;gap:7px;flex-wrap:wrap;"><button type="button" onclick="salaoAdicionarPagamentoUI()" class="btn-refresh" style="background:#2563eb;padding:7px 10px;">＋ Adicionar pagamento/pessoa</button><button type="button" onclick="salaoRedistribuirPagamentosUI()" class="btn-refresh" style="background:#475569;padding:7px 10px;">Dividir igualmente</button></div></div>
                         <div id="salao-pagamentos-lista"></div>
+                        <div id="salao-fiado-dados" style="display:none;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px;padding:12px;border:1px solid #6d28d9;background:#2b2140;border-radius:8px;">
+                            <div style="grid-column:1/-1;color:#ddd6fe;font-size:.86rem;line-height:1.45;">📒 Para usar Fiado, selecione o cliente, informe o vencimento e autorize com o PIN do gerente. Apenas a parte Fiado ficará em Contas a Receber.</div>
+                            <label style="color:#e4e4e7;font-size:.85rem;">Buscar cliente (nome, CPF ou telefone)<input id="salao-fiado-cliente-busca" class="input-table" type="search" autocomplete="off" placeholder="Digite para pesquisar" oninput="salaoBuscarClienteFiadoUI(this.value)" style="width:100%;margin-top:5px;"></label>
+                            <label style="color:#e4e4e7;font-size:.85rem;">Cliente cadastrado<select id="salao-fiado-cliente-id" class="input-table" style="width:100%;margin-top:5px;"><option value="">Pesquise e selecione o cliente...</option></select></label>
+                            <label style="color:#e4e4e7;font-size:.85rem;">Data de vencimento<input id="salao-fiado-vencimento" type="date" class="input-table" style="width:100%;margin-top:5px;"></label>
+                            <label style="color:#e4e4e7;font-size:.85rem;">PIN do gerente (4 a 6 números)<input id="salao-fiado-pin-gerente" class="input-table" type="password" inputmode="numeric" maxlength="6" autocomplete="off" style="width:100%;margin-top:5px;"></label>
+                            <p id="salao-fiado-cliente-status" aria-live="polite" style="grid-column:1/-1;margin:0;color:#c4b5fd;font-size:.82rem;">Pesquise para selecionar um cliente cadastrado.</p>
+                        </div>
                         <p id="salao-pagamentos-soma" style="margin:10px 0 0;color:#a1a1aa;font-size:.86rem;" aria-live="polite">Distribua o total entre os pagamentos.</p>
                     </section>
                     <div id="salao-troco-grupo" style="margin-top:12px;background:#202029;border:1px solid #166534;border-radius:8px;padding:12px;">
@@ -6174,7 +6184,7 @@
             </div>
         </div>
 
-        <script src="js/pdv.js?v=horarios-por-dia-contatos-v2-20261014"></script>
+        <script src="js/pdv.js?v=fiado-pdv-salao-20261020"></script>
 
     </body>
 </html>
