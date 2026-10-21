@@ -3329,6 +3329,13 @@ function renderizarKanban(pedidos) {
             textoBotao = '✅ Concluir';
         }
 
+        const statusPagamentoNormalizado = String(p.status || '')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+        const pedidoPermiteAlterarPagamento = ![
+            'CONCLUIDO', 'CONCLUIDA', 'ENTREGUE', 'FINALIZADO', 'FINALIZADA',
+            'FECHADO', 'FECHADA', 'CANCELADO', 'CANCELADA'
+        ].includes(statusPagamentoNormalizado);
+
         const card = document.createElement('div');
         card.className = 'order-card';
         card.id = `pedido-card-${Number(p.id)}`;
@@ -3361,7 +3368,7 @@ function renderizarKanban(pedidos) {
                 <button class="btn-action btn-print" onclick="imprimirPedido(${p.id})">🖨️ Imprimir</button>
                 ${p.status !== 'CONCLUIDO' ? `<button class="btn-action btn-next" onclick="mudarStatus(${p.id}, '${proximoStatus}')">${textoBotao}</button>` : ''}
                 ${p.status === 'PENDENTE' ? `<button class="btn-action btn-cancel" onclick="cancelarPedido(${p.id})">❌ Cancelar</button>` : ''}
-                ${p.status !== 'CANCELADO' && String(p.tipo || '').toUpperCase() !== 'BALCAO' && !String(p.endereco_snapshot || '').startsWith('Salão / Mesa') ? `<button class="btn-action" style="background:#6d28d9;color:#fff;" onclick="abrirAlterarPagamentoPedidoUI(${Number(p.id)})">💳 Alterar pagamento</button>` : ''}
+                ${pedidoPermiteAlterarPagamento && String(p.tipo || '').toUpperCase() !== 'BALCAO' && !String(p.endereco_snapshot || '').startsWith('Salão / Mesa') ? `<button class="btn-action" style="background:#6d28d9;color:#fff;" onclick="abrirAlterarPagamentoPedidoUI(${Number(p.id)})">💳 Alterar pagamento</button>` : ''}
             </div>`;
 
         container.appendChild(card);
@@ -3397,8 +3404,14 @@ function dataIsoVencimentoFiadoUI(dias = 30) {
 async function abrirAlterarPagamentoPedidoUI(pedidoId) {
     const pedido = (Array.isArray(listaPedidosGlobal) ? listaPedidosGlobal : [])
         .find(p => Number(p.id) === Number(pedidoId));
-    if (!pedido || String(pedido.status || '').toUpperCase() === 'CANCELADO') {
-        alert('Este pedido não pode ter a forma de pagamento alterada.');
+    const statusAtualNormalizado = String(pedido?.status || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    const statusFinalizadosPagamento = [
+        'CONCLUIDO', 'CONCLUIDA', 'ENTREGUE', 'FINALIZADO', 'FINALIZADA',
+        'FECHADO', 'FECHADA', 'CANCELADO', 'CANCELADA'
+    ];
+    if (!pedido || statusFinalizadosPagamento.includes(statusAtualNormalizado)) {
+        alert('Este pedido já foi concluído/cancelado e não permite mais alterar a forma de pagamento.');
         return;
     }
     document.getElementById('modal-pagamento-pedido-pdv')?.remove();
@@ -3553,6 +3566,8 @@ async function abrirAlterarPagamentoPedidoUI(pedidoId) {
             else if (msg.includes('DATA_VENCIMENTO_INVALIDA')) mensagem = 'A data de vencimento não pode ser anterior a hoje.';
             else if (msg.includes('PEDIDO_COM_CONTA_RECEBER_EXISTENTE')) mensagem = 'Este pedido já possui uma conta a receber. Regularize essa conta antes de alterar a forma de pagamento.';
             else if (msg.includes('PEDIDO_CANCELADO')) mensagem = 'Pedidos cancelados não podem ter o pagamento alterado.';
+            else if (msg.includes('PEDIDO_CONCLUIDO_PAGAMENTO_BLOQUEADO')) mensagem = 'Este pedido já foi concluído. A forma de pagamento não pode mais ser alterada.';
+            else if (msg.includes('CONTA_RECEBER_JA_QUITADA')) mensagem = 'Esta conta a receber já foi quitada. A forma de pagamento não pode mais ser alterada.';
             else if (msg.includes('ALTERACAO_APENAS_PEDIDO_ONLINE')) mensagem = 'A alteração por este botão está disponível somente para pedidos online.';
             erroEl.textContent = mensagem; erroEl.style.display = 'block';
         } finally {
