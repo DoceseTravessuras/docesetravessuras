@@ -19076,12 +19076,19 @@ function imprimirPix() {
     }, 1000);
 }
 
-// 1. Carrega os usuários salvos no banco e exibe na tabela
+// Escapa valores dinâmicos antes de inserir nomes/cargos na tabela.
+function escaparHTMLColaborador(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[caractere]);
+}
+
+// Carrega somente os campos de exibição. Nunca traz a coluna PIN ao navegador.
 async function carregarListaUsuarios() {
     try {
         const {data: usuarios, error} = await _supabase
                 .from('usuarios')
-                .select('*')
+                .select('id, nome, cargo, ativo')
                 .order('nome', {ascending: true});
 
         if (error) {
@@ -19100,18 +19107,32 @@ async function carregarListaUsuarios() {
             return;
         }
 
+        const usuarioAtual = window.usuarioAtual;
+        const cargoAtual = String(usuarioAtual?.cargo || '').toUpperCase();
+        const ehGerenteAdmin = ['GERENTE', 'ADMIN'].includes(cargoAtual);
+
         usuarios.forEach(u => {
-            const cargo = u.cargo || 'GERENTE';
+            const cargo = String(u.cargo || 'GERENTE').toUpperCase();
             const statusAtivo = u.ativo !== false;
+            const ehProprioUsuario = String(usuarioAtual?.id || '') === String(u.id);
+            const nomeSeguro = escaparHTMLColaborador(u.nome || 'Sem nome');
+            const cargoSeguro = escaparHTMLColaborador(cargo);
+            const idSeguro = escaparHTMLColaborador(u.id);
+            const cargoHTML = ehGerenteAdmin && !ehProprioUsuario
+                ? `<button type="button" onclick="abrirModalCargoUsuario('${idSeguro}')" title="Clique para editar o cargo" style="background:#1e1e24;border:1px solid #514b7a;padding:5px 9px;border-radius:5px;font-size:.8rem;color:#c4b5fd;cursor:pointer;">${cargoSeguro} ✎</button>`
+                : `<span title="${ehProprioUsuario ? 'Seu próprio cargo não pode ser alterado nesta tela.' : 'Somente GERENTE ou ADMIN pode alterar cargos.'}" style="background:#1e1e24;padding:4px 8px;border-radius:4px;font-size:.8rem;color:#a29bfe;">${cargoSeguro}</span>`;
+            const pinHTML = ehProprioUsuario || ehGerenteAdmin
+                ? `<button type="button" onclick="abrirModalPinUsuario('${idSeguro}')" title="${ehProprioUsuario ? 'Trocar seu PIN' : 'Redefinir PIN deste colaborador com autorização de GERENTE/ADMIN'}" style="background:#1e1e24;border:1px solid #3d3d4e;padding:5px 9px;border-radius:5px;color:#ddd;cursor:pointer;">•••• ✎</button>`
+                : `<span title="Somente o próprio colaborador pode trocar o PIN; redefinições exigem autorização de GERENTE/ADMIN." style="color:#aaa;">••••</span>`;
 
             tbody.innerHTML += `
                 <tr style="border-bottom: 1px solid #3d3d4e;">
-                    <td style="padding: 10px; color: #fff;"><strong>${u.nome}</strong></td>
-                    <td style="padding: 10px;"><span style="background: #1e1e24; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; color: #a29bfe;">${cargo}</span></td>
-                    <td style="padding: 10px; color: #aaa;">••••</td>
+                    <td style="padding: 10px; color: #fff;"><strong>${nomeSeguro}</strong></td>
+                    <td style="padding: 10px;">${cargoHTML}</td>
+                    <td style="padding: 10px; color: #aaa;">${pinHTML}</td>
                     <td style="padding: 10px; color: ${statusAtivo ? '#2ed573' : '#ff4757'}; font-weight: bold;">${statusAtivo ? 'Ativo' : 'Inativo'}</td>
                     <td style="padding: 10px;">
-                        <button onclick="alternarStatusUsuario('${u.id}', ${statusAtivo})" style="background: none; border: 1px solid #3d3d4e; color: #ddd; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                        <button onclick="alternarStatusUsuario('${idSeguro}', ${statusAtivo})" style="background: none; border: 1px solid #3d3d4e; color: #ddd; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                             ${statusAtivo ? '🚫 Desativar' : '✅ Ativar'}
                         </button>
                     </td>
@@ -19125,6 +19146,169 @@ async function carregarListaUsuarios() {
     }
 
     aplicarPermissoes();
+}
+
+// Edição do cargo: a autorização real é novamente validada na RPC do banco.
+async function abrirModalCargoUsuario(id) {
+    const atual = window.usuarioAtual;
+    if (!atual || !['GERENTE', 'ADMIN'].includes(String(atual.cargo || '').toUpperCase())) {
+        alert('🔒 Apenas GERENTE ou ADMIN pode alterar cargos.');
+        return;
+    }
+    if (String(atual.id) === String(id)) {
+        alert('Por segurança, o cargo do usuário conectado não pode ser alterado por esta tela.');
+        return;
+    }
+    const {data: colaborador, error} = await _supabase
+        .from('usuarios').select('id,nome,cargo').eq('id', id).maybeSingle();
+    if (error || !colaborador) {
+        alert('Não foi possível carregar este colaborador.');
+        return;
+    }
+    document.getElementById('cargo-usuario-id').value = colaborador.id;
+    document.getElementById('cargo-usuario-nome').textContent = colaborador.nome || 'Colaborador';
+    document.getElementById('cargo-usuario-novo').value = String(colaborador.cargo || 'OPERADOR').toUpperCase();
+    document.getElementById('modal-cargo-usuario').style.display = 'flex';
+}
+
+function fecharModalCargoUsuario() {
+    const modal = document.getElementById('modal-cargo-usuario');
+    if (modal) modal.style.display = 'none';
+}
+
+async function salvarCargoColaborador() {
+    const id = document.getElementById('cargo-usuario-id')?.value;
+    const cargo = String(document.getElementById('cargo-usuario-novo')?.value || '').toUpperCase();
+    const btn = document.getElementById('btn-salvar-cargo-usuario');
+    if (!id || !['GERENTE', 'ADMIN', 'OPERADOR', 'ATENDENTE', 'ENTREGADOR'].includes(cargo)) {
+        alert('Selecione um cargo válido.'); return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+    try {
+        const {error} = await _supabase.rpc('alterar_cargo_colaborador', {
+            p_usuario_id: id,
+            p_novo_cargo: cargo
+        });
+        if (error) throw error;
+        fecharModalCargoUsuario();
+        await carregarListaUsuarios();
+        alert('✅ Cargo atualizado com sucesso.');
+    } catch (e) {
+        console.error('Erro ao alterar cargo:', e);
+        const msg = String(e?.message || e);
+        alert(msg.includes('USUARIO_NAO_AUTORIZADO') || msg.includes('CARGO_NAO_AUTORIZADO')
+            ? '🔒 Somente GERENTE ou ADMIN pode alterar cargos.'
+            : '❌ Não foi possível alterar o cargo. Confirme se a migração SQL foi aplicada.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Salvar cargo'; }
+    }
+}
+
+// PIN: troca normal exige PIN atual; esquecimento exige autorização PIN de GERENTE/ADMIN.
+let modoOperacaoPinColaborador = 'proprio';
+async function abrirModalPinUsuario(id) {
+    const atual = window.usuarioAtual;
+    if (!atual) { alert('Faça login novamente para alterar o PIN.'); return; }
+    const proprio = String(atual.id) === String(id);
+    const ehGerenteAdmin = ['GERENTE', 'ADMIN'].includes(String(atual.cargo || '').toUpperCase());
+    if (!proprio && !ehGerenteAdmin) {
+        alert('🔒 Você só pode trocar o seu próprio PIN. Redefinições de terceiros exigem GERENTE/ADMIN.');
+        return;
+    }
+    const {data: colaborador, error} = await _supabase
+        .from('usuarios').select('id,nome').eq('id', id).maybeSingle();
+    if (error || !colaborador) { alert('Não foi possível carregar este colaborador.'); return; }
+    document.getElementById('pin-usuario-id').value = colaborador.id;
+    document.getElementById('pin-usuario-nome').textContent = colaborador.nome || 'Colaborador';
+    document.getElementById('pin-atual').value = '';
+    document.getElementById('pin-gerente').value = '';
+    document.getElementById('pin-novo').value = '';
+    document.getElementById('pin-confirmar').value = '';
+    const alternar = document.getElementById('btn-pin-alternar-modo');
+    if (proprio) {
+        modoOperacaoPinColaborador = 'proprio';
+        alternar.style.display = 'inline-block';
+        alternar.textContent = 'Esqueci o PIN';
+    } else {
+        modoOperacaoPinColaborador = 'redefinir';
+        alternar.style.display = 'none';
+    }
+    atualizarModalPinColaborador();
+    document.getElementById('modal-pin-colaborador').style.display = 'flex';
+}
+
+function atualizarModalPinColaborador() {
+    const proprio = modoOperacaoPinColaborador === 'proprio';
+    document.getElementById('pin-atual-grupo').style.display = proprio ? 'block' : 'none';
+    document.getElementById('pin-gerente-grupo').style.display = proprio ? 'none' : 'block';
+    document.getElementById('pin-modal-explicacao').textContent = proprio
+        ? 'Para trocar normalmente, informe seu PIN atual e depois escolha o novo.'
+        : 'Informe o PIN de um GERENTE/ADMIN para autorizar a redefinição. O PIN digitado não é exibido na tela nem registrado na auditoria.';
+}
+
+function alternarModoPinColaborador() {
+    if (modoOperacaoPinColaborador === 'proprio') {
+        modoOperacaoPinColaborador = 'redefinir';
+        document.getElementById('btn-pin-alternar-modo').textContent = 'Voltar à troca com PIN atual';
+    } else {
+        modoOperacaoPinColaborador = 'proprio';
+        document.getElementById('btn-pin-alternar-modo').textContent = 'Esqueci o PIN';
+    }
+    document.getElementById('pin-atual').value = '';
+    document.getElementById('pin-gerente').value = '';
+    atualizarModalPinColaborador();
+}
+
+function fecharModalPinColaborador() {
+    const modal = document.getElementById('modal-pin-colaborador');
+    if (modal) modal.style.display = 'none';
+    ['pin-atual', 'pin-gerente', 'pin-novo', 'pin-confirmar'].forEach(id => {
+        const campo = document.getElementById(id); if (campo) campo.value = '';
+    });
+}
+
+async function salvarPinColaborador() {
+    const atual = window.usuarioAtual;
+    const id = document.getElementById('pin-usuario-id')?.value;
+    const pinNovo = document.getElementById('pin-novo')?.value.trim() || '';
+    const pinConfirmar = document.getElementById('pin-confirmar')?.value.trim() || '';
+    if (!atual || !id) { alert('Sessão inválida. Entre novamente no sistema.'); return; }
+    if (!/^\d{4,6}$/.test(pinNovo)) { alert('O novo PIN deve ter de 4 a 6 números.'); return; }
+    if (pinNovo !== pinConfirmar) { alert('A confirmação do PIN não confere.'); return; }
+    const btn = document.getElementById('btn-salvar-pin-colaborador');
+    if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+    try {
+        let resultado;
+        if (modoOperacaoPinColaborador === 'proprio') {
+            if (String(atual.id) !== String(id)) throw new Error('PIN_SO_DO_PROPRIO_USUARIO');
+            const pinAtual = document.getElementById('pin-atual')?.value.trim() || '';
+            if (!/^\d{4,6}$/.test(pinAtual)) { alert('Informe seu PIN atual com 4 a 6 números.'); return; }
+            resultado = await _supabase.rpc('alterar_meu_pin', {
+                p_pin_atual: pinAtual,
+                p_novo_pin: pinNovo
+            });
+        } else {
+            const pinGerente = document.getElementById('pin-gerente')?.value.trim() || '';
+            if (!/^\d{4,6}$/.test(pinGerente)) { alert('Informe o PIN de GERENTE/ADMIN com 4 a 6 números.'); return; }
+            resultado = await _supabase.rpc('redefinir_pin_colaborador', {
+                p_usuario_id: id,
+                p_novo_pin: pinNovo,
+                p_pin_gerente: pinGerente
+            });
+        }
+        if (resultado.error) throw resultado.error;
+        fecharModalPinColaborador();
+        alert(modoOperacaoPinColaborador === 'proprio' ? '✅ Seu PIN foi alterado.' : '✅ PIN redefinido com autorização de GERENTE/ADMIN.');
+    } catch (e) {
+        console.error('Erro ao alterar PIN do colaborador:', e);
+        const msg = String(e?.message || e);
+        if (msg.includes('PIN_ATUAL_INVALIDO')) alert('❌ O PIN atual está incorreto. Se esqueceu, use “Esqueci o PIN” e solicite autorização de GERENTE/ADMIN.');
+        else if (msg.includes('PIN_GERENTE_INVALIDO') || msg.includes('AUTORIZACAO_GERENTE_NECESSARIA')) alert('❌ PIN de GERENTE/ADMIN inválido.');
+        else if (msg.includes('USUARIO_NAO_AUTORIZADO') || msg.includes('CARGO_NAO_AUTORIZADO')) alert('🔒 Você não tem autorização para esta operação.');
+        else alert('❌ Não foi possível alterar o PIN. Confirme se a migração SQL foi aplicada.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Salvar novo PIN'; }
+    }
 }
 
 // 2. Controladores do Modal

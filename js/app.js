@@ -480,7 +480,7 @@ function renderizarProdutos(lista) {
                 : (semEstoque ? 'Esgotado' : `${estoque} em estoque`);
         const textoBotao = disabledPronta
                 ? 'Esgotado'
-                : (modoCardapioAtual === 'ENCOMENDA' ? 'Adicionar à encomenda' : `Adicionar)`);
+                : (modoCardapioAtual === 'ENCOMENDA' ? 'Adicionar à encomenda' : `Adicionar`);
 
         grid.innerHTML += `
             <div class="product-card" style="${disabledPronta ? 'opacity: 0.6;' : ''}">
