@@ -4117,10 +4117,18 @@
                     </div>
 
                     <div class="audit-filter-field">
+                        <label for="auditoria-produto">📦 Produto</label>
+                        <select id="auditoria-produto" class="input-table" onchange="carregarAuditoria()" style="width:100%;">
+                            <option value="TODOS">Todos os produtos</option>
+                        </select>
+                    </div>
+
+                    <div class="audit-filter-field">
                         <label for="auditoria-tipo">📑 Relatório</label>
                         <select id="auditoria-tipo" class="input-table" onchange="renderizarAuditoriaAtual()" style="width: 100%;">
                             <option value="GERAL">Visão geral</option>
                             <option value="VENDAS">Vendas</option>
+                            <option value="PRODUTOS">Produtos (vendas e lucro)</option>
                             <option value="CAIXAS">Caixas</option>
                             <option value="CANCELAMENTOS">Cancelamentos</option>
                             <option value="ESTOQUE">Estoque</option>
@@ -4136,6 +4144,7 @@
                         <button class="audit-btn primary" onclick="carregarAuditoria()">🔄 Atualizar</button>
                     </div>
                 </div>
+                <p style="color:#999;font-size:.76rem;margin:-4px 2px 12px;">O filtro por produto se aplica às vendas, cancelamentos, estoque, ajustes e ao relatório de produtos. Os totais de caixa e o resumo financeiro continuam sendo totais do pedido/caixa, sem rateio por produto.</p>
 
                 <!-- AÇÕES DE SAÍDA -->
                 <div class="audit-toolbar">
@@ -4950,13 +4959,14 @@
                     id="fin-filtro-periodo"
                     class="input-table"
                     style="width: 180px;"
-                    onchange="carregarResumoFinanceiro()"
+                    onchange="carregarResumoFinanceiro(); carregarRankingProdutosFinanceiro()"
                     >
                     <option value="todos">Todo o período</option>
                     <option value="hoje">Hoje</option>
                     <option value="7dias">Últimos 7 dias</option>
                     <option value="mes">Este mês</option>
                 </select>
+                <button type="button" onclick="carregarRankingProdutosFinanceiro()" class="btn-save-prod" style="padding:8px 12px;background:#1e90ff;color:#fff;">🔄 Atualizar produtos</button>
             </div>
 
             <div id="fin-status-carregamento" role="status" aria-live="polite" hidden style="margin: -6px 0 18px; padding: 10px 12px; border-radius: 6px; background: #3a2f15; border: 1px solid #8a6d1d; color: #ffe08a; font-size: 0.85rem;"></div>
@@ -5052,6 +5062,34 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- RANKING E RENTABILIDADE POR PRODUTO -->
+                <section id="fin-ranking-produtos" style="background:#2a2a35;padding:20px;border-radius:8px;border:1px solid #3d3d4e;margin-bottom:20px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+                        <div>
+                            <h3 style="margin:0;color:#fff;">📦 Desempenho por produto</h3>
+                            <p style="margin:6px 0 0;color:#aaa;font-size:.83rem;">Compare quantidade vendida, venda bruta dos itens, custo e lucro bruto no período selecionado.</p>
+                        </div>
+                        <button type="button" onclick="exportarRankingProdutosFinanceiro()" class="btn-save-prod" style="padding:8px 12px;background:#2ed573;color:#111;">⬇ Exportar CSV</button>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+                        <input type="search" id="fin-produto-busca" class="input-table" placeholder="Buscar produto pelo nome..." oninput="renderizarRankingProdutosFinanceiro()" style="flex:1;min-width:200px;max-width:360px;">
+                        <select id="fin-produto-ordenar" class="input-table" onchange="renderizarRankingProdutosFinanceiro()" style="min-width:210px;">
+                            <option value="quantidade">Mais vendidos (quantidade)</option>
+                            <option value="venda">Maior venda bruta</option>
+                            <option value="lucro">Maior lucro bruto</option>
+                            <option value="margem">Maior margem bruta</option>
+                        </select>
+                    </div>
+                    <div id="fin-produto-status" role="status" aria-live="polite" style="color:#aaa;font-size:.82rem;margin-bottom:10px;">Carregando produtos...</div>
+                    <div style="overflow-x:auto;">
+                        <table class="products-table" style="width:100%;font-size:.88rem;">
+                            <thead><tr><th>#</th><th>Produto</th><th>Qtd. vendida</th><th>Venda bruta</th><th>CMV</th><th>Lucro bruto</th><th>Margem</th><th>Base do custo</th></tr></thead>
+                            <tbody id="fin-produto-ranking-body"><tr><td colspan="8" style="text-align:center;color:#aaa;">Abra Finanças para carregar o ranking.</td></tr></tbody>
+                        </table>
+                    </div>
+                    <p style="color:#999;font-size:.76rem;line-height:1.5;margin:12px 0 0;">A venda bruta soma os subtotais registrados nos itens; descontos e taxas lançados no total do pedido não são rateados por produto. O CMV usa custo congelado no item quando existe; caso contrário, usa custo cadastrado atual como estimativa. Sem custo disponível, lucro e margem não são calculados para esse produto.</p>
+                </section>
 
                 <!-- CONTAS A RECEBER -->
                 <div style="

@@ -16851,7 +16851,7 @@ async function carregarHistoricoEstoque() {
 
 // Função principal para inicializar a aba de Finanças
 async function carregarFinancas() {
-    await carregarResumoFinanceiro();
+    await Promise.all([carregarResumoFinanceiro(), carregarRankingProdutosFinanceiro()]);
     await carregarHistoricoCaixas();
     await carregarTabelaDespesas();
 
@@ -17074,6 +17074,171 @@ async function carregarResumoFinanceiro() {
         elementoStatus.hidden = false;
         elementoStatus.textContent = `⚠️ Alguns dados não puderam ser carregados: ${[...new Set(errosCarregamento)].join(', ')}. Verifique a conexão e as permissões do banco.`;
     }
+}
+
+// Ranking de produtos em Finanças. Mantém preços e custos registrados por item;
+// quando o custo histórico não existe, utiliza custo atual apenas como estimativa.
+let rankingProdutosFinanceiroDados = [];
+let rankingProdutosFinanceiroAviso = '';
+
+function formatarMoedaProduto(valor) {
+    return `R$ ${Number(valor || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+}
+
+function escaparTextoProduto(valor) {
+    return String(valor ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+async function carregarRankingProdutosFinanceiro() {
+    const tbody = document.getElementById('fin-produto-ranking-body');
+    const status = document.getElementById('fin-produto-status');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#aaa;">⏳ Carregando vendas por produto...</td></tr>';
+    if (status) status.textContent = 'Consultando itens de vendas concluídas...';
+    rankingProdutosFinanceiroDados = [];
+    rankingProdutosFinanceiroAviso = '';
+
+    const periodo = document.getElementById('fin-filtro-periodo')?.value || 'todos';
+    const agora = new Date();
+    let inicio = null;
+    if (periodo === 'hoje') inicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    else if (periodo === '7dias') { inicio = new Date(agora); inicio.setDate(inicio.getDate() - 7); }
+    else if (periodo === 'mes') inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+
+    try {
+        const pageSize = 1000;
+        let offset = 0;
+        let pedidosCarregados = 0;
+        const agregados = new Map();
+        let atingiuLimite = false;
+
+        while (true) {
+            let query = _supabase.from('pedidos').select(`
+                id, criado_em, status,
+                itens_pedido (
+                    produto_id, quantidade, preco_unitario, subtotal, custo_medio_unitario,
+                    produtos (id, nome, custo_medio, preco_custo)
+                )
+            `).eq('status', 'CONCLUIDO').order('id', {ascending: true}).range(offset, offset + pageSize - 1);
+            if (inicio) query = query.gte('criado_em', inicio.toISOString());
+            const {data, error} = await query;
+            if (error) throw error;
+            const pagina = Array.isArray(data) ? data : [];
+            pedidosCarregados += pagina.length;
+
+            for (const pedido of pagina) {
+                for (const item of (pedido.itens_pedido || [])) {
+                    const produto = item.produtos || {};
+                    const id = item.produto_id ?? produto.id ?? `nome:${produto.nome || 'Produto sem nome'}`;
+                    const nome = produto.nome || `Produto #${id}`;
+                    const qtd = Number(item.quantidade || 0);
+                    if (!qtd) continue;
+                    const venda = item.subtotal !== null && item.subtotal !== undefined && item.subtotal !== ''
+                        ? Number(item.subtotal) : Number(item.preco_unitario || 0) * qtd;
+                    let itemCusto = null;
+                    let tipoCusto = 'sem custo';
+                    if (item.custo_medio_unitario !== null && item.custo_medio_unitario !== undefined && item.custo_medio_unitario !== '') {
+                        itemCusto = Number(item.custo_medio_unitario);
+                        tipoCusto = 'histórico';
+                    } else {
+                        const custoAtual = produto.custo_medio !== null && produto.custo_medio !== undefined && produto.custo_medio !== ''
+                            ? produto.custo_medio : produto.preco_custo;
+                        if (custoAtual !== null && custoAtual !== undefined && custoAtual !== '') {
+                            itemCusto = Number(custoAtual);
+                            tipoCusto = 'estimado';
+                        }
+                    }
+                    if (!agregados.has(String(id))) agregados.set(String(id), {
+                        id: String(id), nome, quantidade: 0, venda: 0, cmvReal: 0, cmvEstimado: 0,
+                        custoIncompleto: false, custoFontes: new Set(), pedidos: new Set()
+                    });
+                    const ag = agregados.get(String(id));
+                    ag.quantidade += qtd;
+                    ag.venda += venda;
+                    ag.pedidos.add(String(pedido.id));
+                    if (itemCusto === null || !Number.isFinite(itemCusto)) ag.custoIncompleto = true;
+                    else if (tipoCusto === 'histórico') ag.cmvReal += itemCusto * qtd;
+                    else ag.cmvEstimado += itemCusto * qtd;
+                    ag.custoFontes.add(tipoCusto);
+                }
+            }
+            if (pagina.length < pageSize) break;
+            offset += pageSize;
+            // Limite de proteção para não deixar o navegador carregar indefinidamente.
+            if (offset >= 100000) { atingiuLimite = true; break; }
+        }
+
+        rankingProdutosFinanceiroDados = Array.from(agregados.values()).map(ag => {
+            const cmv = ag.cmvReal + ag.cmvEstimado;
+            const custoCompleto = !ag.custoIncompleto;
+            const lucro = custoCompleto ? ag.venda - cmv : null;
+            return {
+                id: ag.id, nome: ag.nome, quantidade: ag.quantidade, venda: ag.venda,
+                cmv, cmvReal: ag.cmvReal, cmvEstimado: ag.cmvEstimado,
+                lucro, margem: custoCompleto && ag.venda > 0 ? (lucro / ag.venda) * 100 : null,
+                custoCompleto, fontes: Array.from(ag.custoFontes), pedidos: ag.pedidos.size
+            };
+        });
+        if (atingiuLimite) rankingProdutosFinanceiroAviso = 'Limite de 100.000 pedidos atingido; refine o período para ver um recorte menor.';
+        renderizarRankingProdutosFinanceiro();
+    } catch (erro) {
+        console.error('Erro ao carregar ranking de produtos:', erro);
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ff7675;">Não foi possível carregar o ranking: ${escaparTextoProduto(erro?.message || erro)}</td></tr>`;
+        if (status) status.textContent = 'Erro ao consultar produtos. Confira conexão e permissões do banco.';
+    }
+}
+
+function renderizarRankingProdutosFinanceiro() {
+    const tbody = document.getElementById('fin-produto-ranking-body');
+    const status = document.getElementById('fin-produto-status');
+    if (!tbody) return;
+    const busca = String(document.getElementById('fin-produto-busca')?.value || '').trim().toLocaleLowerCase('pt-BR');
+    const ordenar = document.getElementById('fin-produto-ordenar')?.value || 'quantidade';
+    const lista = rankingProdutosFinanceiroDados.filter(p => p.nome.toLocaleLowerCase('pt-BR').includes(busca));
+    lista.sort((a, b) => {
+        if (ordenar === 'venda') return b.venda - a.venda;
+        if (ordenar === 'lucro') return (b.lucro ?? -Infinity) - (a.lucro ?? -Infinity);
+        if (ordenar === 'margem') return (b.margem ?? -Infinity) - (a.margem ?? -Infinity);
+        return b.quantidade - a.quantidade;
+    });
+    const total = lista.length;
+    const top = lista.slice(0, 100);
+    if (!top.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#aaa;">Nenhuma venda de produto encontrada para os filtros selecionados.</td></tr>';
+    } else {
+        tbody.innerHTML = top.map((p, idx) => {
+            const fontes = p.fontes;
+            const base = p.custoCompleto
+                ? (fontes.length === 1 && fontes[0] === 'histórico' ? 'Custo histórico' : fontes.length === 1 && fontes[0] === 'estimado' ? 'Estimado' : fontes.includes('estimado') ? 'Histórico + estimado' : 'Custo histórico')
+                : 'Custo incompleto';
+            return `<tr>
+                <td>${idx + 1}</td><td><strong>${escaparTextoProduto(p.nome)}</strong></td>
+                <td>${p.quantidade.toLocaleString('pt-BR', {maximumFractionDigits: 3})}</td>
+                <td>${formatarMoedaProduto(p.venda)}</td>
+                <td>${p.custoCompleto ? formatarMoedaProduto(p.cmv) : `${formatarMoedaProduto(p.cmv)} <small style="color:#fca5a5">(parcial)</small>`}</td>
+                <td style="color:${p.lucro === null ? '#aaa' : p.lucro >= 0 ? '#86efac' : '#fca5a5'};font-weight:600;">${p.lucro === null ? '—' : formatarMoedaProduto(p.lucro)}</td>
+                <td>${p.margem === null ? '—' : `${p.margem.toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2})}%`}</td>
+                <td>${escaparTextoProduto(base)}</td>
+            </tr>`;
+        }).join('');
+    }
+    if (status) status.textContent = `${total} produto(s) encontrado(s)${total > 100 ? ' · exibindo os 100 primeiros' : ''}${rankingProdutosFinanceiroAviso ? ' · ' + rankingProdutosFinanceiroAviso : ''}`;
+}
+
+function exportarRankingProdutosFinanceiro() {
+    const busca = String(document.getElementById('fin-produto-busca')?.value || '').trim().toLocaleLowerCase('pt-BR');
+    const ordenar = document.getElementById('fin-produto-ordenar')?.value || 'quantidade';
+    const lista = rankingProdutosFinanceiroDados.filter(p => p.nome.toLocaleLowerCase('pt-BR').includes(busca));
+    lista.sort((a, b) => ordenar === 'venda' ? b.venda - a.venda : ordenar === 'lucro' ? (b.lucro ?? -Infinity) - (a.lucro ?? -Infinity) : ordenar === 'margem' ? (b.margem ?? -Infinity) - (a.margem ?? -Infinity) : b.quantidade - a.quantidade);
+    const celulas = [['Produto','Quantidade vendida','Venda bruta dos itens','CMV (histórico + estimado)','Lucro bruto','Margem bruta','Base do custo','Pedidos com o produto'], ...lista.map(p => [p.nome,p.quantidade,p.venda,p.cmv,p.lucro ?? '',p.margem ?? '',p.custoCompleto ? p.fontes.join(' + ') : 'custo incompleto',p.pedidos])];
+    const csv = '\uFEFF' + celulas.map(l => l.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(';')).join('\r\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ranking-produtos-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
 }
 
 async function carregarHistoricoCaixas() {
@@ -24411,6 +24576,7 @@ async function carregarFiltrosAuditoria() {
     const selectUsuario = document.getElementById('auditoria-usuario');
     const selectCaixa = document.getElementById('auditoria-caixa');
     const selectCliente = document.getElementById('auditoria-cliente');
+    const selectProduto = document.getElementById('auditoria-produto');
 
     if (selectUsuario && selectUsuario.options.length <= 1) {
         const {data, error} = await _supabase
@@ -24510,6 +24676,24 @@ async function carregarFiltrosAuditoria() {
             });
         }
     }
+
+    if (selectProduto && selectProduto.options.length <= 1) {
+        const {data, error} = await _supabase
+            .from('produtos')
+            .select('id, nome')
+            .order('nome', {ascending: true})
+            .limit(5000);
+        if (error) {
+            console.error('Erro ao carregar produtos da Auditoria:', error);
+        } else if (Array.isArray(data)) {
+            data.forEach(produto => {
+                const option = document.createElement('option');
+                option.value = String(produto.id);
+                option.textContent = produto.nome || `Produto #${produto.id}`;
+                selectProduto.appendChild(option);
+            });
+        }
+    }
 }
 
 function aplicaFiltroQueryAuditoria(query, campoData, filtros) {
@@ -24575,40 +24759,22 @@ async function consultarEventosAuditoria(filtros) {
 }
 
 async function consultarVendasAuditoria(filtros) {
+    const selecionouProduto = filtros.produto && filtros.produto !== 'TODOS';
+    const nomeRelacaoItens = selecionouProduto ? 'itens_pedido!inner' : 'itens_pedido';
+    const camposItens = `${nomeRelacaoItens}(produto_id,quantidade,preco_unitario,subtotal,custo_medio_unitario,produtos(id,nome,preco_custo,custo_medio))`;
     let query = _supabase
-            .from('pedidos')
-            .select(`
-    id,
-    status,
-    tipo,
-    forma_pagamento,
-    valor_total,
-    criado_em,
-    caixa_id,
-    cliente_id,
-    endereco_snapshot,
-
-    clientes (
-        nome
-    ),
-
-    itens_pedido (
-        quantidade,
-        produtos(nome)
-    )
-`)
-            .order('criado_em', {ascending: false})
-            .limit(1000);
+        .from('pedidos')
+        .select(`
+            id, status, tipo, forma_pagamento, valor_total, criado_em, caixa_id,
+            cliente_id, endereco_snapshot, clientes(nome), ${camposItens}
+        `)
+        .order('criado_em', {ascending: false})
+        .limit(1000);
 
     query = aplicaFiltroQueryAuditoria(query, 'criado_em', filtros);
-
-    if (filtros.caixa !== 'TODOS') {
-        query = query.eq('caixa_id', Number(filtros.caixa));
-    }
-
-    if (filtros.cliente !== 'TODOS') {
-        query = query.eq('cliente_id', Number(filtros.cliente));
-    }
+    if (filtros.caixa !== 'TODOS') query = query.eq('caixa_id', Number(filtros.caixa));
+    if (filtros.cliente !== 'TODOS') query = query.eq('cliente_id', Number(filtros.cliente));
+    if (selecionouProduto) query = query.eq('itens_pedido.produto_id', Number(filtros.produto));
 
     const {data, error} = await query;
     return {data: data || [], error};
@@ -24646,6 +24812,7 @@ async function consultarEstoqueAuditoria(filtros) {
             .from('movimentacoes_estoque')
             .select(`
             id,
+            produto_id,
             produto_nome,
             tipo,
             quantidade,
@@ -24663,6 +24830,8 @@ async function consultarEstoqueAuditoria(filtros) {
     query = aplicaFiltroQueryAuditoria(query, 'criado_em', filtros);
     if (filtros.usuario !== 'TODOS')
         query = query.eq('usuario_auth_id', filtros.usuario);
+    if (filtros.produto && filtros.produto !== 'TODOS')
+        query = query.eq('produto_id', Number(filtros.produto));
 
     const {data, error} = await query;
     return {data: data || [], error};
@@ -24761,6 +24930,7 @@ function renderizarAuditoriaAtual() {
         return;
 
     const tipo = document.getElementById('auditoria-tipo')?.value || 'GERAL';
+    const produtoSelecionado = document.getElementById('auditoria-produto')?.value || 'TODOS';
     const eventos = auditoriaDados.eventos || [];
 
     if (tipo === 'GERAL') {
@@ -24831,17 +25001,10 @@ function renderizarAuditoriaAtual() {
         </td>
 
         <td>
-            ${
-                            (v.itens_pedido || [])
-                            .reduce(
-                                    (a, i) =>
-                                a +
-                                        Number(
-                                                i.quantidade || 0
-                                                ),
-                                    0
-                                    )
-                            }
+            ${escaparAuditoria((v.itens_pedido || [])
+                .filter(i => produtoSelecionado === 'TODOS' || Number(i.produto_id) === Number(produtoSelecionado))
+                .map(i => `${i.produtos?.nome || `Produto #${i.produto_id || '?'}`} × ${Number(i.quantidade || 0)}`)
+                .join('; ') || '—')}
         </td>
 
         <td>
@@ -24870,13 +25033,51 @@ function renderizarAuditoriaAtual() {
                             'Operador',
                             'Tipo',
                             'Pagamento',
-                            'Itens',
+                            'Produtos / quantidades',
                             'Total',
                             'Status',
                             'Caixa'
                         ],
                         linhas
                         );
+    }
+
+    if (tipo === 'PRODUTOS') {
+        const mapa = new Map();
+        for (const pedido of (auditoriaDados.vendas || [])) {
+            if (pedido.status !== 'CONCLUIDO') continue;
+            for (const item of (pedido.itens_pedido || [])) {
+                if (produtoSelecionado !== 'TODOS' && Number(item.produto_id) !== Number(produtoSelecionado)) continue;
+                const prod = item.produtos || {};
+                const id = String(item.produto_id ?? prod.id ?? `nome:${prod.nome || 'Sem nome'}`);
+                const qtd = Number(item.quantidade || 0);
+                const valor = item.subtotal !== null && item.subtotal !== undefined && item.subtotal !== ''
+                    ? Number(item.subtotal) : Number(item.preco_unitario || 0) * qtd;
+                let custo = null;
+                let fonte = 'sem custo';
+                if (item.custo_medio_unitario !== null && item.custo_medio_unitario !== undefined && item.custo_medio_unitario !== '') {
+                    custo = Number(item.custo_medio_unitario); fonte = 'histórico';
+                } else {
+                    const custoAtual = prod.custo_medio !== null && prod.custo_medio !== undefined && prod.custo_medio !== '' ? prod.custo_medio : prod.preco_custo;
+                    if (custoAtual !== null && custoAtual !== undefined && custoAtual !== '') { custo = Number(custoAtual); fonte = 'estimado'; }
+                }
+                if (!mapa.has(id)) mapa.set(id, {id, nome: prod.nome || `Produto #${id}`, quantidade: 0, venda: 0, cmv: 0, custoIncompleto: false, fontes: new Set(), pedidos: new Set()});
+                const a = mapa.get(id); a.quantidade += qtd; a.venda += valor; a.pedidos.add(String(pedido.id));
+                if (custo === null || !Number.isFinite(custo)) a.custoIncompleto = true;
+                else a.cmv += custo * qtd;
+                a.fontes.add(fonte);
+            }
+        }
+        const produtos = Array.from(mapa.values()).sort((a,b) => b.quantidade - a.quantidade);
+        const linhas = produtos.map((p, idx) => {
+            const lucro = p.custoIncompleto ? null : p.venda - p.cmv;
+            const margem = lucro !== null && p.venda > 0 ? (lucro / p.venda) * 100 : null;
+            const base = p.custoIncompleto ? 'Custo incompleto' : p.fontes.has('estimado') && p.fontes.has('histórico') ? 'Histórico + estimado' : p.fontes.has('estimado') ? 'Estimado' : 'Histórico';
+            return `<tr><td>${idx+1}</td><td>${escaparAuditoria(p.nome)}</td><td>${p.quantidade.toLocaleString('pt-BR')}</td><td>${dinheiroAuditoria(p.venda)}</td><td>${p.custoIncompleto ? `${dinheiroAuditoria(p.cmv)} (parcial)` : dinheiroAuditoria(p.cmv)}</td><td>${lucro === null ? '—' : dinheiroAuditoria(lucro)}</td><td>${margem === null ? '—' : `${margem.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%`}</td><td>${escaparAuditoria(base)}</td><td>${p.pedidos.size}</td></tr>`;
+        });
+        const escolhido = produtoSelecionado === 'TODOS' ? 'Todos os produtos' : document.getElementById('auditoria-produto')?.selectedOptions?.[0]?.textContent || 'Produto selecionado';
+        const aviso = `<p style="color:#999;font-size:.78rem;margin:0 0 10px;">Produto: ${escaparAuditoria(escolhido)}. Considera somente pedidos concluídos no período; venda bruta soma subtotais de itens e não rateia descontos/taxas do pedido. Lucro/margem aparecem quando há custo completo.</p>`;
+        return conteudo.innerHTML = aviso + tabelaAuditoria('Vendas e rentabilidade por produto', ['#','Produto','Qtd. vendida','Venda bruta','CMV','Lucro bruto','Margem','Base do custo','Pedidos'], linhas, 'Nenhuma venda concluída de produto encontrada no período selecionado.');
     }
 
     if (tipo === 'CAIXAS') {
@@ -25042,7 +25243,9 @@ async function carregarAuditoria() {
                 document.getElementById(
                         'auditoria-cliente'
                         )?.value ||
-                'TODOS'
+                'TODOS',
+        produto:
+                document.getElementById('auditoria-produto')?.value || 'TODOS'
     };
 
     try {
@@ -25139,6 +25342,16 @@ async function carregarAuditoria() {
             }
         }
 
+        if (filtros.produto !== 'TODOS') {
+            const idsPedidosComProduto = new Set(auditoriaDados.vendas.map(v => String(v.id)));
+            auditoriaDados.eventos = auditoriaDados.eventos.filter(ev => {
+                const entidade = String(ev.entidade || '').toLowerCase();
+                if (entidade === 'pedidos' || entidade === 'pedido') return idsPedidosComProduto.has(String(ev.registro_id));
+                if (entidade.includes('produto') && Number(ev.registro_id) === Number(filtros.produto)) return true;
+                return false;
+            });
+        }
+
         renderizarResumoAuditoria();
         renderizarAuditoriaAtual();
 
@@ -25186,6 +25399,7 @@ function limparFiltrosAuditoria() {
     const usuario = document.getElementById('auditoria-usuario');
     const caixa = document.getElementById('auditoria-caixa');
     const cliente = document.getElementById('auditoria-cliente');
+    const produto = document.getElementById('auditoria-produto');
     const tipo = document.getElementById('auditoria-tipo');
     const inicio = document.getElementById('auditoria-data-inicio');
     const fim = document.getElementById('auditoria-data-fim');
@@ -25198,6 +25412,8 @@ function limparFiltrosAuditoria() {
         caixa.value = 'TODOS';
     if (cliente)
         cliente.value = 'TODOS';
+    if (produto)
+        produto.value = 'TODOS';
     if (tipo)
         tipo.value = 'GERAL';
     if (inicio)
