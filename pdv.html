@@ -4495,6 +4495,7 @@
                             <strong id="caixa-resumo-esperado" style="font-size: 1.1rem; color: #ffa502;">R$ 0,00</strong>
                         </div>
                     </div>
+                    <small style="display:block;color:#aaa;font-size:.8rem;line-height:1.5;margin:0 0 12px;">Este resumo considera somente entradas vinculadas a este caixa. O fiado entra aqui quando é recebido; a venda original já conta no faturamento quando concluída. Por isso, o faturamento do período e as entradas deste caixa podem ser diferentes.</small>
 
                     <div style="margin-top:15px;padding:15px;background:#1f1f1f;border-radius:10px;">
                         <div style="font-weight:bold;margin-bottom:10px;">Movimentação de Caixa</div>
@@ -4977,10 +4978,11 @@
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
 
                     <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
-                        <span style="color: #aaa; font-size: 0.85rem; display: block;">Faturamento Total</span>
+                        <span style="color: #aaa; font-size: 0.85rem; display: block;">Faturamento do período (todos os caixas)</span>
                         <strong id="fin-faturamento" style="font-size: 1.4rem; color: #2ed573; display: block; margin-top: 5px;">
                             R$ 0,00
                         </strong>
+                        <small style="display:block;color:#aaa;font-size:.78rem;line-height:1.4;margin-top:6px;">Soma vendas concluídas no período escolhido, incluindo pedidos fiados e vendas de outros caixas. Não representa apenas o dinheiro já recebido.</small>
                     </div>
 
                     <div style="background: #2a2a35; padding: 18px; border-radius: 8px; border: 1px solid #3d3d4e;">
@@ -5261,6 +5263,7 @@
                                     <th>Pedido</th>
                                     <th>Valor</th>
                                     <th>Pago</th>
+                                    <th>Forma / histórico de recebimento</th>
                                     <th>Saldo</th>
                                     <th>Vencimento</th>
                                     <th>Status</th>
@@ -5271,7 +5274,7 @@
                             <tbody id="contas-receber-table-body">
                                 <tr>
                                     <td
-                                        colspan="8"
+                                        colspan="9"
                                         style="text-align:center;color:#aaa;"
                                         >
                                         Carregando...

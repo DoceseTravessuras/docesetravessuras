@@ -148,7 +148,7 @@ async function carregarContasReceberUI() {
     tbody.innerHTML = `
         <tr>
             <td
-                colspan="8"
+                colspan="9"
                 style="
                     text-align:center;
                     color:#aaa;
@@ -317,7 +317,7 @@ async function carregarContasReceberUI() {
             tbody.innerHTML = `
                 <tr>
                     <td
-                        colspan="8"
+                        colspan="9"
                         style="
                             text-align:center;
                             color:#aaa;
@@ -330,6 +330,31 @@ async function carregarContasReceberUI() {
             `;
 
             return;
+        }
+
+        // ----------------------------------------------------
+        // HISTÓRICO DE RECEBIMENTOS POR CONTA
+        // A migração 06 registra cada parcela e permite distinguir
+        // pagamentos antigos, cujo histórico detalhado não existia.
+        // ----------------------------------------------------
+        const historicoRecebimentosPorConta = new Map();
+        let erroAoCarregarHistoricoRecebimentos = false;
+        try {
+            const {data: historicoRecebimentos, error: erroHistoricoRecebimentos} =
+                await _supabase.rpc('listar_historico_recebimentos_contas_admin', {
+                    p_conta_ids: contas.map(conta => Number(conta.id))
+                });
+            if (erroHistoricoRecebimentos) throw erroHistoricoRecebimentos;
+            (historicoRecebimentos || []).forEach(registro => {
+                const contaId = Number(registro.conta_id);
+                if (!historicoRecebimentosPorConta.has(contaId)) {
+                    historicoRecebimentosPorConta.set(contaId, []);
+                }
+                historicoRecebimentosPorConta.get(contaId).push(registro);
+            });
+        } catch (erroHistoricoRecebimentos) {
+            erroAoCarregarHistoricoRecebimentos = true;
+            console.error('Não foi possível carregar o histórico de recebimentos. Execute a migração 06.', erroHistoricoRecebimentos);
         }
 
         // ----------------------------------------------------
@@ -384,6 +409,26 @@ async function carregarContasReceberUI() {
 
             const valorPago =
                     dinheiro(conta.valor_pago);
+
+            const recebimentosDaConta = historicoRecebimentosPorConta.get(Number(conta.id)) || [];
+            const formaRecebimentoTexto = recebimentosDaConta.length
+                ? recebimentosDaConta.map(registro => {
+                    const forma = String(registro.forma_pagamento || '').toUpperCase();
+                    const rotulosForma = {
+                        DINHEIRO: 'Dinheiro',
+                        PIX: 'PIX',
+                        CARTAO: 'Cartão',
+                        CARTAO_DEBITO: 'Cartão de débito',
+                        CARTAO_CREDITO: 'Cartão de crédito'
+                    };
+                    const rotulo = rotulosForma[forma] || forma || 'Forma não identificada';
+                    return registro.valor !== null && registro.valor !== undefined && Number.isFinite(Number(registro.valor))
+                        ? `${rotulo}: ${dinheiro(registro.valor)}`
+                        : `${rotulo} (registro anterior sem histórico por parcela)`;
+                }).join(' · ')
+                : (erroAoCarregarHistoricoRecebimentos
+                    ? 'Histórico indisponível — confira a migração 06'
+                    : (Number(conta.valor_pago || 0) > 0 ? 'Forma não registrada' : 'Ainda não recebido'));
 
             const saldo =
                     dinheiro(conta.saldo_aberto);
@@ -487,6 +532,10 @@ async function carregarContasReceberUI() {
                         ${valorPago}
                     </td>
 
+                    <td style="min-width:180px;max-width:310px;white-space:normal;color:#d1d5db;font-size:.82rem;line-height:1.45;">
+                        ${escaparHTML(formaRecebimentoTexto)}
+                    </td>
+
                     <td
                         style="
                             font-weight:bold;
@@ -533,7 +582,7 @@ async function carregarContasReceberUI() {
         tbody.innerHTML = `
             <tr>
                 <td
-                    colspan="8"
+                    colspan="9"
                     style="
                         text-align:center;
                         color:#ff4757;
@@ -1460,13 +1509,13 @@ async function abrirRecebimentoContaUI(contaId) {
                             📱 PIX
                         </option>
 
-                   <!--     <option value="CARTAO_DEBITO">
+                        <option value="CARTAO_DEBITO">
                             💳 Cartão de Débito
                         </option>
 
                         <option value="CARTAO_CREDITO">
                             💳 Cartão de Crédito
-                        </option>     -->
+                        </option>
 
                     </select>
 
@@ -17659,17 +17708,25 @@ async function abrirDetalhesCaixa(caixaId) {
 
         const linhasMovimentacoes =
                 movimentacoes.length
-                ? movimentacoes.map(m => `
+                ? movimentacoes.map(m => {
+                    const tipoMovimentacao = String(m.tipo || '').toUpperCase();
+                    const rotuloTipo = tipoMovimentacao === 'SUPRIMENTO'
+                        ? '➕ Suprimento'
+                        : tipoMovimentacao === 'SANGRIA'
+                            ? '➖ Sangria'
+                            : tipoMovimentacao === 'RECEBIMENTO_FIADO'
+                                ? '📒 Recebimento de fiado'
+                                : (m.tipo || 'Movimentação');
+                    return `
                     <tr>
                         <td>${dataHora(m.criado_em)}</td>
-                        <td>${m.tipo === 'SUPRIMENTO'
-                            ? '➕ Suprimento'
-                            : '➖ Sangria'}</td>
+                        <td>${rotuloTipo}</td>
                         <td>${dinheiro(m.valor)}</td>
                         <td>${m.motivo || '-'}</td>
                         <td>${m.usuario_nome || '-'}</td>
                     </tr>
-                `).join('')
+                `;
+                }).join('')
                 : `
                     <tr>
                         <td colspan="5"
@@ -18221,116 +18278,29 @@ async function exibirPainelCaixaAberto() {
 
     const dataInicio = caixaAtual.data_abertura || caixaAtual.created_at;
 
-// Busca somente vendas efetivamente concluídas deste caixa
-    let query = _supabase
-            .from('pedidos')
-            .select('id, valor_total, forma_pagamento')
-            .eq('status', 'CONCLUIDO');
-
-    if (caixaAtual.id) {
-        query = query.eq('caixa_id', caixaAtual.id);
-    } else if (dataInicio) {
-        query = query.gte('created_at', dataInicio);
-    }
-
-    const {data: vendas, error: erroVendas} = await query;
-
+// O resumo financeiro é calculado no banco para não depender de RLS
+// de leitura direta das tabelas e para contabilizar parcelas de Fiado.
     let totalDinheiro = 0;
     let totalOutros = 0;
-    let idsPedidosComPagamentoDividido = new Set();
+    let erroCalculoEntradas = null;
 
-    if (caixaAtual.id) {
-        const {data: linhasPagamento, error: erroLinhasPagamento} = await _supabase
-                .from('salao_pagamentos_v2').select('pedido_id').eq('caixa_id', caixaAtual.id);
-        if (erroLinhasPagamento) {
-            console.error('Erro ao consultar parcelas de pagamento do salão:', erroLinhasPagamento);
-        } else {
-            idsPedidosComPagamentoDividido = new Set((linhasPagamento || []).map(x => Number(x.pedido_id)));
+    try {
+        const {data: resumoEntradas, error: erroResumoEntradas} = await _supabase.rpc(
+            'resumo_entradas_caixa_balcao',
+            {p_caixa_id: Number(caixaAtual.id)}
+        );
+        if (erroResumoEntradas) throw erroResumoEntradas;
+        const linhaResumo = Array.isArray(resumoEntradas) ? resumoEntradas[0] : resumoEntradas;
+        if (!linhaResumo) throw new Error('O banco não retornou o resumo de entradas para este caixa.');
+
+        totalDinheiro = Number(linhaResumo.entradas_dinheiro || 0);
+        totalOutros = Number(linhaResumo.entradas_cartao_pix || 0);
+        if (!Number.isFinite(totalDinheiro) || !Number.isFinite(totalOutros)) {
+            throw new Error('O banco retornou valores inválidos para as entradas do caixa.');
         }
-    }
-
-    if (vendas) {
-        vendas.forEach(v => {
-            if (idsPedidosComPagamentoDividido.has(Number(v.id)))
-                return;
-            const val = parseFloat(v.valor_total || 0);
-            const pgto = String(v.forma_pagamento || '').toUpperCase().trim();
-
-            if (pgto === 'DINHEIRO') {
-                totalDinheiro += val;
-
-            } else if (
-                    pgto === 'PIX' ||
-                    pgto === 'CARTAO_DEBITO' ||
-                    pgto === 'CARTAO_CREDITO'
-                    ) {
-                totalOutros += val;
-
-            } else if (pgto === 'FIADO') {
-                // FIADO não entra no caixa no momento da venda.
-            }
-        });
-    }
-
-    // Pedidos com linhas de pagamento V2 são contabilizados pelas parcelas reais.
-    if (caixaAtual.id) {
-        const {data: pagamentosSalao, error: erroPagamentosSalao} = await _supabase
-                .from('salao_pagamentos_v2').select('forma_pagamento, valor').eq('caixa_id', caixaAtual.id);
-        if (erroPagamentosSalao) {
-            console.error('Erro ao carregar pagamentos divididos do salão:', erroPagamentosSalao);
-        } else if (pagamentosSalao) {
-            pagamentosSalao.forEach(p => {
-                const val = Number(p.valor || 0);
-                const forma = String(p.forma_pagamento || '').toUpperCase();
-                if (forma === 'DINHEIRO')
-                    totalDinheiro += val;
-                else if (['PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'].includes(forma))
-                    totalOutros += val;
-            });
-        }
-    }
-
-    /* ============================================================
-     RECEBIMENTOS DE CONTAS A RECEBER
-     ============================================================ */
-
-    let totalRecebimentosOutros = 0;
-
-    if (caixaAtual.id) {
-
-        const {
-            data: recebimentos,
-            error: erroRecebimentos
-        } = await _supabase
-                .from('contas_receber')
-                .select(`
-            valor_pago,
-            forma_pagamento_recebimento
-        `)
-                .eq('caixa_id_recebimento', caixaAtual.id)
-                .eq('status', 'PAGA')
-                .in('forma_pagamento_recebimento', [
-                    'PIX',
-                    'CARTAO_DEBITO',
-                    'CARTAO_CREDITO'
-                ]);
-
-        if (erroRecebimentos) {
-            console.error(
-                    'Erro ao carregar recebimentos de contas a receber:',
-                    erroRecebimentos
-                    );
-        }
-
-        if (recebimentos) {
-            recebimentos.forEach(r => {
-                const val = parseFloat(r.valor_pago || 0);
-
-                totalRecebimentosOutros += val;
-            });
-        }
-
-        totalOutros += totalRecebimentosOutros;
+    } catch (erroResumoEntradas) {
+        erroCalculoEntradas = erroResumoEntradas;
+        console.error('Erro ao calcular entradas do Caixa Balcão. Verifique a migração 06:', erroResumoEntradas);
     }
 
     let totalSaidasDinheiro = 0;
@@ -18382,32 +18352,36 @@ async function exibirPainelCaixaAberto() {
     }
 
     const saldoInicial = parseFloat(caixaAtual.saldo_inicial || 0);
-    const saldoEsperadoGaveta =
-            saldoInicial
-            + totalDinheiro
-            + totalSuprimentos
-            - totalSaidasDinheiro
-            - totalSangrias;
+    const saldoEsperadoGaveta = erroCalculoEntradas
+        ? null
+        : saldoInicial + totalDinheiro + totalSuprimentos - totalSaidasDinheiro - totalSangrias;
 
     // Atualiza interface
     document.getElementById('caixa-badge-status').innerText = 'ABERTO';
     document.getElementById('caixa-badge-status').style.background = '#2ed573';
-    document.getElementById('caixa-status-texto').innerText = dataInicio
+    const textoAberturaCaixa = dataInicio
             ? `Aberto em: ${new Date(dataInicio).toLocaleString('pt-BR')}`
             : 'Caixa aberto';
+    document.getElementById('caixa-status-texto').innerText = erroCalculoEntradas
+            ? `${textoAberturaCaixa} • Entradas indisponíveis: confira a migração 06 do PDV.`
+            : textoAberturaCaixa;
 
     document.getElementById('caixa-resumo-inicial').innerText = `R$ ${saldoInicial.toFixed(2).replace('.', ',')}`;
-    document.getElementById('caixa-resumo-dinheiro').innerText = `R$ ${totalDinheiro.toFixed(2).replace('.', ',')}`;
-    document.getElementById('caixa-resumo-outros').innerText = `R$ ${totalOutros.toFixed(2).replace('.', ',')}`;
+    document.getElementById('caixa-resumo-dinheiro').innerText = erroCalculoEntradas ? 'Falha ao calcular' : `R$ ${totalDinheiro.toFixed(2).replace('.', ',')}`;
+    document.getElementById('caixa-resumo-outros').innerText = erroCalculoEntradas ? 'Falha ao calcular' : `R$ ${totalOutros.toFixed(2).replace('.', ',')}`;
     document.getElementById('caixa-resumo-saidas').innerText = `R$ ${totalSaidasDinheiro.toFixed(2).replace('.', ',')}`;
-    document.getElementById('caixa-resumo-esperado').innerText = `R$ ${saldoEsperadoGaveta.toFixed(2).replace('.', ',')}`;
+    document.getElementById('caixa-resumo-esperado').innerText = saldoEsperadoGaveta === null ? 'Indisponível' : `R$ ${saldoEsperadoGaveta.toFixed(2).replace('.', ',')}`;
+    if (erroCalculoEntradas) {
+        document.getElementById('caixa-resumo-dinheiro').title = 'Execute a migração 06 do PDV no Supabase e atualize a tela.';
+        document.getElementById('caixa-resumo-outros').title = 'Execute a migração 06 do PDV no Supabase e atualize a tela.';
+    }
 
     document.getElementById('box-abrir-caixa').style.display = 'none';
     document.getElementById('box-fechar-caixa').style.display = 'block';
 
     // Guarda totais calculados no objeto atual
-    caixaAtual.total_entradas_dinheiro = totalDinheiro;
-    caixaAtual.total_outras_formas = totalOutros;
+    caixaAtual.total_entradas_dinheiro = erroCalculoEntradas ? null : totalDinheiro;
+    caixaAtual.total_outras_formas = erroCalculoEntradas ? null : totalOutros;
     caixaAtual.total_saidas = totalSaidasDinheiro;
     caixaAtual.saldo_esperado = saldoEsperadoGaveta;
     caixaAtual.total_suprimentos = totalSuprimentos;
@@ -18517,20 +18491,27 @@ async function carregarHistoricoMovimentacoesCaixa() {
 
     tbody.innerHTML = data.map(mov => {
         const dataHora = new Date(mov.criado_em).toLocaleString('pt-BR');
+        const tipoMovimentacao = String(mov.tipo || '').toUpperCase();
 
-        const tipoTexto =
-                mov.tipo === 'SUPRIMENTO'
+        const tipoTexto = tipoMovimentacao === 'SUPRIMENTO'
                 ? '➕ Suprimento'
-                : '➖ Sangria';
+                : tipoMovimentacao === 'SANGRIA'
+                    ? '➖ Sangria'
+                    : tipoMovimentacao === 'RECEBIMENTO_FIADO'
+                        ? '📒 Recebimento de fiado'
+                        : (mov.tipo || 'Movimentação');
 
         const valor = `R$ ${parseFloat(mov.valor || 0)
                 .toFixed(2)
                 .replace('.', ',')}`;
 
-        const corTipo =
-                mov.tipo === 'SUPRIMENTO'
+        const corTipo = tipoMovimentacao === 'SUPRIMENTO'
                 ? '#2ed573'
-                : '#ff4757';
+                : tipoMovimentacao === 'SANGRIA'
+                    ? '#ff4757'
+                    : tipoMovimentacao === 'RECEBIMENTO_FIADO'
+                        ? '#1e90ff'
+                        : '#aaa';
 
         return `
             <tr>
