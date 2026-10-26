@@ -1,8 +1,13 @@
 // 1. Configuração das credenciais do Supabase
-const SUPABASE_URL = 'https://pznuqeqtytyjtupxnzqk.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6bnVxZXF0eXR5anR1cHhuenFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MDIyMTAsImV4cCI6MjEwMzk3ODIxMH0.ZadwdTr-pERj7mBYQGnIRpg7M4RhN9K3xNCpcG_GOqQ'; // Insira sua chave anon publica aqui
+const { url, anonKey } = window.SUPABASE_CONFIG || {};
 
-const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+if (!url || !anonKey) {
+    throw new Error(
+        'Configuração do Supabase não encontrada ou incompleta.'
+    );
+}
+
+const _supabase = window.supabase.createClient(url, anonKey);
 
 let listaPedidosGlobal = [];
 let pedidoCozinhaFocoId = null;
@@ -13924,6 +13929,7 @@ async function abrirEdicaoProduto(produtoId) {
                     categoria_id,
                     codigo_barras,
                     imagem_url,
+                    disponivel_pronta_entrega,
                     aceita_encomenda,
                     antecedencia_encomenda_horas,
                     quantidade_max_encomenda
@@ -14043,9 +14049,12 @@ async function abrirEdicaoProduto(produtoId) {
 
         }
 
+        const campoDisponivelProntaEntrega = document.getElementById('edit-produto-disponivel-pronta-entrega');
         const campoAceitaEncomenda = document.getElementById('edit-produto-aceita-encomenda');
         const campoAntecedenciaEncomenda = document.getElementById('edit-produto-antecedencia');
         const campoMaxEncomenda = document.getElementById('edit-produto-max-encomenda');
+        if (campoDisponivelProntaEntrega)
+            campoDisponivelProntaEntrega.checked = produto.disponivel_pronta_entrega !== false;
         if (campoAceitaEncomenda)
             campoAceitaEncomenda.checked = produto.aceita_encomenda === true;
         if (campoAntecedenciaEncomenda)
@@ -14436,6 +14445,7 @@ async function salvarEdicaoProduto() {
         const categoriaId =
                 campoCategoria?.value || null;
 
+        const disponivelProntaEntrega = document.getElementById('edit-produto-disponivel-pronta-entrega')?.checked === true;
         const aceitaEncomenda = document.getElementById('edit-produto-aceita-encomenda')?.checked === true;
         const antecedenciaEncomenda = Number(document.getElementById('edit-produto-antecedencia')?.value ?? 24);
         const maxEncomendaTexto = document.getElementById('edit-produto-max-encomenda')?.value.trim() || '';
@@ -14580,6 +14590,7 @@ async function salvarEdicaoProduto() {
                     imagem_url:
                             urlFinalImagem
                             || null,
+                    disponivel_pronta_entrega: disponivelProntaEntrega,
                     aceita_encomenda: aceitaEncomenda,
                     antecedencia_encomenda_horas: antecedenciaEncomenda,
                     quantidade_max_encomenda: maxEncomenda
@@ -14595,6 +14606,7 @@ async function salvarEdicaoProduto() {
                     categoria_id,
                     codigo_barras,
                     imagem_url,
+                    disponivel_pronta_entrega,
                     aceita_encomenda,
                     antecedencia_encomenda_horas,
                     quantidade_max_encomenda
@@ -14766,6 +14778,7 @@ async function salvarNovoProduto(event) {
         const custo = parseFloat(document.getElementById('np-custo').value) || 0;
         const margem = parseFloat(document.getElementById('np-margem').value) || 0;
         const precoVenda = parseFloat(document.getElementById('np-venda').value) || 0;
+        const disponivelProntaEntrega = document.getElementById('np-disponivel-pronta-entrega')?.checked === true;
         const aceitaEncomenda = document.getElementById('np-aceita-encomenda')?.checked === true;
         const antecedenciaEncomenda = Number(document.getElementById('np-antecedencia')?.value ?? 24);
         const maxEncomendaTexto = document.getElementById('np-max-encomenda')?.value.trim() || '';
@@ -14792,6 +14805,7 @@ async function salvarNovoProduto(event) {
                         margem_lucro: margem,
                         preco: precoVenda,
                         imagem_url: urlFinalImagem,
+                        disponivel_pronta_entrega: disponivelProntaEntrega,
                         aceita_encomenda: aceitaEncomenda,
                         antecedencia_encomenda_horas: antecedenciaEncomenda,
                         quantidade_max_encomenda: maxEncomenda,

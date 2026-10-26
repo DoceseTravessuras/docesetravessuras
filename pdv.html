@@ -36,6 +36,10 @@
 
         <!-- Supabase JS CDN -->
         <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+        <!-- Configuração compartilhada -->
+        <script src="js/supabase-config.js"></script>
+
     </head>
 
     <body class="pdv-carregando">
@@ -418,7 +422,7 @@
                                 <th>Margem (%)</th>
                                 <th>Venda (R$)</th>
                                 <th>Estoque</th>
-                                                                <th>Status</th>
+                                <th>Status</th>
                                 <th>Ação</th>
                             </tr>
                         </thead>
@@ -741,6 +745,11 @@
                         </div>
 
                         <div style="border:1px solid #4a4a5c;border-radius:8px;padding:12px;margin:12px 0;background:#272733;">
+                            <label style="display:flex;gap:8px;align-items:center;font-weight:700;margin-bottom:8px;">
+                                <input type="checkbox" id="np-disponivel-pronta-entrega" checked style="width:18px;height:18px;">
+                                Disponível para pronta entrega
+                            </label>
+                            <small style="display:block;color:#aaa;margin:0 0 12px 26px;line-height:1.4;">Desmarque para retirar o produto da aba Pronta entrega. Ele continuará na aba Encomendas se a opção abaixo estiver marcada.</small>
                             <label style="display:flex;gap:8px;align-items:center;font-weight:700;">
                                 <input type="checkbox" id="np-aceita-encomenda" style="width:18px;height:18px;">
                                 Este produto aceita encomendas
@@ -1058,6 +1067,11 @@
 
                     <!-- CONFIGURAÇÃO DE ENCOMENDAS -->
                     <div style="border:1px solid #4a4a5c;border-radius:8px;padding:12px;margin-top:12px;background:#272733;">
+                        <label style="display:flex;gap:8px;align-items:center;font-weight:700;margin-bottom:8px;">
+                            <input type="checkbox" id="edit-produto-disponivel-pronta-entrega" checked style="width:18px;height:18px;">
+                            Disponível para pronta entrega
+                        </label>
+                        <small style="display:block;color:#aaa;margin:0 0 12px 26px;line-height:1.4;">Desmarque para retirar o produto da aba Pronta entrega. Ele continuará na aba Encomendas se a opção abaixo estiver marcada.</small>
                         <label style="display:flex;gap:8px;align-items:center;font-weight:700;">
                             <input type="checkbox" id="edit-produto-aceita-encomenda" style="width:18px;height:18px;">
                             Este produto aceita encomendas
@@ -3798,16 +3812,16 @@
                 <div
                     id="historico-compras-resumo"
                     style="
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:center;
-                        flex-wrap:wrap;
-                        gap:12px;
-                        margin-top:14px;
-                        padding:14px 16px;
-                        background:#1e1e24;
-                        border:1px solid #3d3d4e;
-                        border-radius:8px;
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    flex-wrap:wrap;
+                    gap:12px;
+                    margin-top:14px;
+                    padding:14px 16px;
+                    background:#1e1e24;
+                    border:1px solid #3d3d4e;
+                    border-radius:8px;
                     ">
                     <span
                         id="historico-compras-contagem"
@@ -6059,7 +6073,7 @@
                     <button type="button"
                             onclick="fecharModalCategoriaUI()"
                             style="padding:10px 18px; background:#555; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:inline-flex; align-items:center; justify-content:center; line-height:1; white-space:nowrap;">
-                       ❌ Cancelar
+                        ❌ Cancelar
                     </button>
 
                     <button

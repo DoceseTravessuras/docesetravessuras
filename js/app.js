@@ -1,8 +1,14 @@
 // 1. Configuração do Supabase (Substitua pelas suas chaves do Supabase)
-const SUPABASE_URL = 'https://pznuqeqtytyjtupxnzqk.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6bnVxZXF0eXR5anR1cHhuenFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MDIyMTAsImV4cCI6MjEwMzk3ODIxMH0.ZadwdTr-pERj7mBYQGnIRpg7M4RhN9K3xNCpcG_GOqQ'; // Insira sua chave anon publica aqui
+const { url, anonKey } = window.SUPABASE_CONFIG || {};
 
-const _supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+if (!url || !anonKey) {
+    throw new Error(
+        'Configuração do Supabase não encontrada ou incompleta.'
+    );
+}
+
+const _supabase = window.supabase.createClient(url, anonKey);
+
 // QR Code do Salão: catálogo somente para consulta, sem envio de pedido público.
 const PARAMS_CARDAPIO = new URLSearchParams(window.location.search);
 const MODO_CONSULTA_SALAO = PARAMS_CARDAPIO.get('salao_consulta') === '1';
@@ -436,7 +442,12 @@ function renderizarCatalogo() {
     let lista = [...produtosList];
 
     if (modoCardapioAtual === 'ENCOMENDA') {
+        // Encomenda independe da disponibilidade para pronta entrega.
         lista = lista.filter(p => p.aceita_encomenda === true);
+    } else {
+        // Se a opção estiver desmarcada, o produto não aparece nesta aba.
+        // `!== false` mantém compatibilidade com produtos legados até a migração.
+        lista = lista.filter(p => p.disponivel_pronta_entrega !== false);
     }
 
     if (categoriaAtualFiltro !== 'todas') {
@@ -541,6 +552,12 @@ function adicionarAoCarrinho(produtoId) {
     const prod = produtosList.find(p => Number(p.id) === Number(produtoId));
     if (!prod) {
         alert('Este produto não está mais disponível. Atualize o cardápio.');
+        return;
+    }
+
+    if (modoCardapioAtual === 'PRONTA_ENTREGA' && prod.disponivel_pronta_entrega === false) {
+        alert(`O produto "${prod.nome}" não está disponível para pronta entrega. Consulte a aba Encomendas.`);
+        renderizarCatalogo();
         return;
     }
 
@@ -1860,6 +1877,12 @@ async function finalizarPedido(event) {
             alert(
                     `⚠️ O produto "${item.nome}" não está disponível.`
                     );
+            return;
+        }
+
+        if (produto.disponivel_pronta_entrega === false) {
+            alert(`O produto "${produto.nome}" foi desativado para pronta entrega. Remova-o do carrinho ou escolha a aba Encomendas se ele aceitar essa modalidade.`);
+            await carregarProdutos();
             return;
         }
 
