@@ -22638,6 +22638,7 @@ function fecharModalCidadeEntrega() {
 let clienteEditandoId = null;
 let clientesCadastroCache = [];
 let timerBuscaClientesCadastro = null;
+let sequenciaBuscaClientesCadastro = 0;
 
 // ============================================================
 // ABRIR ABA CLIENTES
@@ -22706,207 +22707,213 @@ async function abrirCadastroClientesUI() {
 }
 
 // ============================================================
+// NORMALIZA A BUSCA DE CLIENTES
+// ============================================================
+function normalizarBuscaCadastroClienteUI(valor) {
+    return String(valor ?? '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+}
+
+// ============================================================
+// FILTRO LOCAL DE SEGURANÇA
+// Garante que a tabela respeite a pesquisa mesmo se o RPC
+// listar_clientes_admin retornar todos os clientes.
+// ============================================================
+function filtrarListaCadastroClientesUI(clientes, busca) {
+    const lista = Array.isArray(clientes) ? clientes : [];
+    const termoOriginal = String(busca ?? '').trim();
+
+    if (!termoOriginal) {
+        return lista;
+    }
+
+    const termoTexto = normalizarBuscaCadastroClienteUI(termoOriginal);
+    const buscaSomenteNumeros = /^[\d\s()./+-]+$/.test(termoOriginal);
+    const termoNumerico = buscaSomenteNumeros
+            ? termoOriginal.replace(/\D/g, '')
+            : '';
+
+    return lista.filter(cliente => {
+        const nome = normalizarBuscaCadastroClienteUI(cliente?.nome);
+        const documento = String(
+                cliente?.documento ?? cliente?.cpf ?? ''
+                ).replace(/\D/g, '');
+        const telefone = String(cliente?.telefone ?? '').replace(/\D/g, '');
+
+        if (termoTexto && nome.includes(termoTexto)) {
+            return true;
+        }
+
+        if (
+                termoNumerico &&
+                (documento.includes(termoNumerico) ||
+                telefone.includes(termoNumerico))
+                ) {
+            return true;
+        }
+
+        return false;
+    });
+}
+
+// ============================================================
 // CARREGAR CLIENTES
 // ============================================================
-async function carregarCadastroClientesUI(busca = '') {
-
+async function carregarCadastroClientesUI(busca = null) {
     const tbody = document.getElementById('clientes-table-body');
 
     if (!tbody) {
-        console.error(
-                'Tabela de clientes não encontrada.'
-                );
+        console.error('Tabela de clientes não encontrada.');
         return;
     }
 
+    const campoBusca = document.getElementById('clientes-busca');
+    const termoBusca = String(
+            busca !== null && busca !== undefined
+                    ? busca
+                    : (campoBusca?.value || '')
+            ).trim();
+
+    // Cada consulta recebe uma sequência. Respostas antigas são ignoradas,
+    // evitando que uma busca mais lenta sobrescreva a pesquisa mais recente.
+    const sequenciaAtual = ++sequenciaBuscaClientesCadastro;
+
     tbody.innerHTML = `
         <tr>
-            <td
-                colspan="5"
-                style="
-                text-align:center;
-                color:#aaa;
-                padding:25px;
-                "
-            >
+            <td colspan="5" style="text-align:center;color:#aaa;padding:25px;">
                 ⏳ Carregando clientes...
             </td>
         </tr>
     `;
 
     try {
-
-        const {data, error} =
-                await _supabase.rpc(
-                        'listar_clientes_admin',
-                        {
-                            p_busca:
-                                    busca?.trim() || null
-                        }
-                );
+        const {data, error} = await _supabase.rpc(
+                'listar_clientes_admin',
+                {
+                    p_busca: termoBusca || null
+                }
+        );
 
         if (error) {
             throw error;
         }
 
-        clientesCadastroCache =
-                Array.isArray(data)
-                ? data
-                : [];
+        // Não deixa uma resposta antiga substituir o resultado mais novo.
+        if (sequenciaAtual !== sequenciaBuscaClientesCadastro) {
+            return;
+        }
 
-        renderizarTabelaClientesUI(
-                clientesCadastroCache
+        clientesCadastroCache = Array.isArray(data) ? data : [];
+
+        // O filtro local é aplicado mesmo quando o banco já recebeu p_busca.
+        // Assim a tabela nunca mostra clientes fora do termo digitado.
+        const clientesFiltrados = filtrarListaCadastroClientesUI(
+                clientesCadastroCache,
+                termoBusca
                 );
+
+        renderizarTabelaClientesUI(clientesFiltrados);
 
     } catch (erro) {
+        if (sequenciaAtual !== sequenciaBuscaClientesCadastro) {
+            return;
+        }
 
-        console.error(
-                'Erro ao carregar clientes:',
-                erro
-                );
+        console.error('Erro ao carregar clientes:', erro);
 
         tbody.innerHTML = `
             <tr>
-                <td
-                    colspan="5"
-                    style="
-                    text-align:center;
-                    color:#ff6b6b;
-                    padding:25px;
-                    "
-                >
+                <td colspan="5" style="text-align:center;color:#ff6b6b;padding:25px;">
                     ❌ Não foi possível carregar os clientes.
                 </td>
             </tr>
         `;
-}
+    }
 }
 
 // ============================================================
 // RENDERIZAR CLIENTES
 // ============================================================
 function renderizarTabelaClientesUI(clientes) {
-
-    const tbody =
-            document.getElementById(
-                    'clientes-table-body'
-                    );
+    const tbody = document.getElementById('clientes-table-body');
 
     if (!tbody) {
         return;
     }
 
-    if (
-            !Array.isArray(clientes) ||
-            clientes.length === 0
-            ) {
-
+    if (!Array.isArray(clientes) || clientes.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td
-                    colspan="5"
-                    style="
-                    text-align:center;
-                    color:#aaa;
-                    padding:25px;
-                    "
-                >
+                <td colspan="5" style="text-align:center;color:#aaa;padding:25px;">
                     Nenhum cliente encontrado.
                 </td>
             </tr>
         `;
-
         return;
     }
 
-    tbody.innerHTML =
-            clientes.map(cliente => {
+    tbody.innerHTML = clientes.map(cliente => {
+        const nome = escaparHTMLClienteUI(cliente.nome || '');
 
-                const nome =
-                        escaparHTMLClienteUI(
-                                cliente.nome || ''
-                                );
+        const documento = cliente.documento
+                ? escaparHTMLClienteUI(
+                        formatarDocumentoClienteUI(cliente.documento)
+                        )
+                : '—';
 
-                const documento =
-                        cliente.documento
-                        ? escaparHTMLClienteUI(
-                                formatarDocumentoClienteUI(
-                                        cliente.documento
-                                        )
-                                )
-                        : '—';
+        const telefone = cliente.telefone
+                ? escaparHTMLClienteUI(
+                        formatarTelefoneClienteUI(cliente.telefone)
+                        )
+                : '—';
 
-                const telefone =
-                        cliente.telefone
-                        ? escaparHTMLClienteUI(
-                                formatarTelefoneClienteUI(
-                                        cliente.telefone
-                                        )
-                                )
-                        : '—';
+        const endereco = montarEnderecoClienteUI(cliente);
 
-                const endereco =
-                        montarEnderecoClienteUI(
-                                cliente
-                                );
-
-                return `
-                <tr>
-
-                    <td>
-                        <strong>
-                            ${nome}
-                        </strong>
-                    </td>
-
-                    <td>
-                        ${documento}
-                    </td>
-
-                    <td>
-                        ${telefone}
-                    </td>
-
-                    <td>
-                        ${endereco}
-                    </td>
-
-                    <td style="text-align:center;">
-
-                        <button
-                            type="button"
-                            class="btn-qty"
-                            onclick="editarClienteUI(${Number(cliente.id)})"
-                            style="
-                            margin-right:5px;
-                            "
-                        >
-                            ✏️ Editar
-                        </button>
-                    </td>
-                </tr>
-            `;
-
-            }).join('');
+        return `
+            <tr>
+                <td><strong>${nome}</strong></td>
+                <td>${documento}</td>
+                <td>${telefone}</td>
+                <td>${endereco}</td>
+                <td style="text-align:center;">
+                    <button
+                        type="button"
+                        class="btn-qty"
+                        onclick="editarClienteUI(${Number(cliente.id)})"
+                        style="margin-right:5px;"
+                    >
+                        ✏️ Editar
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 // ============================================================
 // BUSCA
 // ============================================================
 function filtrarCadastroClientesUI(valor) {
+    clearTimeout(timerBuscaClientesCadastro);
 
-    clearTimeout(
-            timerBuscaClientesCadastro
+    const termoBusca = String(valor ?? '');
+
+    // Invalida imediatamente qualquer consulta anterior que ainda esteja
+    // em andamento e atualiza a tabela localmente, sem esperar o servidor.
+    sequenciaBuscaClientesCadastro++;
+
+    const resultadoLocal = filtrarListaCadastroClientesUI(
+            clientesCadastroCache,
+            termoBusca
             );
+    renderizarTabelaClientesUI(resultadoLocal);
 
-    timerBuscaClientesCadastro =
-            setTimeout(() => {
-
-                carregarCadastroClientesUI(
-                        valor || ''
-                        );
-
-            }, 250);
+    timerBuscaClientesCadastro = setTimeout(() => {
+        carregarCadastroClientesUI(termoBusca);
+    }, 250);
 }
 
 // ============================================================

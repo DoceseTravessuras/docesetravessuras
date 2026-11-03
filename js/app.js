@@ -1,10 +1,9 @@
 // 1. Configuração do Supabase (Substitua pelas suas chaves do Supabase)
-const { url, anonKey } = window.SUPABASE_CONFIG || {};
-
+const {url, anonKey} = window.SUPABASE_CONFIG || {};
 if (!url || !anonKey) {
     throw new Error(
-        'Configuração do Supabase não encontrada ou incompleta.'
-    );
+            'Configuração do Supabase não encontrada ou incompleta.'
+            );
 }
 
 const _supabase = window.supabase.createClient(url, anonKey);
@@ -503,7 +502,7 @@ function renderizarProdutos(lista) {
                     <small style="display:block;margin:4px 0 10px;color:#76656b;">${etiqueta}</small>
                     ${disabledPronta
                 ? `<button class="add-btn" disabled style="background:#888;cursor:not-allowed;">${textoBotao}</button>`
-                : `<button class="add-btn" onclick="adicionarAoCarrinho(${Number(p.id)})">${textoBotao}</button>`}
+                : `<button type="button" class="add-btn" onclick="adicionarAoCarrinho(${Number(p.id)}, this)">${textoBotao}</button>`}
                 </div>
             </div>
         `;
@@ -543,8 +542,103 @@ function atualizarContadorCarrinho() {
         label.textContent = modoCardapioAtual === 'ENCOMENDA' ? 'Minhas Encomendas' : 'Meu Pedido';
 }
 
+// ============================================================
+// FEEDBACK VISUAL AO ADICIONAR PRODUTO AO CARRINHO
+// ============================================================
+
+const temporizadoresBotoesAdicao = new WeakMap();
+let temporizadorMensagemAdicao = null;
+
+function mostrarFeedbackAdicao(botao) {
+    // Cria a mensagem de confirmação apenas uma vez.
+    let mensagem = document.getElementById('feedback-produto-adicionado');
+
+    if (!mensagem) {
+        mensagem = document.createElement('div');
+        mensagem.id = 'feedback-produto-adicionado';
+        mensagem.setAttribute('role', 'status');
+        mensagem.setAttribute('aria-live', 'polite');
+
+        mensagem.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 99999;
+            padding: 13px 20px;
+            border-radius: 10px;
+            background: #176b45;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,.20);
+            display: none;
+            max-width: calc(100% - 30px);
+        `;
+
+        document.body.appendChild(mensagem);
+    }
+
+    mensagem.textContent = '✓ Produto adicionado ao carrinho!';
+    mensagem.style.display = 'block';
+
+    // Reinicia o tempo da mensagem caso o cliente adicione outro produto.
+    if (temporizadorMensagemAdicao) {
+        clearTimeout(temporizadorMensagemAdicao);
+    }
+
+    temporizadorMensagemAdicao = setTimeout(() => {
+        mensagem.style.display = 'none';
+    }, 2000);
+
+    // Feedback no próprio botão clicado.
+    if (botao) {
+        const textoOriginal = botao.dataset.textoOriginal || botao.textContent.trim();
+
+        botao.dataset.textoOriginal = textoOriginal;
+        botao.textContent = '✓ Adicionado!';
+        botao.classList.add('produto-adicionado');
+
+        const temporizadorAnterior = temporizadoresBotoesAdicao.get(botao);
+
+        if (temporizadorAnterior) {
+            clearTimeout(temporizadorAnterior);
+        }
+
+        const temporizador = setTimeout(() => {
+            botao.textContent = textoOriginal;
+            botao.classList.remove('produto-adicionado');
+            temporizadoresBotoesAdicao.delete(botao);
+        }, 2000);
+
+        temporizadoresBotoesAdicao.set(botao, temporizador);
+    }
+}
+
+// Estilo visual do botão durante a confirmação.
+(function adicionarEstiloFeedbackCarrinho() {
+    if (document.getElementById('estilo-feedback-carrinho'))
+        return;
+
+    const estilo = document.createElement('style');
+    estilo.id = 'estilo-feedback-carrinho';
+
+    estilo.textContent = `
+        .add-btn.produto-adicionado {
+            background: #176b45 !important;
+            color: #fff !important;
+            border-color: #176b45 !important;
+            transform: scale(0.98);
+            transition: background .2s ease, transform .2s ease;
+        }
+    `;
+
+    document.head.appendChild(estilo);
+})();
+
 // Gerenciamento de carrinhos separados: estoque atual x encomenda futura.
-function adicionarAoCarrinho(produtoId) {
+function adicionarAoCarrinho(produtoId, botao) {
     if (MODO_CONSULTA_SALAO) {
         alert('Este QR Code está em modo de consulta. Chame o garçom para registrar o pedido na comanda.');
         return;
@@ -591,6 +685,9 @@ function adicionarAoCarrinho(produtoId) {
     if (modoCardapioAtual === 'ENCOMENDA')
         chaveIdempotenciaEncomenda = null;
     atualizarCarrinho();
+
+    // Confirma visualmente que o produto entrou no carrinho.
+    mostrarFeedbackAdicao(botao);
 }
 
 function alterarQtd(produtoId, delta) {
