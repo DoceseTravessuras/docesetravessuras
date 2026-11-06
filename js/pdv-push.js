@@ -102,11 +102,26 @@
         return authUser;
     }
 
+    // O PDV pode estar publicado em uma subpasta do GitHub Pages
+    // (ex.: /docesetravessuras/). Use a pasta da própria página como escopo,
+    // em vez de assumir a raiz do domínio.
+    function obterEscopoServiceWorker() {
+        return new URL('./', window.location.href).pathname;
+    }
+
+    function obterUrlServiceWorker() {
+        return new URL('service-worker.js', window.location.href).href;
+    }
+
     async function obterRegistroServiceWorker() {
+        const escopo = obterEscopoServiceWorker();
+        const urlScript = obterUrlServiceWorker();
+
         const registro = await navigator.serviceWorker.register(
-            '/service-worker.js',
-            { scope: '/' }
+            urlScript,
+            { scope: escopo }
         );
+
         await navigator.serviceWorker.ready;
         return registro;
     }
@@ -193,7 +208,7 @@
         }
 
         try {
-            const registro = await navigator.serviceWorker.getRegistration('/');
+            const registro = await navigator.serviceWorker.getRegistration(obterEscopoServiceWorker());
             const assinatura = registro
                 ? await registro.pushManager.getSubscription()
                 : null;
@@ -302,7 +317,7 @@
         try {
             const { data: authData } = await _supabase.auth.getUser();
             const authUserId = authData?.user?.id || window.usuarioAtual?.auth_user_id;
-            const registro = await navigator.serviceWorker?.getRegistration('/');
+            const registro = await navigator.serviceWorker?.getRegistration(obterEscopoServiceWorker());
             const assinatura = registro
                 ? await registro.pushManager.getSubscription()
                 : null;

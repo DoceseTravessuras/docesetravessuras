@@ -1,6 +1,8 @@
 /* ============================================================
  * SERVICE WORKER - WEB PUSH DO PDV
- * Escopo: raiz do site. Não implementa cache/offline.
+ * Usa o escopo real da página, inclusive em GitHub Pages de projeto
+ * (ex.: https://usuario.github.io/nome-do-repositorio/).
+ * Não implementa cache/offline.
  * ============================================================ */
 
 self.addEventListener('install', (event) => {
@@ -10,6 +12,45 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(self.clients.claim());
 });
+
+function urlBaseDoPDV() {
+    return new URL('pdv.html', self.registration.scope);
+}
+
+function obterDestino(dados) {
+    const destino = urlBaseDoPDV();
+    const pedidoId = dados && dados.pedido_id != null
+        ? String(dados.pedido_id)
+        : '';
+
+    // Aceita apenas ID numérico de pedido.
+    if (/^\d+$/.test(pedidoId)) {
+        destino.searchParams.set('pedido', pedidoId);
+        return destino;
+    }
+
+    // Compatibilidade com payloads antigos que enviam path absoluto.
+    if (dados && typeof dados.path === 'string') {
+        try {
+            const informado = new URL(dados.path, self.registration.scope);
+            const paginaPDV = urlBaseDoPDV();
+
+            if (
+                informado.origin === paginaPDV.origin &&
+                informado.pathname.endsWith('/pdv.html')
+            ) {
+                const pedidoInformado = informado.searchParams.get('pedido');
+                if (pedidoInformado && /^\d+$/.test(pedidoInformado)) {
+                    destino.searchParams.set('pedido', pedidoInformado);
+                }
+            }
+        } catch (_) {
+            // Mantém a página do PDV no escopo atual.
+        }
+    }
+
+    return destino;
+}
 
 self.addEventListener('push', (event) => {
     let dados = {};
@@ -25,24 +66,17 @@ self.addEventListener('push', (event) => {
 
     const titulo = String(dados.title || 'Novo pedido online');
     const corpo = String(dados.body || 'Um novo pedido chegou ao PDV.');
-    const pedidoId = dados.pedido_id ? String(dados.pedido_id) : '';
-
-    // Só aceita navegação interna para a tela do PDV.
-    let caminho = '/pdv.html';
-    if (typeof dados.path === 'string' && dados.path.startsWith('/pdv.html')) {
-        caminho = dados.path;
-    } else if (pedidoId && /^\d+$/.test(pedidoId)) {
-        caminho = `/pdv.html?pedido=${encodeURIComponent(pedidoId)}`;
-    }
+    const pedidoId = dados.pedido_id != null ? String(dados.pedido_id) : '';
+    const destino = obterDestino(dados);
 
     const opcoes = {
         body: corpo,
         data: {
-            path: caminho,
-            pedido_id: pedidoId,
+            path: destino.pathname + destino.search,
+            pedido_id: /^\d+$/.test(pedidoId) ? pedidoId : '',
             tipo_pedido: String(dados.tipo_pedido || '')
         },
-        tag: pedidoId ? `pdv-pedido-${pedidoId}` : 'pdv-novo-pedido',
+        tag: /^\d+$/.test(pedidoId) ? `pdv-pedido-${pedidoId}` : 'pdv-novo-pedido',
         renotify: true
     };
 
@@ -55,22 +89,8 @@ self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
     event.waitUntil((async () => {
-        const dados = event.notification.data || {};
-        let destino = new URL('/pdv.html', self.location.origin);
-
-        if (typeof dados.path === 'string') {
-            try {
-                const candidato = new URL(dados.path, self.location.origin);
-                if (
-                    candidato.origin === self.location.origin &&
-                    candidato.pathname.endsWith('/pdv.html')
-                ) {
-                    destino = candidato;
-                }
-            } catch (_) {
-                // Mantém o destino padrão do PDV.
-            }
-        }
+        const destino = obterDestino(event.notification.data || {});
+        const paginaPDV = urlBaseDoPDV();
 
         const janelas = await self.clients.matchAll({
             type: 'window',
@@ -81,8 +101,8 @@ self.addEventListener('notificationclick', (event) => {
             try {
                 const urlJanela = new URL(janela.url);
                 if (
-                    urlJanela.origin === self.location.origin &&
-                    urlJanela.pathname.endsWith('/pdv.html') &&
+                    urlJanela.origin === paginaPDV.origin &&
+                    urlJanela.pathname === paginaPDV.pathname &&
                     'navigate' in janela
                 ) {
                     await janela.navigate(destino.href);
