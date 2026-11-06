@@ -2978,6 +2978,18 @@ async function exibirPDV() {
         iniciarEscutaRealtime();
         salaoIniciarRealtimeUI();
 
+        // Notificações Push: atualizar o estado sem solicitar permissão automaticamente.
+        if (typeof window.pdvPushAtualizarBotao === 'function') {
+            window.pdvPushAtualizarBotao().catch(erro => {
+                console.warn('Não foi possível atualizar o estado do Push:', erro);
+            });
+        }
+
+        // Se o PDV foi aberto pelo clique em uma notificação, direciona ao pedido.
+        if (typeof window.pdvPushProcessarPedidoURL === 'function') {
+            await window.pdvPushProcessarPedidoURL();
+        }
+
     } catch (err) {
         console.error('Erro ao inicializar o PDV:', err);
 
@@ -3072,6 +3084,9 @@ async function fazerLogin() {
 
 async function fazerLogout() {
     try {
+        // A assinatura Push permanece cadastrada após o logout.
+        // Assim, o dispositivo continua recebendo notificações mesmo com
+        // o PDV fechado. O acesso ao pedido exigirá autenticação novamente.
         await _supabase.auth.signOut();
     } finally {
         localStorage.removeItem('usuario_pdv');

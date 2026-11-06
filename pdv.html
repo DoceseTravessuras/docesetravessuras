@@ -196,6 +196,16 @@
 
                 <button
                     class="sound-btn"
+                    id="btn-push"
+                    onclick="pdvPushAtivarNotificacoes()"
+                    title="Ativar notificações de novos pedidos neste dispositivo"
+                    style="display:none;background:#0f766e;"
+                    >
+                    🔔 Ativar Push
+                </button>
+
+                <button
+                    class="sound-btn"
                     id="btn-ajuda-pdv"
                     onclick="abrirCentralAjuda('completo')"
                     title="Abrir ajuda do sistema"
@@ -6291,7 +6301,9 @@
             </div>
         </div>
 
-        <script src="js/pdv.js?v=filtro-clientes-20261102"></script>
+        <script src="js/pdv.js?v=webpush-20261105"></script>
+        <script src="js/push-config.js?v=20261105"></script>
+        <script src="js/pdv-push.js?v=20261105"></script>
 
     </body>
 </html>
