@@ -3249,7 +3249,7 @@ function renderizarEncomendas(lista) {
                 ? '<p style="font-size:.78rem;color:#a1a1aa;line-height:1.45;margin:10px 0 0;">Cada item pode ser produzido pela Ficha Técnica, com baixa oficial dos insumos, ou separado do estoque existente. Em ambos os casos, a quantidade fica reservada para esta encomenda e indisponível para outras vendas.</p>'
                 : status === 'PRONTA'
                 ? '<p style="font-size:.78rem;color:#a1a1aa;line-height:1.45;margin:10px 0 0;">Todos os itens estão prontos. Ao concluir no caixa, a reserva será consumida junto com a venda, na mesma transação.</p>' : '';
-        return `<article style="background:#24242f;border:1px solid #3d3d4e;border-radius:12px;padding:15px;color:#f1f1f1;">
+        return `<article id="encomenda-card-${id}" style="background:#24242f;border:1px solid #3d3d4e;border-radius:12px;padding:15px;color:#f1f1f1;">
             <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;">
                 <div><strong style="font-size:1.05rem;">Encomenda #${id}</strong><div style="color:#aaa;font-size:.82rem;margin-top:3px;">Recebida em ${e.criado_em ? new Date(e.criado_em).toLocaleString('pt-BR') : '-'}</div></div>
                 <span style="color:${cores[status] || '#aaa'};font-weight:700;white-space:normal;text-align:right;">${statusRotulos[status] || escaparHTMLSeguroEncomenda(status)}</span>

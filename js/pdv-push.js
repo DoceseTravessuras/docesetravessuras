@@ -346,6 +346,64 @@
 
     window.pdvPushProcessarPedidoURL = async function () {
         const url = new URL(window.location.href);
+
+        // -----------------------------------------------------
+        // NOVA ENCOMENDA AGENDADA
+        // -----------------------------------------------------
+        const aba = (url.searchParams.get('aba') || '').toLowerCase();
+        const encomendaTexto = url.searchParams.get('encomenda');
+
+        if (aba === 'encomendas' && encomendaTexto !== null) {
+            const encomendaId = Number(encomendaTexto);
+
+            if (!Number.isSafeInteger(encomendaId) || encomendaId <= 0) {
+                url.searchParams.delete('aba');
+                url.searchParams.delete('encomenda');
+                history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+                console.warn('ID de encomenda recebido pela notificação é inválido.');
+                return;
+            }
+
+            if (typeof window.alternarAba !== 'function') {
+                console.warn('A função de abrir a aba Encomendas ainda não está disponível.');
+                return;
+            }
+
+            const filtro = document.getElementById('filtro-encomendas-status');
+            if (filtro) filtro.value = 'TODAS';
+
+            await window.alternarAba('encomendas');
+
+            // Remove os parâmetros após carregar a aba, evitando reabrir a rota
+            // em toda atualização manual da página.
+            url.searchParams.delete('aba');
+            url.searchParams.delete('encomenda');
+            history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+
+            const card = document.getElementById(`encomenda-card-${encomendaId}`);
+            if (card) {
+                card.style.outline = '3px solid #f59e0b';
+                card.style.outlineOffset = '3px';
+                card.style.boxShadow = '0 0 24px rgba(245,158,11,.35)';
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                window.setTimeout(() => {
+                    if (!card.isConnected) return;
+                    card.style.outline = '';
+                    card.style.outlineOffset = '';
+                    card.style.boxShadow = '';
+                }, 8000);
+            } else {
+                console.warn(`A encomenda #${encomendaId} não foi encontrada na lista carregada.`);
+                alert(`A encomenda #${encomendaId} não foi encontrada na lista atual. Atualize a aba Encomendas para conferir.`);
+            }
+
+            return;
+        }
+
+        // -----------------------------------------------------
+        // PEDIDO ONLINE — MANTÉM O COMPORTAMENTO EXISTENTE
+        // -----------------------------------------------------
         const pedidoIdTexto = url.searchParams.get('pedido');
         if (!pedidoIdTexto) return;
 
