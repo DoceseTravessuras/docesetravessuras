@@ -7,7 +7,7 @@
         <title>Doces e Travessuras - Cardápio & Delivery</title>
 
         <!-- CSS Principal -->
-        <link rel="stylesheet" href="css/estilo.css">
+        <link rel="stylesheet" href="css/estilo.css?v=banner-promocional-v1">
 
         <!-- Supabase JS Client via CDN -->
         <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -145,6 +145,26 @@
             margin:15px auto 10px;
             "
             ></div>
+
+
+        <!-- =========================================================
+             BANNER PROMOCIONAL (CONFIGURADO PELO PDV)
+        ========================================================== -->
+        <section
+            id="promo-banner"
+            class="promo-banner"
+            hidden
+            role="region"
+            aria-label="Anúncio da loja"
+            aria-live="polite"
+            aria-atomic="true"
+            >
+            <div class="promo-banner__content">
+                <div class="promo-banner__eyebrow">✨ Um recado especial para você</div>
+                <p id="promo-banner-text" class="promo-banner__text"></p>
+                <span class="promo-banner__decoration" aria-hidden="true">🍬</span>
+            </div>
+        </section>
 
 
         <!-- =========================================================
@@ -1097,7 +1117,7 @@
              SCRIPT PRINCIPAL
         ========================================================== -->
 
-        <script src="js/app.js?v=horarios-por-dia-contatos-v2-20261014"></script>
+        <script src="js/app.js?v=banner-promocional-v1"></script>
 
     </body>
 </html>
