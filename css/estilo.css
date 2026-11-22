@@ -425,8 +425,13 @@ body {
     margin: 16px auto 12px;
     border-radius: 18px;
     overflow: hidden;
-    border: 1px solid #f3c4d5;
-    background: linear-gradient(120deg, #fff0f6 0%, #fff9e9 52%, #fff1e7 100%);
+    border: 3px solid transparent;
+    background:
+        linear-gradient(120deg, #fff0f6 0%, #fff9e9 52%, #fff1e7 100%) padding-box,
+        linear-gradient(120deg, #ef78ad, #f6c66b, #b99af5, #ef78ad, #f6c66b) border-box;
+    background-size: 100% 100%, 300% 300%;
+    background-position: center, 0% 50%;
+    animation: promoBannerBorda 6s ease-in-out infinite;
     box-shadow: 0 9px 26px rgba(171, 46, 97, .11);
     position: relative;
     isolation: isolate;
@@ -475,6 +480,11 @@ body {
     from { opacity: 0; transform: translateY(12px) scale(.985); }
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
+@keyframes promoBannerBorda {
+    0% { background-position: center, 0% 50%; }
+    50% { background-position: center, 100% 50%; }
+    100% { background-position: center, 0% 50%; }
+}
 @media (max-width: 560px) {
     .promo-banner { width: calc(100% - 24px); margin: 12px auto 8px; border-radius: 14px; }
     .promo-banner__content { min-height: 104px; padding: 20px 48px 20px 18px; gap: 8px; }
@@ -482,5 +492,6 @@ body {
     .promo-banner__decoration { right: 10px; bottom: 8px; font-size: 1.8rem; }
 }
 @media (prefers-reduced-motion: reduce) {
+    .promo-banner { animation: none; }
     .promo-banner__content { animation: none; }
 }
