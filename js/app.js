@@ -2254,6 +2254,8 @@ let configLoja = {
     whatsapp_contato_online: '',
     email_contato_online: '',
     endereco_contato_online: '',
+    banner_promocional_ativo: false,
+    banner_promocional_texto: '',
     configuracoes_carregadas: false,
     // Mantém encomendas ocultas até confirmar a configuração persistida no banco.
     encomendas_ativas: false
@@ -2364,28 +2366,11 @@ async function carregarConfiguracoesLoja() {
         atualizarBannerStatus();
         aplicarDisponibilidadeEncomendasUI();
         atualizarInformacoesPublicasLoja();
+        atualizarBannerPromocional();
         return;
     }
 
-    const {data, error} = await _supabase
-            .from('configuracoes')
-            .select(`
-            nome_loja,
-            loja_aberta,
-            valor_minimo_pedido,
-            whatsapp_notificacoes_ativas,
-            encomendas_ativas,
-            dias_funcionamento_online,
-            hora_abertura_online,
-            hora_fechamento_online,
-            horarios_funcionamento_online,
-            telefone_contato_online,
-            whatsapp_contato_online,
-            email_contato_online,
-            endereco_contato_online
-        `)
-            .eq('id', 1)
-            .single();
+    const {data, error} = await _supabase.rpc('obter_configuracoes_publicas_loja');
 
     if (error || !data) {
         console.error('Erro ao buscar configurações da loja; novos pedidos permanecerão bloqueados:', error?.message || 'Registro de configuração não encontrado.');
@@ -2393,6 +2378,7 @@ async function carregarConfiguracoesLoja() {
         atualizarBannerStatus();
         aplicarDisponibilidadeEncomendasUI();
         atualizarInformacoesPublicasLoja();
+        atualizarBannerPromocional();
         return;
     }
 
@@ -2406,6 +2392,8 @@ async function carregarConfiguracoesLoja() {
         whatsapp_contato_online: data.whatsapp_contato_online || '',
         email_contato_online: data.email_contato_online || '',
         endereco_contato_online: data.endereco_contato_online || '',
+        banner_promocional_ativo: data.banner_promocional_ativo === true,
+        banner_promocional_texto: typeof data.banner_promocional_texto === 'string' ? data.banner_promocional_texto : '',
         configuracoes_carregadas: true,
         // Só habilita se o banco confirmar explicitamente true.
         encomendas_ativas: data.encomendas_ativas === true
@@ -2414,6 +2402,30 @@ async function carregarConfiguracoesLoja() {
     atualizarOpcaoWhatsApp();
     aplicarDisponibilidadeEncomendasUI();
     atualizarInformacoesPublicasLoja();
+    atualizarBannerPromocional();
+}
+
+function atualizarBannerPromocional() {
+    const banner = document.getElementById('promo-banner');
+    const campoTexto = document.getElementById('promo-banner-text');
+    if (!banner || !campoTexto)
+        return;
+
+    const texto = typeof configLoja.banner_promocional_texto === 'string'
+            ? configLoja.banner_promocional_texto.trim()
+            : '';
+    const deveExibir = configLoja.configuracoes_carregadas === true
+            && configLoja.banner_promocional_ativo === true
+            && texto.length > 0;
+
+    if (!deveExibir) {
+        banner.hidden = true;
+        campoTexto.textContent = '';
+        return;
+    }
+
+    campoTexto.textContent = texto;
+    banner.hidden = false;
 }
 
 function escutarConfiguracoesRealtime() {
@@ -2441,7 +2453,9 @@ function escutarConfiguracoesRealtime() {
                         typeof dados.telefone_contato_online === 'undefined' &&
                         typeof dados.whatsapp_contato_online === 'undefined' &&
                         typeof dados.email_contato_online === 'undefined' &&
-                        typeof dados.endereco_contato_online === 'undefined'
+                        typeof dados.endereco_contato_online === 'undefined' &&
+                        typeof dados.banner_promocional_ativo === 'undefined' &&
+                        typeof dados.banner_promocional_texto === 'undefined'
                         )) {
                     console.warn('⚠️ Payload de configuração inválido:', payload);
                     return;
@@ -2466,12 +2480,15 @@ function escutarConfiguracoesRealtime() {
                     whatsapp_contato_online: dados.whatsapp_contato_online ?? configLoja.whatsapp_contato_online,
                     email_contato_online: dados.email_contato_online ?? configLoja.email_contato_online,
                     endereco_contato_online: dados.endereco_contato_online ?? configLoja.endereco_contato_online,
+                    banner_promocional_ativo: typeof dados.banner_promocional_ativo === 'boolean' ? dados.banner_promocional_ativo : configLoja.banner_promocional_ativo,
+                    banner_promocional_texto: typeof dados.banner_promocional_texto === 'string' ? dados.banner_promocional_texto : configLoja.banner_promocional_texto,
                     configuracoes_carregadas: true
                 };
 
                 atualizarBannerStatus();
                 aplicarDisponibilidadeEncomendasUI();
                 atualizarInformacoesPublicasLoja();
+                atualizarBannerPromocional();
             }
             )
             .subscribe((status, error) => {

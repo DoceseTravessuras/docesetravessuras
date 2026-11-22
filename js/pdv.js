@@ -13072,6 +13072,14 @@ window.reimprimirPedidoSelecionado = async function () {
         btnReimprimir.disabled = false;
 };
 
+function atualizarContadorBannerPromocional() {
+    const campo = document.getElementById('cfg-banner-promocional-texto');
+    const contador = document.getElementById('cfg-banner-promocional-contador');
+    if (!campo || !contador)
+        return;
+    contador.textContent = `${campo.value.length}/240 caracteres`;
+}
+
 async function carregarConfiguracoesPDV() {
 
     const {data: cfg, error} = await _supabase
@@ -13090,7 +13098,9 @@ async function carregarConfiguracoesPDV() {
             telefone_contato_online,
             whatsapp_contato_online,
             email_contato_online,
-            endereco_contato_online
+            endereco_contato_online,
+            banner_promocional_ativo,
+            banner_promocional_texto
         `)
             .eq('id', 1)
             .single();
@@ -13156,6 +13166,15 @@ async function carregarConfiguracoesPDV() {
             campoContatoEmail.value = cfg.email_contato_online || '';
         if (campoContatoEndereco)
             campoContatoEndereco.value = cfg.endereco_contato_online || '';
+
+        const campoBannerAtivo = document.getElementById('cfg-banner-promocional-ativo');
+        const campoBannerTexto = document.getElementById('cfg-banner-promocional-texto');
+        if (campoBannerAtivo)
+            campoBannerAtivo.checked = cfg.banner_promocional_ativo === true;
+        if (campoBannerTexto)
+            campoBannerTexto.value = typeof cfg.banner_promocional_texto === 'string' ? cfg.banner_promocional_texto : '';
+        atualizarContadorBannerPromocional();
+
         salaoModuloAtivo = cfg.modulo_salao_ativo === true;
         const campoSalao = document.getElementById('cfg-modulo-salao-ativo');
         if (campoSalao)
@@ -13313,6 +13332,8 @@ async function salvarConfiguracoes() {
             document.getElementById('cfg-whatsapp-notificacoes');
     const campoEncomendasAtivas =
             document.getElementById('cfg-encomendas-ativas');
+    const campoBannerAtivo = document.getElementById('cfg-banner-promocional-ativo');
+    const campoBannerTexto = document.getElementById('cfg-banner-promocional-texto');
 
     const whatsappNotificacoesAtivas =
             campoWhatsapp?.checked === true;
@@ -13322,7 +13343,7 @@ async function salvarConfiguracoes() {
     const horariosFuncionamentoOnline = {};
     const diasFuncionamentoOnline = [];
 
-    if (!campoLojaAberta || !campoValorMinimo || !campoEncomendasAtivas || camposDiasLoja.length !== 7) {
+    if (!campoLojaAberta || !campoValorMinimo || !campoEncomendasAtivas || !campoBannerAtivo || !campoBannerTexto || camposDiasLoja.length !== 7) {
         alert(
                 '❌ Não foi possível localizar os campos de configuração.'
                 );
@@ -13342,6 +13363,14 @@ async function salvarConfiguracoes() {
         campoValorMinimo.focus();
         return;
     }
+
+    const textoBannerPromocional = campoBannerTexto.value.trim();
+    if (textoBannerPromocional.length > 240) {
+        alert('A mensagem do banner deve ter no máximo 240 caracteres.');
+        campoBannerTexto.focus();
+        return;
+    }
+
     for (const campoDia of camposDiasLoja) {
         const dia = Number(campoDia.dataset.lojaDia);
         const inicio = document.querySelector(`[data-loja-dia-inicio="${dia}"]`);
@@ -13392,6 +13421,8 @@ async function salvarConfiguracoes() {
                     hora_abertura_online: inicioLegado,
                     hora_fechamento_online: fimLegado,
                     horarios_funcionamento_online: horariosFuncionamentoOnline,
+                    banner_promocional_ativo: campoBannerAtivo.checked === true,
+                    banner_promocional_texto: textoBannerPromocional || null,
                     telefone_contato_online: document.getElementById('cfg-contato-telefone')?.value.trim() || null,
                     whatsapp_contato_online: document.getElementById('cfg-contato-whatsapp')?.value.trim() || null,
                     email_contato_online: document.getElementById('cfg-contato-email')?.value.trim() || null,
@@ -17653,11 +17684,59 @@ async function abrirDetalhesCaixa(caixaId) {
                     ? new Date(valor).toLocaleString('pt-BR')
                     : '-';
 
-        // Caixa fechado: preservar os totais gravados no momento do fechamento.
-        // Não recalcular o passado com tabelas que podem ter sido alteradas depois.
-        const entradasDinheiroRegistradas = Number(caixa.total_entradas_dinheiro || 0);
-        const entradasOutrasFormasRegistradas = Number(caixa.total_outras_formas || 0);
-        const saidasDinheiroRegistradas = Number(caixa.total_saidas || 0);
+        const vendasDinheiro =
+                vendas
+                .filter(v =>
+                    (v.forma_pagamento || '').toUpperCase()
+                            === 'DINHEIRO'
+                )
+                .reduce(
+                        (total, v) =>
+                    total + Number(v.valor_total || 0),
+                        0
+                        );
+
+        const vendasOutras =
+                vendas
+                .filter(v =>
+                    (v.forma_pagamento || '').toUpperCase()
+                            !== 'DINHEIRO'
+                )
+                .reduce(
+                        (total, v) =>
+                    total + Number(v.valor_total || 0),
+                        0
+                        );
+
+        const suprimentos =
+                movimentacoes
+                .filter(m => m.tipo === 'SUPRIMENTO')
+                .reduce(
+                        (total, m) =>
+                    total + Number(m.valor || 0),
+                        0
+                        );
+
+        const sangrias =
+                movimentacoes
+                .filter(m => m.tipo === 'SANGRIA')
+                .reduce(
+                        (total, m) =>
+                    total + Number(m.valor || 0),
+                        0
+                        );
+
+        const despesasDinheiro =
+                despesas
+                .filter(d =>
+                    (d.forma_pagamento || '').toUpperCase()
+                            === 'DINHEIRO'
+                )
+                .reduce(
+                        (total, d) =>
+                    total + Number(d.valor || 0),
+                        0
+                        );
 
         const diferenca =
                 Number(caixa.diferenca || 0);
@@ -17758,28 +17837,37 @@ async function abrirDetalhesCaixa(caixaId) {
 
                 <div class="metric-card">
                     <span class="metric-title">
-                        Total de entradas em dinheiro (no fechamento)
+                        Vendas Dinheiro
                     </span>
                     <h3 class="metric-value">
-                        ${dinheiro(entradasDinheiroRegistradas)}
+                        ${dinheiro(vendasDinheiro)}
                     </h3>
                 </div>
 
                 <div class="metric-card">
                     <span class="metric-title">
-                        Total de outras formas (no fechamento)
+                        Suprimentos
                     </span>
                     <h3 class="metric-value">
-                        ${dinheiro(entradasOutrasFormasRegistradas)}
+                        ${dinheiro(suprimentos)}
                     </h3>
                 </div>
 
                 <div class="metric-card">
                     <span class="metric-title">
-                        Total de saídas em dinheiro (no fechamento)
+                        Sangrias
                     </span>
                     <h3 class="metric-value">
-                        ${dinheiro(saidasDinheiroRegistradas)}
+                        ${dinheiro(sangrias)}
+                    </h3>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-title">
+                        Despesas Dinheiro
+                    </span>
+                    <h3 class="metric-value">
+                        ${dinheiro(despesasDinheiro)}
                     </h3>
                 </div>
 
@@ -18245,126 +18333,119 @@ function exibirPainelCaixaFechado() {
 
 // 3. Transição visual e cálculo de totais para caixa ABERTO
 async function exibirPainelCaixaAberto() {
-    if (!caixaAtual) return;
+    if (!caixaAtual)
+        return;
 
     const dataInicio = caixaAtual.data_abertura || caixaAtual.created_at;
-    const saldoInicialLocal = Number(caixaAtual.saldo_inicial || 0);
-    let resumo = null;
-    let erroCalculo = null;
+
+// O resumo financeiro é calculado no banco para não depender de RLS
+// de leitura direta das tabelas e para contabilizar parcelas de Fiado.
+    let totalDinheiro = 0;
+    let totalOutros = 0;
+    let erroCalculoEntradas = null;
 
     try {
-        const {data, error} = await _supabase.rpc(
-            'resumo_financeiro_caixa',
+        const {data: resumoEntradas, error: erroResumoEntradas} = await _supabase.rpc(
+            'resumo_entradas_caixa_balcao',
             {p_caixa_id: Number(caixaAtual.id)}
         );
+        if (erroResumoEntradas) throw erroResumoEntradas;
+        const linhaResumo = Array.isArray(resumoEntradas) ? resumoEntradas[0] : resumoEntradas;
+        if (!linhaResumo) throw new Error('O banco não retornou o resumo de entradas para este caixa.');
 
-        if (error) throw error;
-
-        resumo = Array.isArray(data) ? data[0] : data;
-        if (!resumo) {
-            throw new Error('O banco não retornou o resumo financeiro deste caixa.');
+        totalDinheiro = Number(linhaResumo.entradas_dinheiro || 0);
+        totalOutros = Number(linhaResumo.entradas_cartao_pix || 0);
+        if (!Number.isFinite(totalDinheiro) || !Number.isFinite(totalOutros)) {
+            throw new Error('O banco retornou valores inválidos para as entradas do caixa.');
         }
-
-        const camposNumericos = [
-            'saldo_inicial',
-            'entradas_dinheiro',
-            'entradas_outras_formas',
-            'suprimentos',
-            'sangrias',
-            'despesas_dinheiro',
-            'total_entradas_dinheiro',
-            'total_saidas_dinheiro',
-            'saldo_esperado'
-        ];
-
-        for (const campo of camposNumericos) {
-            if (resumo[campo] === null || resumo[campo] === undefined || !Number.isFinite(Number(resumo[campo]))) {
-                throw new Error(`O banco retornou um valor inválido em ${campo}.`);
-            }
-        }
-    } catch (err) {
-        erroCalculo = err;
-        resumo = null;
-        console.error('Erro ao calcular o resumo financeiro do caixa:', err);
+    } catch (erroResumoEntradas) {
+        erroCalculoEntradas = erroResumoEntradas;
+        console.error('Erro ao calcular entradas do Caixa Balcão. Verifique a migração 06:', erroResumoEntradas);
     }
 
-    const saldoInicial = resumo
-        ? Number(resumo.saldo_inicial)
-        : saldoInicialLocal;
-    const totalEntradasDinheiro = resumo
-        ? Number(resumo.total_entradas_dinheiro)
-        : null;
-    const totalOutros = resumo
-        ? Number(resumo.entradas_outras_formas)
-        : null;
-    const totalSaidasDinheiro = resumo
-        ? Number(resumo.total_saidas_dinheiro)
-        : null;
-    const totalSuprimentos = resumo
-        ? Number(resumo.suprimentos)
-        : null;
-    const totalSangrias = resumo
-        ? Number(resumo.sangrias)
-        : null;
-    const saldoEsperadoGaveta = resumo
-        ? Number(resumo.saldo_esperado)
-        : null;
+    let totalSaidasDinheiro = 0;
 
-    // Atualiza interface. Em caso de falha da RPC, não exibe totais parciais
-    // como se fossem um saldo confiável.
+    try {
+        const {data: despesasDinheiro, error: erroDespesas} = await _supabase
+                .from('despesas')
+                .select('valor')
+                .eq('caixa_id', caixaAtual.id)
+                .eq('pago', true)
+                .eq('forma_pagamento', 'DINHEIRO');
+
+        if (erroDespesas) {
+            console.error('Erro ao buscar saídas de dinheiro:', erroDespesas);
+        } else if (despesasDinheiro) {
+            totalSaidasDinheiro = despesasDinheiro.reduce(
+                    (acc, d) => acc + parseFloat(d.valor || 0),
+                    0
+                    );
+        }
+    } catch (err) {
+        console.error('Exceção ao calcular saídas de dinheiro:', err);
+    }
+
+    let totalSuprimentos = 0;
+    let totalSangrias = 0;
+
+    try {
+        const {data: movimentacoes, error: erroMovimentacoes} = await _supabase
+                .from('movimentacoes_caixa')
+                .select('tipo, valor')
+                .eq('caixa_id', caixaAtual.id);
+
+        if (erroMovimentacoes) {
+            console.error('Erro ao buscar movimentações do caixa:', erroMovimentacoes);
+        } else if (movimentacoes) {
+            movimentacoes.forEach(m => {
+                const valor = parseFloat(m.valor || 0);
+
+                if (m.tipo === 'SUPRIMENTO') {
+                    totalSuprimentos += valor;
+                } else if (m.tipo === 'SANGRIA') {
+                    totalSangrias += valor;
+                }
+            });
+        }
+    } catch (err) {
+        console.error('Exceção ao calcular movimentações do caixa:', err);
+    }
+
+    const saldoInicial = parseFloat(caixaAtual.saldo_inicial || 0);
+    const saldoEsperadoGaveta = erroCalculoEntradas
+        ? null
+        : saldoInicial + totalDinheiro + totalSuprimentos - totalSaidasDinheiro - totalSangrias;
+
+    // Atualiza interface
     document.getElementById('caixa-badge-status').innerText = 'ABERTO';
     document.getElementById('caixa-badge-status').style.background = '#2ed573';
-
     const textoAberturaCaixa = dataInicio
-        ? `Aberto em: ${new Date(dataInicio).toLocaleString('pt-BR')}`
-        : 'Caixa aberto';
+            ? `Aberto em: ${new Date(dataInicio).toLocaleString('pt-BR')}`
+            : 'Caixa aberto';
+    document.getElementById('caixa-status-texto').innerText = erroCalculoEntradas
+            ? `${textoAberturaCaixa} • Entradas indisponíveis: confira a migração 06 do PDV.`
+            : textoAberturaCaixa;
 
-    document.getElementById('caixa-status-texto').innerText = erroCalculo
-        ? `${textoAberturaCaixa} • Resumo financeiro indisponível.`
-        : textoAberturaCaixa;
-
-    document.getElementById('caixa-resumo-inicial').innerText =
-        `R$ ${saldoInicial.toFixed(2).replace('.', ',')}`;
-    document.getElementById('caixa-resumo-dinheiro').innerText = resumo
-        ? `R$ ${totalEntradasDinheiro.toFixed(2).replace('.', ',')}`
-        : 'Falha ao calcular';
-    document.getElementById('caixa-resumo-outros').innerText = resumo
-        ? `R$ ${totalOutros.toFixed(2).replace('.', ',')}`
-        : 'Falha ao calcular';
-    document.getElementById('caixa-resumo-saidas').innerText = resumo
-        ? `R$ ${totalSaidasDinheiro.toFixed(2).replace('.', ',')}`
-        : 'Falha ao calcular';
-    document.getElementById('caixa-resumo-esperado').innerText = resumo
-        ? `R$ ${saldoEsperadoGaveta.toFixed(2).replace('.', ',')}`
-        : 'Indisponível';
-
-    if (erroCalculo) {
-        document.getElementById('caixa-resumo-dinheiro').title =
-            'Não foi possível consultar o resumo financeiro unificado do caixa.';
-        document.getElementById('caixa-resumo-outros').title =
-            'Não foi possível consultar o resumo financeiro unificado do caixa.';
-        document.getElementById('caixa-resumo-saidas').title =
-            'Não foi possível consultar o resumo financeiro unificado do caixa.';
-    } else {
-        document.getElementById('caixa-resumo-dinheiro').title =
-            'Inclui vendas, pagamentos do salão, recebimentos de fiado e suprimentos em dinheiro.';
-        document.getElementById('caixa-resumo-saidas').title =
-            'Inclui despesas pagas em dinheiro e sangrias.';
+    document.getElementById('caixa-resumo-inicial').innerText = `R$ ${saldoInicial.toFixed(2).replace('.', ',')}`;
+    document.getElementById('caixa-resumo-dinheiro').innerText = erroCalculoEntradas ? 'Falha ao calcular' : `R$ ${totalDinheiro.toFixed(2).replace('.', ',')}`;
+    document.getElementById('caixa-resumo-outros').innerText = erroCalculoEntradas ? 'Falha ao calcular' : `R$ ${totalOutros.toFixed(2).replace('.', ',')}`;
+    document.getElementById('caixa-resumo-saidas').innerText = `R$ ${totalSaidasDinheiro.toFixed(2).replace('.', ',')}`;
+    document.getElementById('caixa-resumo-esperado').innerText = saldoEsperadoGaveta === null ? 'Indisponível' : `R$ ${saldoEsperadoGaveta.toFixed(2).replace('.', ',')}`;
+    if (erroCalculoEntradas) {
+        document.getElementById('caixa-resumo-dinheiro').title = 'Execute a migração 06 do PDV no Supabase e atualize a tela.';
+        document.getElementById('caixa-resumo-outros').title = 'Execute a migração 06 do PDV no Supabase e atualize a tela.';
     }
 
     document.getElementById('box-abrir-caixa').style.display = 'none';
     document.getElementById('box-fechar-caixa').style.display = 'block';
 
-    // Mantém no objeto da tela os mesmos totais que o banco usa no fechamento.
-    caixaAtual.total_entradas_dinheiro = totalEntradasDinheiro;
-    caixaAtual.total_outras_formas = totalOutros;
+    // Guarda totais calculados no objeto atual
+    caixaAtual.total_entradas_dinheiro = erroCalculoEntradas ? null : totalDinheiro;
+    caixaAtual.total_outras_formas = erroCalculoEntradas ? null : totalOutros;
     caixaAtual.total_saidas = totalSaidasDinheiro;
     caixaAtual.saldo_esperado = saldoEsperadoGaveta;
     caixaAtual.total_suprimentos = totalSuprimentos;
     caixaAtual.total_sangrias = totalSangrias;
-    caixaAtual.entradas_vendas_recebimentos_dinheiro = resumo
-        ? Number(resumo.entradas_dinheiro)
-        : null;
 
     await carregarHistoricoMovimentacoesCaixa();
 }
@@ -18566,18 +18647,10 @@ async function fecharCaixa() {
         return;
     }
 
-    // O valor é apenas informativo para a confirmação, mas não pode ser
-    // tratado como zero quando a RPC de resumo falhou. Recarrega e exige nova
-    // tentativa explícita para evitar confirmação com um saldo fictício.
-    if (caixaAtual.saldo_esperado === null ||
-            caixaAtual.saldo_esperado === undefined ||
-            !Number.isFinite(Number(caixaAtual.saldo_esperado))) {
-        alert('O saldo esperado está indisponível. O resumo será atualizado; confira o valor antes de tentar fechar novamente.');
-        await exibirPainelCaixaAberto();
-        return;
-    }
-
-    const saldoEsperadoTela = Number(caixaAtual.saldo_esperado);
+    // Este valor é apenas informativo para a confirmação.
+    // O valor definitivo será recalculado pelo banco.
+    const saldoEsperadoTela =
+            parseFloat(caixaAtual.saldo_esperado || 0);
 
     const mensagemPrevia =
             valorInformado === saldoEsperadoTela
