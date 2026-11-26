@@ -21004,6 +21004,31 @@ async function carregarCadastroFornecedoresUI() {
 let fornecedorEditandoId = null;
 
 // ============================================================
+// FORNECEDORES — CONFIGURAR MÁSCARAS
+// ============================================================
+function configurarMascarasFornecedor() {
+
+    const campoTelefone = document.getElementById('fornecedor-telefone');
+    const campoDocumento = document.getElementById('fornecedor-documento');
+
+    if (campoTelefone) {
+        campoTelefone.setAttribute('inputmode', 'numeric');
+        campoTelefone.setAttribute('maxlength', '15');
+        campoTelefone.oninput = function () {
+            formatarTelefoneFornecedorInput(this);
+        };
+    }
+
+    if (campoDocumento) {
+        campoDocumento.setAttribute('inputmode', 'numeric');
+        campoDocumento.setAttribute('maxlength', '18');
+        campoDocumento.oninput = function () {
+            formatarDocumentoFornecedorInput(this);
+        };
+    }
+}
+
+// ============================================================
 // FORNECEDORES — ABRIR MODAL
 // ============================================================
 function abrirModalNovoFornecedor() {
@@ -21047,45 +21072,8 @@ function abrirModalNovoFornecedor() {
                     'fornecedor-observacao'
                     );
 
-    // --------------------------------------------------------
-// CONFIGURAÇÃO DOS CAMPOS DE TELEFONE E DOCUMENTO
-// --------------------------------------------------------
-
-    if (campoTelefone) {
-
-        campoTelefone.setAttribute(
-                'inputmode',
-                'numeric'
-                );
-
-        campoTelefone.setAttribute(
-                'maxlength',
-                '15'
-                );
-
-        campoTelefone.oninput =
-                function () {
-                    formatarTelefoneFornecedorInput(this);
-                };
-    }
-
-    if (campoDocumento) {
-
-        campoDocumento.setAttribute(
-                'inputmode',
-                'numeric'
-                );
-
-        campoDocumento.setAttribute(
-                'maxlength',
-                '18'
-                );
-
-        campoDocumento.oninput =
-                function () {
-                    formatarDocumentoFornecedorInput(this);
-                };
-    }
+    // Aplica as mesmas máscaras no cadastro e na edição.
+    configurarMascarasFornecedor();
 
     if (campoNome)
         campoNome.value = '';
@@ -21191,6 +21179,9 @@ async function editarFornecedorUI(id) {
         fornecedorEditandoId =
                 Number(data.id);
 
+        // Garante que os campos tenham máscara também na edição.
+        configurarMascarasFornecedor();
+
         const modal =
                 document.getElementById(
                         'modal-fornecedor'
@@ -21205,15 +21196,19 @@ async function editarFornecedorUI(id) {
                 ).value =
                 data.nome || '';
 
-        document.getElementById(
-                'fornecedor-documento'
-                ).value =
-                data.documento || '';
+        const campoDocumento = document.getElementById('fornecedor-documento');
+        if (campoDocumento) {
+            campoDocumento.value = data.documento || '';
+            // Formata imediatamente o valor vindo do banco, sem exigir digitação.
+            formatarDocumentoFornecedorInput(campoDocumento);
+        }
 
-        document.getElementById(
-                'fornecedor-telefone'
-                ).value =
-                data.telefone || '';
+        const campoTelefone = document.getElementById('fornecedor-telefone');
+        if (campoTelefone) {
+            campoTelefone.value = data.telefone || '';
+            // Formata imediatamente o valor vindo do banco, sem exigir digitação.
+            formatarTelefoneFornecedorInput(campoTelefone);
+        }
 
         document.getElementById(
                 'fornecedor-email'
@@ -24501,8 +24496,38 @@ function formatarTelefoneFornecedorInput(input) {
         return;
     }
 
-    // Reaproveita a mesma regra usada nos clientes.
-    formatarTelefoneClienteInput(input);
+    const numeros =
+            String(input.value || '')
+            .replace(/\D/g, '')
+            .slice(0, 11);
+
+    let formatado = numeros;
+
+    // Celular: DDD + 9 dígitos.
+    if (numeros.length >= 11) {
+
+        formatado = numeros.replace(
+                /^(\d{2})(\d{5})(\d{0,4}).*$/,
+                '($1) $2-$3'
+                );
+
+    // Telefone fixo: DDD + 8 dígitos.
+    } else if (numeros.length >= 7) {
+
+        formatado = numeros.replace(
+                /^(\d{2})(\d{4})(\d{0,4}).*$/,
+                '($1) $2-$3'
+                );
+
+    } else if (numeros.length >= 3) {
+
+        formatado = numeros.replace(
+                /^(\d{2})(\d*).*$/,
+                '($1) $2'
+                );
+    }
+
+    input.value = formatado;
 }
 
 
